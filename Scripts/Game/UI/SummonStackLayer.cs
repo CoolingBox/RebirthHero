@@ -158,4 +158,17 @@ public partial class SummonStackLayer : Control
         pos = Vector2.Zero;
         return false;
     }
+
+    /// <summary>同上，但换算到**世界坐标**（供音频定位用；飘字仍用局部坐标）。</summary>
+    public bool TryGetWorldAnchor(BattleUnit u, out Vector2 world)
+    {
+        if (!TryGetAnchor(u, out Vector2 local))
+        {
+            world = Vector2.Zero;
+            return false;
+        }
+
+        world = GetGlobalTransform() * local;
+        return true;
+    }
 }

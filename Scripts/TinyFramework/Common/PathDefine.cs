@@ -17,7 +17,7 @@ public class PathDefine
     public const string UIScriptPath = "res://Scripts/Game/UI/";
     
     public const string BGMPath = ResPath + "Audio/BGM/";
-    public const string SFXPath = ResPath + "Audio/SFX";
+    public const string SFXPath = ResPath + "Audio/SFX/";
     
     public const string ConfigPath= ResPath+ "Config/";
   
