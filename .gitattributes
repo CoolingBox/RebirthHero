@@ -1,0 +1,56 @@
+# ============================================================
+# 《轮回大侠》行尾 / 文件类型规则
+# 目标：文本文件在「仓库 + 工作区」统一为 LF；资源标记为二进制，不做行尾与 diff 转换。
+# 说明：eol 属性会覆盖 core.autocrlf，所以本仓库不再受系统级 autocrlf=true 影响。
+# ============================================================
+
+# 默认：所有文本按 LF 处理（未显式声明的文本类型走这条）
+* text=auto eol=lf
+
+# ---------- 文本（显式声明，避免被误判）----------
+*.cs            text eol=lf
+*.py            text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.txt           text eol=lf
+*.tscn          text eol=lf
+*.tres          text eol=lf
+*.uid           text eol=lf
+*.godot         text eol=lf
+*.cfg           text eol=lf
+*.import        text eol=lf
+*.svg           text eol=lf
+*.editorconfig  text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+# ---------- 资源 / 编译产物：二进制 ----------
+# Godot 产物与素材
+*.res       binary
+*.scn       binary
+*.escn      binary
+*.pck       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.webp      binary
+*.bmp       binary
+*.tga       binary
+*.exr       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+*.wav       binary
+*.ogg       binary
+*.mp3       binary
+*.flac      binary
+# 配置源表 / .NET 构建产物
+*.xlsx      binary
+*.xls       binary
+*.zip       binary
+*.dll       binary
+*.pdb       binary
+*.exe       binary
+*.so        binary
+*.dylib     binary
