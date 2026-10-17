@@ -72,7 +72,7 @@ def gen_skeleton(name):
     if os.path.exists(path):
         print("[跳过] " + name + ".cs 已存在（保留开发者逻辑）")
         return
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("using Godot;\n")
         f.write("using TinyFramework;\n\n")
         f.write("public partial class " + name + " : BasePanel\n")
@@ -93,7 +93,7 @@ def gen_bind(name, nodes):
     """总是重新生成（对应 GenerateUiCodeBind，无 skip）。"""
     os.makedirs(UI_CODE_BIND, exist_ok=True)
     path = os.path.join(UI_CODE_BIND, name + "Bind.cs")
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("using Godot;\n")
         f.write("using TinyFramework;\n\n")
         f.write("public partial class " + name + " : BasePanel\n")

@@ -50,6 +50,10 @@ public partial class BattlePanel : BasePanel
     private SummonStackLayer _stacks;
     private FloatLayer _floats;
     private StatsPanelView _stats;
+    private StageSelectView _stage;
+
+    // —— 材料库存（本世资产；重开本世时清空）——
+    private readonly MaterialBag _materials = new();
 
     // —— M2.1 推图状态 ——
     private StageRun _run;                       // 层数推进
@@ -173,11 +177,13 @@ public partial class BattlePanel : BasePanel
         _stacks = _TStacks as SummonStackLayer;
         _floats = _TFxLayer as FloatLayer;
         _stats = _TStatsPanel as StatsPanelView;
+        _stage = _TStagePanel as StageSelectView;
 
         if (_TPushBtn != null) _TPushBtn.Pressed += OnResumePush;
         if (_TNextBtn != null) _TNextBtn.Pressed += OnNext;
         if (_TInnBtn != null) _TInnBtn.Pressed += OnOpenInn;
         if (_TStatsBtn != null && _stats != null) _TStatsBtn.Pressed += _stats.Toggle;
+        if (_TStageBtn != null && _stage != null) _TStageBtn.Pressed += OnOpenStage;
 
         _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
         GameObject.AddChild(_timer);
@@ -223,6 +229,7 @@ public partial class BattlePanel : BasePanel
         _run.Reset();
         _cult.Reset();
         _silver.Reset();
+        _materials.Reset();         // 材料也是"此生"资产
         _stats.InvalidateLayer();   // 重开本世 → 下次开战强制清零统计
         StartBattle();
     }
@@ -256,6 +263,31 @@ public partial class BattlePanel : BasePanel
     private void OnCloseInn()
     {
         if (_TInnBtn != null) _TInnBtn.Disabled = false;
+        if (_engine != null && !_engine.IsOver) _timer.Start();
+        else if (_resultShown) _advanceTimer.Start();
+    }
+
+    // ============ 选关 ============
+    /// <summary>打开选关面板：暂停战斗（停 _timer / _advanceTimer），由面板点层后锁层开战。</summary>
+    private void OnOpenStage()
+    {
+        _timer.Stop();
+        _advanceTimer.Stop();
+        _stage.Bind(_run, _materials, OnGoLayer, OnCloseStage);
+    }
+
+    /// <summary>选某层：锁层挂机 + 关面板 + 重开一场。</summary>
+    private void OnGoLayer(int layer)
+    {
+        _run.JumpTo(layer);
+        _stage.Close();
+        OnCloseStage();
+        StartBattle();
+    }
+
+    /// <summary>关选关面板：恢复战斗节奏（与客栈同一套恢复逻辑）。</summary>
+    private void OnCloseStage()
+    {
         if (_engine != null && !_engine.IsOver) _timer.Start();
         else if (_resultShown) _advanceTimer.Start();
     }
@@ -324,7 +356,13 @@ public partial class BattlePanel : BasePanel
         _cult.GainForKill(RosterIds(), layer);          // 只累进池子，不升级
         double sil = _silver.GainForKill(layer);
 
-        SpawnFloat(u, "修为+" + perHead.ToString("0.#") + " 银两+" + UiUtil.Fmt(sil), new Color(1f, 0.92f, 0.45f));
+        // 材料：按当前层段掉对应品阶（确定性，不赌概率）
+        int matTier = MaterialCatalog.TierOf(layer);
+        _materials.Add(matTier, MaterialConfig.MatMobDrop);
+
+        SpawnFloat(u, "修为+" + perHead.ToString("0.#") + " 银两+" + UiUtil.Fmt(sil)
+                      + " " + MaterialCatalog.NameOf(matTier) + "+" + MaterialConfig.MatMobDrop,
+                   new Color(1f, 0.92f, 0.45f));
         RefreshHeader();
     }
 
@@ -373,10 +411,19 @@ public partial class BattlePanel : BasePanel
 
         if (win)
         {
+            // 打穿整层 → 额外材料奖励（收尾波获胜时结算一次）
+            string matTag = "";
+            if (_run.LastSettleClearedLayer)
+            {
+                int tier = MaterialCatalog.TierOf(layer);
+                _materials.Add(tier, MaterialConfig.MatClearBonus);
+                matTag = " · " + MaterialCatalog.NameOf(tier) + "+" + MaterialConfig.MatClearBonus;
+            }
+
             if (_TResult != null)
             {
                 _TResult.Text = _run.LastSettleClearedLayer
-                    ? "🏆 破第 " + layer + " 层（" + totalWaves + " 波） · " + dropTag + upTag
+                    ? "🏆 破第 " + layer + " 层（" + totalWaves + " 波） · " + dropTag + upTag + matTag
                     : "✔ 第 " + layer + " 层 " + wave + "/" + totalWaves + " 波（" + (finisher ? "首领" : "普通") + "）清 · " + hpTag;
                 _TResult.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.5f));
                 _TResult.Visible = true;
