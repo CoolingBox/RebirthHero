@@ -1,0 +1,62 @@
+[
+  {
+    "Id": 1,
+    "Kind": "tank",
+    "Name": "\u5200\u76fe\u5080\u5121",
+    "HpRatio": 0.8,
+    "FixedHp": 0,
+    "DmgPerHit": 0,
+    "AtkRatio": 0.45,
+    "SpdFloor": 60,
+    "SpdRatio": 0,
+    "BaseW": 20,
+    "Ttl": 20,
+    "SummonMax": 1,
+    "Desc": "\u8089\u76fe\u00b7\u552f\u4e00\u4e00\u53ea\u7ed9\u539a\u8840(W20 \u5438\u706b\u529b)"
+  },
+  {
+    "Id": 2,
+    "Kind": "dps",
+    "Name": "\u7075\u86c7",
+    "HpRatio": 0.25,
+    "FixedHp": 0,
+    "DmgPerHit": 0,
+    "AtkRatio": 0.6,
+    "SpdFloor": 60,
+    "SpdRatio": 1.2,
+    "BaseW": 10,
+    "Ttl": 20,
+    "SummonMax": 2,
+    "Desc": "\u8f93\u51fa\u00b7\u54ac\u5f97\u51f6\u4f46\u8106(\u968f\u53ec\u5524\u8005\u52a0\u901f)"
+  },
+  {
+    "Id": 3,
+    "Kind": "sub",
+    "Name": "\u7eb8\u4eba",
+    "HpRatio": 0.17,
+    "FixedHp": 0,
+    "DmgPerHit": 0,
+    "AtkRatio": 0.08,
+    "SpdFloor": 60,
+    "SpdRatio": 0,
+    "BaseW": 25,
+    "Ttl": 20,
+    "SummonMax": 3,
+    "Desc": "\u66ff\u6b7b\u00b7\u8584\u58f3\u866b\u7fa4(W25 \u6700\u9ad8\u6743\u91cd)"
+  },
+  {
+    "Id": 4,
+    "Kind": "sword",
+    "Name": "\u98de\u5251",
+    "HpRatio": 0,
+    "FixedHp": 2,
+    "DmgPerHit": 1,
+    "AtkRatio": 0.8,
+    "SpdFloor": 0,
+    "SpdRatio": 1.5,
+    "BaseW": 10,
+    "Ttl": 20,
+    "SummonMax": 2,
+    "Desc": "\u73bb\u7483\u70ae\u00b72\u8840\u8ba1\u6570\u4f53(\u6bcf\u6b21\u53d7\u51fb-1,\u514d\u75ab\u5927\u4f24\u5bb3\u79d2\u6740,\u6015\u9ad8\u9891\u591a\u6b21\u547d\u4e2d)\u00b7\u6700\u5feb(1.5\u00d7\u53ec\u5524\u8005\u901f\u5ea6)"
+  }
+]

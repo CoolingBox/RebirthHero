@@ -1,0 +1,68 @@
+[
+  {
+    "Id": 1,
+    "Name": "\u5251\u5fc3\u901a\u660e",
+    "Desc": "\u5251\u7cfb\u6b66\u5b66\u500d\u7387+15%",
+    "Effect1": 5,
+    "Value1": 15,
+    "Effect2": 0,
+    "Value2": 0,
+    "Status": 1,
+    "Category": 1
+  },
+  {
+    "Id": 2,
+    "Name": "\u94dc\u76ae\u94c1\u9aa8",
+    "Desc": "\u53d7\u51fb\u6743\u91cd+5\uff0c\u6c14\u8840+10%",
+    "Effect1": 4,
+    "Value1": 5,
+    "Effect2": 2,
+    "Value2": 10,
+    "Status": 1,
+    "Category": 0
+  },
+  {
+    "Id": 3,
+    "Name": "\u5999\u624b\u56de\u6625",
+    "Desc": "\u6cbb\u7597\u91cf+25%",
+    "Effect1": 6,
+    "Value1": 25,
+    "Effect2": 0,
+    "Value2": 0,
+    "Status": 1,
+    "Category": 0
+  },
+  {
+    "Id": 4,
+    "Name": "\u767e\u517d\u4e4b\u738b",
+    "Desc": "\u53ec\u5524\u7269\u6c14\u8840+30%",
+    "Effect1": 7,
+    "Value1": 30,
+    "Effect2": 0,
+    "Value2": 0,
+    "Status": 1,
+    "Category": 0
+  },
+  {
+    "Id": 5,
+    "Name": "\u8eab\u8f7b\u5982\u71d5",
+    "Desc": "\u901f\u5ea6+15%\uff0c\u53d7\u51fb\u6743\u91cd\u22123",
+    "Effect1": 3,
+    "Value1": 15,
+    "Effect2": 4,
+    "Value2": -3,
+    "Status": 1,
+    "Category": 0
+  },
+  {
+    "Id": 6,
+    "Name": "\u55dc\u6218\u5982\u547d",
+    "Desc": "\u653b\u51fb+15%\uff0c\u53d7\u51fb\u4f24\u5bb3+5%",
+    "Effect1": 1,
+    "Value1": 15,
+    "Effect2": 8,
+    "Value2": 5,
+    "Status": 1,
+    "Category": 0
+  }
+]
