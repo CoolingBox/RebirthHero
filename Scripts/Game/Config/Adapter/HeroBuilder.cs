@@ -18,9 +18,13 @@ public static class HeroBuilder
     /// </summary>
     public static BattleUnit Build(HeroConfig hero, int slot, Func<int, SkillConfig> skillLookup, int level = 1,
                                    bool includePending = false,
-                                   HeroQuality quality = null, Func<int, QualityConfig> affixLookup = null)
+                                   HeroQuality quality = null, Func<int, QualityConfig> affixLookup = null,
+                                   Func<int, int[]> skillIdsOf = null)
     {
         if (hero == null) return null;
+
+        // M2.4 武学装配：默认用表里的 SkillIds；面板装配后由 skillIdsOf 提供 3 槽（0 = 空槽）
+        int[] ids = skillIdsOf != null ? skillIdsOf(hero.Id) : hero.SkillIds;
 
         double hpBonus = slot == 1 ? BattleConfig.Slot1HpBonus : 1.0;
         double slotW = slot == 1 ? BattleConfig.Slot1W : BattleConfig.OtherW;
@@ -50,7 +54,7 @@ public static class HeroBuilder
 
         // —— 召唤武学代价（2026-10-17 用户）：每携带 1 个召唤类武学，最大生命 −15%（叠加）——
         // 锁死部分记入 LockedHp，由血条 UI 以银灰色显示；惩罚基于"已算好的最终最大生命"（含 1 号位加成与资质）。
-        int nSummon = CountSummonSkills(hero, skillLookup, includePending);
+        int nSummon = CountSummonSkills(ids, skillLookup, includePending);
         if (nSummon > 0 && u.BaseHp > 0)
         {
             double lockPct = Math.Min(0.85, BattleConfig.SummonHpPenaltyPerSkill * nSummon);  // 0.85 = 安全上限，避免极端配置下暴毙/除零
@@ -60,8 +64,8 @@ public static class HeroBuilder
         }
 
         u.Skills = new List<BattleSkill>();
-        if (hero.SkillIds != null)
-            foreach (int id in hero.SkillIds)
+        if (ids != null)
+            foreach (int id in ids)
             {
                 SkillConfig cfg = skillLookup?.Invoke(id);
                 if (cfg == null) continue;
@@ -95,11 +99,11 @@ public static class HeroBuilder
     }
 
     /// <summary>统计该侠客阵容里"召唤类武学"的数量（<see cref="SkillEffect.Summon"/>）。</summary>
-    static int CountSummonSkills(HeroConfig hero, Func<int, SkillConfig> skillLookup, bool includePending)
+    static int CountSummonSkills(int[] ids, Func<int, SkillConfig> skillLookup, bool includePending)
     {
-        if (hero == null || hero.SkillIds == null) return 0;
+        if (ids == null) return 0;
         int n = 0;
-        foreach (int id in hero.SkillIds)
+        foreach (int id in ids)
         {
             SkillConfig cfg = skillLookup?.Invoke(id);
             if (cfg == null) continue;
@@ -112,13 +116,14 @@ public static class HeroBuilder
     /// <summary>整队构建：按数组顺序分配 slot 1..N。</summary>
     public static List<BattleUnit> BuildTeam(IEnumerable<HeroConfig> heroes, Func<int, SkillConfig> skillLookup,
                                              int level = 1, bool includePending = false,
-                                             Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null)
+                                             Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
+                                             Func<int, int[]> skillIdsOf = null)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
-            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup);
+            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf);
             if (u != null) { list.Add(u); slot++; }
         }
         return list;
@@ -127,14 +132,15 @@ public static class HeroBuilder
     /// <summary>整队构建（**每侠客各自等级**，M2.2 修为经济起用；返回该侠客等级的委托）。</summary>
     public static List<BattleUnit> BuildTeam(IEnumerable<HeroConfig> heroes, Func<int, SkillConfig> skillLookup,
                                              Func<int, int> levelOf, bool includePending = false,
-                                             Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null)
+                                             Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
+                                             Func<int, int[]> skillIdsOf = null)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
             int lv = levelOf?.Invoke(h.Id) ?? 1;
-            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup);
+            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf);
             if (u != null) { list.Add(u); slot++; }
         }
         return list;

@@ -55,6 +55,11 @@ public partial class BattlePanel : BasePanel
     // —— 材料库存（本世资产；重开本世时清空）——
     private readonly MaterialBag _materials = new();
 
+    // —— 武学装配（M2.4：每侠客 3 槽，玩家的构筑选择，不随重开本世清空）——
+    private readonly SkillLoadout _loadout = new();
+    private SkillsPanelView _skills;
+    private List<SkillConfig> _skillPool;   // 全部已实装武学（装配池）
+
     // —— M2.1 推图状态 ——
     private StageRun _run;                       // 层数推进
     private List<HeroConfig> _roster;            // 玩家阵容（开局 4 名）
@@ -103,6 +108,13 @@ public partial class BattlePanel : BasePanel
         }
         _lookup = id => ConfigManager.GetOne<SkillConfig>(id);
 
+        // M2.4 武学池 = 全部「已实装」武学（不按 Tier 限制；TierCap 只约束敌方，见 SkillConfig.Tier 注释）
+        _skillPool = new List<SkillConfig>();
+        List<SkillConfig> allSkills = ConfigManager.GetAll<SkillConfig>();
+        if (allSkills != null)
+            foreach (SkillConfig s in allSkills)
+                if (s != null && s.Status == SkillStatus.Implemented) _skillPool.Add(s);
+
         // 敌方阵容：单位模板（EnemyConfig 表）+ 武学池（已实装全池；按 Id 定序 → 抽取可复现）
         _enemyTemplates = ConfigManager.GetAll<EnemyConfig>() ?? new List<EnemyConfig>();
         _enemyPool = EnemyFactory.BuildSkillPool(ConfigManager.GetAll<SkillConfig>());
@@ -117,6 +129,9 @@ public partial class BattlePanel : BasePanel
         _inn = new Inn(heroes, ConfigManager.GetAll<QualityConfig>(),
                        id => ConfigManager.GetOne<QualityConfig>(id));
         _inn.NewLife(20261016, RosterIds());
+
+        // M2.4 武学装配：初始 = 表内默认武学（每人 2 个），第 3 槽留给玩家填
+        _loadout.Init(heroes);
     }
 
     /// <summary>M2.3 客栈：当前出战阵容 = 客栈编队（带当世资质）。编队为空即真正空编队（不再回退开局 4 名）。</summary>
@@ -151,7 +166,8 @@ public partial class BattlePanel : BasePanel
     private List<BattleUnit> BuildPlayerTeam()
         => HeroBuilder.BuildTeam(ActiveRoster(), _lookup, id => _cult.LevelOf(id), includePending: false,
                                  qualityOf: id => _inn?.QualityOf(id),
-                                 affixLookup: id => ConfigManager.GetOne<QualityConfig>(id));
+                                 affixLookup: id => ConfigManager.GetOne<QualityConfig>(id),
+                                 skillIdsOf: _loadout.Get);
 
     private List<BattleUnit> BuildEnemyWave(int layer, int wave, bool isFinisher)
         => EnemyFactory.BuildWave(layer, wave, isFinisher, _enemyTemplates, _enemyPool);
@@ -178,12 +194,14 @@ public partial class BattlePanel : BasePanel
         _floats = _TFxLayer as FloatLayer;
         _stats = _TStatsPanel as StatsPanelView;
         _stage = _TStagePanel as StageSelectView;
+        _skills = _TSkillsPanel as SkillsPanelView;
 
         if (_TPushBtn != null) _TPushBtn.Pressed += OnResumePush;
         if (_TNextBtn != null) _TNextBtn.Pressed += OnNext;
         if (_TInnBtn != null) _TInnBtn.Pressed += OnOpenInn;
         if (_TStatsBtn != null && _stats != null) _TStatsBtn.Pressed += _stats.Toggle;
         if (_TStageBtn != null && _stage != null) _TStageBtn.Pressed += OnOpenStage;
+        if (_TSkillBtn != null && _skills != null) _TSkillBtn.Pressed += OnOpenSkills;
 
         _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
         GameObject.AddChild(_timer);
@@ -263,6 +281,22 @@ public partial class BattlePanel : BasePanel
     private void OnCloseInn()
     {
         if (_TInnBtn != null) _TInnBtn.Disabled = false;
+        if (_engine != null && !_engine.IsOver) _timer.Start();
+        else if (_resultShown) _advanceTimer.Start();
+    }
+
+    // ============ 武学装配（M2.4）============
+    /// <summary>打开武学装配面板：暂停战斗（与客栈 / 选关同一套恢复逻辑）。</summary>
+    private void OnOpenSkills()
+    {
+        _timer.Stop();
+        _advanceTimer.Stop();
+        _skills.Bind(_loadout, ActiveRoster(), _lookup, _skillPool, OnCloseSkills);
+    }
+
+    /// <summary>关武学面板：恢复战斗节奏。</summary>
+    private void OnCloseSkills()
+    {
         if (_engine != null && !_engine.IsOver) _timer.Start();
         else if (_resultShown) _advanceTimer.Start();
     }
