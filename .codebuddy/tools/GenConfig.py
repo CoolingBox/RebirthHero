@@ -79,7 +79,7 @@ def gen_one(path):
             d[field] = cv
         out.append(d)
     os.makedirs(OUT, exist_ok=True)
-    with open(OUT + name + ".json", "w", encoding="utf-8") as f:
+    with open(OUT + name + ".json", "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, indent=2, ensure_ascii=True)
     print(f"generated {name}.json ({len(out)} rows)")
 

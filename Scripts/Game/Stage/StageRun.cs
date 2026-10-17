@@ -5,7 +5,8 @@
 //
 // 推进规则（2026-10-15 用户口径）：
 //   · "推图失败返回上一层重复刷图" —— 负/平 → **退回上一层**、波次归 1、转入挂机模式
-//   · "起始要刷 5 波普通敌人，才会打层主" + "每 10 层加 1 波" —— 一个层 = N 波普通 + 1 波收尾首领
+//   · "起始要刷 4 波普通敌人，才会打层主"（原 5 波；2026-10-17 全体 −1）+ "每 10 层加 1 波"
+//     —— 一个层 = N 波普通 + 1 波收尾首领
 //   · "每波敌人间只恢复 10% 的血量" —— 层内续战时只把血量按 10% 最大气血回补
 //   · "普通层的层主是精英" —— 收尾波在普通层是精英、层主层是层主（编成见 EnemyFactory）
 //   · 阵亡处理：**保持阵亡**（口径）—— 层内不复活；跨层时整队重建，才恢复满编
@@ -161,6 +162,24 @@ public sealed class StageRun
     {
         AutoPush = true;
         _idle = 0;
+    }
+
+    /// <summary>
+    /// 选关：跳到指定层、从第 1 波开始、**锁层挂机**（AutoPush=false，不再自动往上推）。
+    /// 只能选"已到达过"的层 —— 越界夹到 [1, BestLayer]。
+    /// 换层视为新的一段：整队重建（满血、阵亡者归队）。
+    /// </summary>
+    public void JumpTo(int layer)
+    {
+        int target = layer;
+        if (target < 1) target = 1;
+        if (target > BestLayer) target = BestLayer;
+
+        Layer = target;
+        Wave = 1;
+        AutoPush = false;
+        _idle = 0;
+        _carry = null;
     }
 
     public void Reset()

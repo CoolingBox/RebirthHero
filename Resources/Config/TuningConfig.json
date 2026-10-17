@@ -353,11 +353,11 @@
   {
     "Id": 40,
     "Key": "FirstMobWaves",
-    "Value": 5,
+    "Value": 4,
     "Group": "\u63a8\u56fe",
     "Runtime": true,
     "Source": "\u7528\u6237\u6307\u5b9a",
-    "Note": "\u7b2c 1 \u5c42\u7684\u666e\u901a\u6ce2\u6570\uff08\u7528\u6237\u53e3\u5f84'\u8d77\u59cb\u8981\u5237 5 \u6ce2\u666e\u901a\u654c\u4eba\u624d\u6253\u5c42\u4e3b'\uff09"
+    "Note": "\u7b2c 1 \u5c42\u7684\u666e\u901a\u6ce2\u6570\uff082026-10-17 \u7528\u6237\u8981\u6c42\u5168\u4f53 -1\uff1a5 -> 4\uff09"
   },
   {
     "Id": 41,
@@ -718,5 +718,32 @@
     "Runtime": true,
     "Source": "\u7528\u6237\u6307\u5b9a",
     "Note": "\u6bcf\u643a\u5e26 1 \u4e2a\u53ec\u5524\u7c7b\u6b66\u5b66\uff0c\u6240\u5c5e\u4fa0\u5ba2\u6700\u5927\u751f\u547d \u2212\u672c\u503c\uff08\u53e0\u52a0\uff1aN \u4e2a = N\u00d7\u672c\u503c\uff09\u3002\u9501\u6b7b\u90e8\u5206\u8bb0\u5165 BattleUnit.LockedHp\uff0c\u8840\u6761 UI \u4ee5\u94f6\u7070\u8272\u663e\u793a"
+  },
+  {
+    "Id": 81,
+    "Key": "MatTierEveryLayer",
+    "Value": 10,
+    "Group": "\u6750\u6599",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6bcf\u591a\u5c11\u5c42\u4e00\u4e2a\u6750\u6599\u54c1\u9636\u6863\uff0810 \u2192 \u5c42 1~10 \u4e3a\u51e1\u94c1\uff09\u3002[PLACEHOLDER]"
+  },
+  {
+    "Id": 82,
+    "Key": "MatMobDrop",
+    "Value": 1,
+    "Group": "\u6750\u6599",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6bcf\u6b21\u666e\u901a\u51fb\u6740\u6389\u843d\u7684\u6750\u6599\u6570\uff08\u786e\u5b9a\u6027\uff09\u3002[PLACEHOLDER]"
+  },
+  {
+    "Id": 83,
+    "Key": "MatClearBonus",
+    "Value": 5,
+    "Group": "\u6750\u6599",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6253\u7a7f\u6574\u5c42\uff08\u6536\u5c3e\u6ce2\u83b7\u80dc\uff09\u989d\u5916\u5956\u52b1\u3002 [PLACEHOLDER]"
   }
 ]

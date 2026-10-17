@@ -30,6 +30,7 @@ public static class Tuning
         typeof(StageRules),
         typeof(CultivationConfig),
         typeof(InnConfig),
+        typeof(MaterialConfig),
     };
 
     static bool _loaded;
