@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Game/UI/HeroCardLayer.cs" id="1_cards"]
 [ext_resource type="Script" path="res://Scripts/Game/UI/SummonStackLayer.cs" id="2_stacks"]
 [ext_resource type="Script" path="res://Scripts/Game/UI/FloatLayer.cs" id="3_float"]
 [ext_resource type="Script" path="res://Scripts/Game/UI/StatsPanelView.cs" id="4_stats"]
 [ext_resource type="Script" path="res://Scripts/Game/UI/StageSelectView.cs" id="5_stage"]
+[ext_resource type="Script" path="res://Scripts/Game/UI/SkillsPanelView.cs" id="6_skills"]
 
 [node name="BattlePanel" type="Control"]
 mouse_filter = 0
@@ -164,6 +165,19 @@ offset_top = 14.0
 offset_right = 130.0
 offset_bottom = 48.0
 text = "客栈 ⌂"
+
+[node name="TSkillBtn" type="Button" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 1470.0
+offset_top = 14.0
+offset_right = 1590.0
+offset_bottom = 48.0
+text = "武学 ⚔"
 
 [node name="TStageBtn" type="Button" parent="."]
 layout_mode = 0
@@ -372,6 +386,122 @@ offset_left = 20.0
 offset_top = 800.0
 offset_right = 1220.0
 offset_bottom = 826.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.62, 0.66, 0.74, 1)
+
+[node name="TSkillsPanel" type="Control" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 340.0
+offset_top = 100.0
+offset_right = 1580.0
+offset_bottom = 980.0
+mouse_filter = 0
+visible = false
+script = ExtResource("6_skills")
+
+[node name="Bg" type="ColorRect" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.03, 0.04, 0.07, 0.95)
+
+[node name="Heading" type="Label" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 12.0
+offset_right = 560.0
+offset_bottom = 44.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
+text = "武学装配 · 每侠客 3 槽"
+
+[node name="CloseBtn" type="Button" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 1100.0
+offset_top = 10.0
+offset_right = 1220.0
+offset_bottom = 44.0
+text = "关闭 ✕"
+
+[node name="Hint" type="Label" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 52.0
+offset_right = 1220.0
+offset_bottom = 78.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
+
+[node name="Content" type="VBoxContainer" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 88.0
+offset_right = 1220.0
+offset_bottom = 300.0
+theme_override_constants/separation = 8
+
+[node name="Pool" type="GridContainer" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 320.0
+offset_right = 1220.0
+offset_bottom = 820.0
+columns = 8
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="BottomHint" type="Label" parent="TSkillsPanel"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 830.0
+offset_right = 1220.0
+offset_bottom = 856.0
 horizontal_alignment = 0
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.62, 0.66, 0.74, 1)
