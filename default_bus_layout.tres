@@ -1,5 +1,33 @@
 [gd_resource type="AudioBusLayout" format=3 uid="uid://b8rd3oxrdq1t1"]
 
+[sub_resource type="AudioEffectLimiter" id="AudioEffectLimiter_sfx"]
+threshold_db = -3.0
+ceiling_db = -0.5
+soft_clip_db = -2.0
+soft_clip_ratio = 2.0
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_far"]
+cutoff_hz = 4000.0
+resonance = 0.4
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_far"]
+room_size = 0.35
+damping = 0.6
+spread = 1.0
+hipass = 0.3
+dry = 1.0
+wet = 0.22
+predelay_msec = 20.0
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_ambient"]
+room_size = 0.6
+damping = 0.45
+spread = 1.0
+hipass = 0.15
+dry = 1.0
+wet = 0.45
+predelay_msec = 35.0
+
 [resource]
 bus/1/name = &"BGM"
 bus/1/solo = false
@@ -13,3 +41,29 @@ bus/2/mute = false
 bus/2/bypass_fx = false
 bus/2/volume_db = 0.0
 bus/2/send = &"Master"
+bus/2/effect/0/effect = SubResource("AudioEffectLimiter_sfx")
+bus/2/effect/0/enabled = true
+bus/3/name = &"SFX_Far"
+bus/3/solo = false
+bus/3/mute = false
+bus/3/bypass_fx = false
+bus/3/volume_db = -4.0
+bus/3/send = &"Master"
+bus/3/effect/0/effect = SubResource("AudioEffectLowPassFilter_far")
+bus/3/effect/0/enabled = true
+bus/3/effect/1/effect = SubResource("AudioEffectReverb_far")
+bus/3/effect/1/enabled = true
+bus/4/name = &"SFX_UI"
+bus/4/solo = false
+bus/4/mute = false
+bus/4/bypass_fx = false
+bus/4/volume_db = 0.0
+bus/4/send = &"Master"
+bus/5/name = &"Ambient"
+bus/5/solo = false
+bus/5/mute = false
+bus/5/bypass_fx = false
+bus/5/volume_db = -8.0
+bus/5/send = &"Master"
+bus/5/effect/0/effect = SubResource("AudioEffectReverb_ambient")
+bus/5/effect/0/enabled = true

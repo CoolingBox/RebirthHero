@@ -81,6 +81,7 @@ public partial class BattlePanel : BasePanel
             InitStatic();
             _built = true;
         }
+        AudioManager.PlayBGM("battle_01");   // 目前只有战斗一个场景；换曲只改这里（battle_01/02/03 可试听对比）
         StartBattle();
     }
 
@@ -106,7 +107,13 @@ public partial class BattlePanel : BasePanel
             HeroConfig h = FindHero(heroes, id);
             if (h != null) _roster.Add(h);
         }
-        _lookup = id => ConfigManager.GetOne<SkillConfig>(id);
+        // 0 = 空槽（SkillLoadout.Empty），不是合法武学 id —— 在入口拦掉，
+        // 避免任何调用方漏判时空查表刷 "找不到ID为 0" 的噪音
+        _lookup = id =>
+        {
+            if (id <= 0) return null;
+            return ConfigManager.GetOne<SkillConfig>(id);
+        };
 
         // M2.4 武学池 = 全部「已实装」武学（不按 Tier 限制；TierCap 只约束敌方，见 SkillConfig.Tier 注释）
         _skillPool = new List<SkillConfig>();
@@ -199,7 +206,7 @@ public partial class BattlePanel : BasePanel
         if (_TPushBtn != null) _TPushBtn.Pressed += OnResumePush;
         if (_TNextBtn != null) _TNextBtn.Pressed += OnNext;
         if (_TInnBtn != null) _TInnBtn.Pressed += OnOpenInn;
-        if (_TStatsBtn != null && _stats != null) _TStatsBtn.Pressed += _stats.Toggle;
+        if (_TStatsBtn != null && _stats != null) _TStatsBtn.Pressed += OnToggleStats;
         if (_TStageBtn != null && _stage != null) _TStageBtn.Pressed += OnOpenStage;
         if (_TSkillBtn != null && _skills != null) _TSkillBtn.Pressed += OnOpenSkills;
 
@@ -244,6 +251,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>止步后重开本世（银两与修为/等级一并归零 —— 都是"此生"资产，GDD §4.2）。</summary>
     private void OnNext()
     {
+        AudioManager.PlayUISFX("ui_confirm");
         _run.Reset();
         _cult.Reset();
         _silver.Reset();
@@ -266,6 +274,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>打开客栈：用 UIManager 弹出独立窗口（**同时暂停战斗**：停 _timer / _advanceTimer）。</summary>
     private void OnOpenInn()
     {
+        AudioManager.PlayUISFX("ui_open");
         _timer.Stop();
         _advanceTimer.Stop();
         if (_TInnBtn != null) _TInnBtn.Disabled = true;
@@ -280,6 +289,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>关闭客栈的回调（由 InnPanel 关闭按钮触发）：恢复按钮并续上战斗状态。</summary>
     private void OnCloseInn()
     {
+        AudioManager.PlayUISFX("ui_close");
         if (_TInnBtn != null) _TInnBtn.Disabled = false;
         if (_engine != null && !_engine.IsOver) _timer.Start();
         else if (_resultShown) _advanceTimer.Start();
@@ -289,6 +299,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>打开武学装配面板：暂停战斗（与客栈 / 选关同一套恢复逻辑）。</summary>
     private void OnOpenSkills()
     {
+        AudioManager.PlayUISFX("ui_open");
         _timer.Stop();
         _advanceTimer.Stop();
         _skills.Bind(_loadout, ActiveRoster(), _lookup, _skillPool, OnCloseSkills);
@@ -297,6 +308,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>关武学面板：恢复战斗节奏。</summary>
     private void OnCloseSkills()
     {
+        AudioManager.PlayUISFX("ui_close");
         if (_engine != null && !_engine.IsOver) _timer.Start();
         else if (_resultShown) _advanceTimer.Start();
     }
@@ -305,6 +317,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>打开选关面板：暂停战斗（停 _timer / _advanceTimer），由面板点层后锁层开战。</summary>
     private void OnOpenStage()
     {
+        AudioManager.PlayUISFX("ui_open");
         _timer.Stop();
         _advanceTimer.Stop();
         _stage.Bind(_run, _materials, OnGoLayer, OnCloseStage);
@@ -322,8 +335,16 @@ public partial class BattlePanel : BasePanel
     /// <summary>关选关面板：恢复战斗节奏（与客栈同一套恢复逻辑）。</summary>
     private void OnCloseStage()
     {
+        AudioManager.PlayUISFX("ui_close");
         if (_engine != null && !_engine.IsOver) _timer.Start();
         else if (_resultShown) _advanceTimer.Start();
+    }
+
+    /// <summary>战报只是轻量面板：用轻点击音，不用 open/close（避免每次查看都像开新界面）。</summary>
+    private void OnToggleStats()
+    {
+        AudioManager.PlayUISFX("ui_click");
+        _stats.Toggle();
     }
 
     private void ClearBattle()
@@ -370,7 +391,12 @@ public partial class BattlePanel : BasePanel
     // ============ 事件订阅 ============
     private void HookEvents()
     {
-        _engine.Bus.OnDamage += (a, t, amt, skill) => { if (amt > 0) SpawnFloat(t, "-" + amt.ToString("0"), new Color(1f, 0.4f, 0.3f)); };
+        _engine.Bus.OnDamage += (a, t, amt, skill) =>
+        {
+            if (amt <= 0) return;
+            SpawnFloat(t, "-" + amt.ToString("0"), new Color(1f, 0.4f, 0.3f));
+            PlayDamageSound(t, skill);
+        };
         _engine.Bus.OnHeal += (a, t, amt, skill) => { if (amt > 0) SpawnFloat(t, "+" + amt.ToString("0"), new Color(0.4f, 1f, 0.5f)); };
         _engine.Bus.OnShield += (a, t, amt) => { if (amt > 0) SpawnFloat(t, "🛡 " + amt.ToString("0"), new Color(0.4f, 0.9f, 1f)); };
         _engine.Bus.OnSummon += (owner, unit) => OnSummoned(owner, unit);
@@ -378,9 +404,48 @@ public partial class BattlePanel : BasePanel
         _engine.Bus.OnEnd += OnEnded;
     }
 
+    // ============ 音效（M2.6 表现层：方位 / 距离 / 优先级） ============
+    // 声音定位一律用"世界坐标"：卡牌层给出局部锚点，组件自己换算成世界坐标。
+    // 不用 GetGlobalRect —— 那只是 Rect 布局值，不等于 canvas 坐标。
+
+    /// <summary>
+    /// 命中音：普攻轻、武学重。
+    /// 只做"轻重两档"，不按伤害数值分档 —— 引擎没有暴击概念，
+    /// 凭数值猜档位会让同一件武器忽轻忽重，反而破坏空间一致性。
+    /// </summary>
+    private void PlayDamageSound(BattleUnit tgt, string skillName)
+    {
+        if (!TryWorldAnchor(tgt, out Vector2 pos)) return;
+
+        bool isSkill = !string.IsNullOrEmpty(skillName);
+        string sfx = isSkill ? "hit_heavy" : "hit_light";
+
+        AudioManager.SfxPriority priority = AudioManager.SfxPriority.Hit;
+        if (isSkill) priority = AudioManager.SfxPriority.Crit;
+
+        AudioManager.PlaySFXAt(sfx, pos, priority);
+    }
+
+    private void PlayDeathSound(BattleUnit u)
+    {
+        if (!TryWorldAnchor(u, out Vector2 pos)) return;
+        AudioManager.PlaySFXAt("death", pos, AudioManager.SfxPriority.Death);
+    }
+
+    /// <summary>取单位的世界坐标（音频定位用）：先问侠客卡，再问召唤堆叠卡。</summary>
+    private bool TryWorldAnchor(BattleUnit u, out Vector2 world)
+    {
+        if (_cards.TryGetWorldAnchor(u, out world)) return true;
+        if (_stacks.TryGetWorldAnchor(u, out world)) return true;
+        world = Vector2.Zero;
+        return false;
+    }
+
     /// <summary>敌方单位被击杀 → 立刻发放修为（每人一份）与银两，并飘字反馈。</summary>
     private void OnUnitDied(BattleUnit u)
     {
+        PlayDeathSound(u);   // 必须在移除锚点之前取位置
+
         // 召唤物死亡不留"尸体"：引擎已把它移出队伍，这里同步堆叠卡（减 1，减到 0 就撤卡）
         if (u.IsSummon) { _stacks.Sync(_engine, _areaX); return; }
 
@@ -403,6 +468,10 @@ public partial class BattlePanel : BasePanel
     private void OnSummoned(BattleUnit owner, BattleUnit unit)
     {
         _stacks.Sync(_engine, _areaX);   // 召唤物走堆叠卡：立刻同步一次，让飘字马上有锚点（否则要等下一个 tick）
+
+        // 同步之后再取锚点：否则召唤物还没有堆叠卡，拿不到位置
+        if (TryWorldAnchor(unit, out Vector2 pos))
+            AudioManager.PlaySFXAt("spawn", pos, AudioManager.SfxPriority.Summon);
     }
 
     private void OnEnded(int r)
@@ -452,6 +521,10 @@ public partial class BattlePanel : BasePanel
                 int tier = MaterialCatalog.TierOf(layer);
                 _materials.Add(tier, MaterialConfig.MatClearBonus);
                 matTag = " · " + MaterialCatalog.NameOf(tier) + "+" + MaterialConfig.MatClearBonus;
+
+                // 全屏事件音：首领波用更重的音，普通清层用轻的（都是居中、不参与方位）
+                if (finisher) AudioManager.PlayEventSFX("boss_down");
+                else AudioManager.PlayEventSFX("clear_layer");
             }
 
             if (_TResult != null)
