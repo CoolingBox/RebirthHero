@@ -1,0 +1,722 @@
+[
+  {
+    "Id": 1,
+    "Key": "AtkScale",
+    "Value": 1,
+    "Group": "\u653b\u9632\u9884\u7b97",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u653b\u9884\u7b97\u3002\u539f 2.2\uff08\u6211 M0 \u81ea\u62df\uff0c\u4e3a\u538b\u6b7b\u5c40\u5355\u65b9\u9762\u52a0\u653b\uff09\uff1b2026-10-16 \u7528\u6237\u8981\u6c42\u5f52 1"
+  },
+  {
+    "Id": 2,
+    "Key": "HpScale",
+    "Value": 1,
+    "Group": "\u653b\u9632\u9884\u7b97",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u8840\u9884\u7b97\u3002\u539f 1.7\uff08\u6211\u81ea\u62df\uff0c\u7528\u4e8e\u62b5\u6d88\u4e0a\u9762\u90a3\u4e2a 2.2\uff09\uff1b2026-10-16 \u7528\u6237\u8981\u6c42\u5f52 1"
+  },
+  {
+    "Id": 3,
+    "Key": "DefScale",
+    "Value": 1,
+    "Group": "\u653b\u9632\u9884\u7b97",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "DEF\u2192\u4f24\u5bb3\u523b\u5ea6\u6362\u7b97\u3002**\u5f52 1**\uff082026-10-16 \u7528\u6237\u53e3\u5f84'\u4e0d\u8981\u641e\u4e2a\u8c01\u90fd\u4e0d\u77e5\u9053\u7684\u7cfb\u6570'\uff09\u2014\u2014 \u539f 0.25 \u5df2\u6298\u8fdb HeroConfig.BaseDEF / EnemyConfig.BaseDef\uff0c\u8868\u91cc\u7684 DEF \u503c = \u6218\u6597\u91cc\u53c2\u4e0e\u51cf\u6cd5\u7684\u503c\uff0c\u73a9\u5bb6\u53ef\u7528\u5361\u9762\u6570\u5b57\u76f4\u63a5\u7b97\u4f24\u5bb3"
+  },
+  {
+    "Id": 4,
+    "Key": "GaugeMax",
+    "Value": 100,
+    "Group": "\u65f6\u95f4",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u884c\u52a8\u6761\u6ee1\u503c\uff08\u84c4\u6ee1\u5373\u884c\u52a8\uff09"
+  },
+  {
+    "Id": 5,
+    "Key": "Limit",
+    "Value": 120,
+    "Group": "\u65f6\u95f4",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u5355\u573a\u8d85\u65f6\u4e0a\u9650\uff08\u79d2\uff09\uff0c\u8d85\u65f6\u5224\u8d1f"
+  },
+  {
+    "Id": 6,
+    "Key": "DtCap",
+    "Value": 0.5,
+    "Group": "\u65f6\u95f4",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u786e\u5b9a\u6027 Run() \u7684\u5355\u6b65\u6700\u5927\u63a8\u8fdb\uff08\u79d2\uff09\uff0c\u4fdd\u8bc1\u53ef\u590d\u73b0"
+  },
+  {
+    "Id": 7,
+    "Key": "ChainMax",
+    "Value": 8,
+    "Group": "\u65f6\u95f4",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u53d7\u51fb\u89e6\u53d1\u94fe\u6700\u5927\u6df1\u5ea6\uff08\u9632\u9012\u5f52\u5931\u63a7\uff09"
+  },
+  {
+    "Id": 8,
+    "Key": "FatigueStart",
+    "Value": 30,
+    "Group": "\u75b2\u52b3",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u75b2\u52b3\u8d77\u70b9\uff08\u79d2\uff09\u2014\u2014\u6b64\u540e\u627f\u4f24\u968f\u65f6\u95f4\u9012\u589e\uff0c\u7528\u4e8e\u7ec8\u7ed3\u50f5\u5c40"
+  },
+  {
+    "Id": 9,
+    "Key": "FatigueRate",
+    "Value": 0.03,
+    "Group": "\u75b2\u52b3",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u75b2\u52b3\u901f\u7387\uff1a\u6bcf\u79d2\u627f\u4f24 +3%"
+  },
+  {
+    "Id": 10,
+    "Key": "ReplayPMax",
+    "Value": 0.9,
+    "Group": "\u91cd\u653e",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u91cd\u653e\u6982\u7387\u4e0a\u9650\uff08\u6846\u67b6 \u00a79-1\uff1b\u9632\u671f\u671b\u53d1\u6563\uff09"
+  },
+  {
+    "Id": 11,
+    "Key": "ReplayCMax",
+    "Value": 25,
+    "Group": "\u91cd\u653e",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u91cd\u653e\u6b21\u6570\u4e0a\u9650\u5c01\u9876"
+  },
+  {
+    "Id": 12,
+    "Key": "Slot1W",
+    "Value": 30,
+    "Group": "\u5e03\u9635",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "1 \u53f7\u4f4d\u57fa\u7840\u53d7\u51fb\u6743\u91cd\uff0810 \u57fa\u51c6 \u00d7 3.0\uff09"
+  },
+  {
+    "Id": 13,
+    "Key": "OtherW",
+    "Value": 10,
+    "Group": "\u5e03\u9635",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "2~4 \u53f7\u4f4d\u57fa\u7840\u53d7\u51fb\u6743\u91cd\uff0810 \u57fa\u51c6\uff09"
+  },
+  {
+    "Id": 14,
+    "Key": "WFloor",
+    "Value": 1,
+    "Group": "\u5e03\u9635",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6743\u91cd\u4e0b\u9650\uff08\u4e0d\u80fd\u5f52\u96f6\u9690\u8eab\uff09"
+  },
+  {
+    "Id": 15,
+    "Key": "Slot1HpBonus",
+    "Value": 1.3,
+    "Group": "\u5e03\u9635",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "1 \u53f7\u4f4d\u8840\u91cf\u52a0\u6210 \u2014\u2014 \u53ea\u7ed9\u73a9\u5bb6\uff0c\u654c\u65b9\u4e0d\u4eab\u53d7\uff08\u89c1 EnemyHasSlot1Bonus\uff09"
+  },
+  {
+    "Id": 16,
+    "Key": "EnemyHasSlot1Bonus",
+    "Value": 0.0,
+    "Group": "\u5e03\u9635",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u654c\u65b9\u662f\u5426\u4eab\u53d7 1 \u53f7\u4f4d\u673a\u5236\uff08\u00d73 \u6743\u91cd + \u00d71.3 \u8840\uff09\u3002\u53e3\u5f84'\u654c\u65b9\u4e0d\u4eab\u53d7'\uff0c\u503c\u4e3a false"
+  },
+  {
+    "Id": 17,
+    "Key": "ExtMinRatio",
+    "Value": 0.15,
+    "Group": "\u4f24\u5bb3\u516c\u5f0f",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u5916\u529f\u786c\u51cf\u4e0b\u9650\uff1amax(\u57fa\u7840\u00d715%, \u57fa\u7840\u2212DEF)\uff0c\u9632\u514d\u75ab"
+  },
+  {
+    "Id": 18,
+    "Key": "IntCurveK",
+    "Value": 100,
+    "Group": "\u4f24\u5bb3\u516c\u5f0f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u5185\u529f\u6bd4\u4f8b\u5316\u89e3\u7cfb\u6570 Kd\uff08**\u7528\u6237\u76f4\u63a5\u6307\u5b9a**\uff0c2026-10-15\uff1b\u51cf\u4f24\u7387 = DEF/(DEF+Kd)\uff09"
+  },
+  {
+    "Id": 19,
+    "Key": "IntMinRatio",
+    "Value": 0.25,
+    "Group": "\u4f24\u5bb3\u516c\u5f0f",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u5185\u529f\u5316\u89e3\u4e0b\u9650\uff08\u6700\u591a\u51cf 75%\uff09"
+  },
+  {
+    "Id": 20,
+    "Key": "PoisonTick",
+    "Value": 2,
+    "Group": "\u5f02\u5e38\u72b6\u6001",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u53e0\u6bd2\u6bcf 2s \u4e00\u8df3"
+  },
+  {
+    "Id": 21,
+    "Key": "PoisonPerStack",
+    "Value": 0.2,
+    "Group": "\u5f02\u5e38\u72b6\u6001",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6bcf\u6808\u5403\u6765\u6e90 EffAtk \u7684 20%"
+  },
+  {
+    "Id": 22,
+    "Key": "PoisonMaxStack",
+    "Value": 5,
+    "Group": "\u5f02\u5e38\u72b6\u6001",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u53e0\u6bd2\u6700\u5927\u5c42\u6570"
+  },
+  {
+    "Id": 23,
+    "Key": "BurnTick",
+    "Value": 1,
+    "Group": "\u5f02\u5e38\u72b6\u6001",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u707c\u70e7\u6bcf 1s \u4e00\u8df3"
+  },
+  {
+    "Id": 24,
+    "Key": "BurnRate",
+    "Value": 0.15,
+    "Group": "\u5f02\u5e38\u72b6\u6001",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u707c\u70e7\u5403\u6765\u6e90 EffAtk \u7684 15%/\u8df3"
+  },
+  {
+    "Id": 25,
+    "Key": "BurnDur",
+    "Value": 10,
+    "Group": "\u5f02\u5e38\u72b6\u6001",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u707c\u70e7\u6301\u7eed\uff08\u79d2\uff09"
+  },
+  {
+    "Id": 26,
+    "Key": "HeroLevelMax",
+    "Value": 40,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u4fa0\u5ba2\u7b49\u7ea7\u4e0a\u9650\uff08\u7528\u6237\u5b9a\uff09"
+  },
+  {
+    "Id": 27,
+    "Key": "StdHp",
+    "Value": 1000,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aHP \u57fa\u51c6\uff08\u7528\u6237\u5b9a\uff09"
+  },
+  {
+    "Id": 28,
+    "Key": "StdHpGrowth",
+    "Value": 100,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aHP \u6bcf\u7ea7\u589e\u91cf\uff08\u7528\u6237\u5b9a\uff09"
+  },
+  {
+    "Id": 29,
+    "Key": "StdAtk",
+    "Value": 60,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aATK \u57fa\u51c6\uff08\u7528\u6237\u5b9a\uff0cv4.4 \u7531 50 \u4e0a\u8c03\uff09"
+  },
+  {
+    "Id": 30,
+    "Key": "StdAtkGrowth",
+    "Value": 5,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aATK \u6bcf\u7ea7\u589e\u91cf\uff08\u7528\u6237\u5b9a\uff09"
+  },
+  {
+    "Id": 31,
+    "Key": "StdDef",
+    "Value": 7.5,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aDEF \u57fa\u51c6 = \u539f\u53e3\u5f84 30 \u00d7 0.25\uff08**\u6298\u8868\u540e**\uff1b30 \u662f\u7528\u6237\u5b9a\u7684\uff0c0.25 \u662f\u6211\u6309\u63a2\u9488\u6821\u51c6\u7ed3\u679c\u6362\u7b97\u7684\uff09"
+  },
+  {
+    "Id": 32,
+    "Key": "StdDefGrowth",
+    "Value": 0.5,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aDEF \u6bcf\u7ea7\u589e\u91cf = \u539f\u53e3\u5f84 2 \u00d7 0.25\uff08\u6298\u8868\u540e\uff09"
+  },
+  {
+    "Id": 33,
+    "Key": "StdSpd",
+    "Value": 50,
+    "Group": "\u7b49\u7ea7\u6210\u957f",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6807\u51c6\u8f74\uff1aSPD 50\uff08\u901f\u5ea6\u5360\u6a21\u7684\u57fa\u51c6\uff0c\u4e0d\u968f\u7b49\u7ea7\u6210\u957f\uff09"
+  },
+  {
+    "Id": 34,
+    "Key": "SummonCap",
+    "Value": 8,
+    "Group": "\u53ec\u5524",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u5168\u961f\u53ec\u5524\u4f4d\u4e0a\u9650\uff08\u7528\u6237\u53e3\u5f84'\u63d0\u9ad8'\uff0c\u503c\u7531\u6211\u53d6 4\u21928\uff09\u3002\u5916\u5c42\u95f8\uff1b\u5185\u5c42\u8fd8\u6709\u7c7b\u578b\u6863\u4f4d\u4e0e\u6b66\u5b66\u8986\u76d6"
+  },
+  {
+    "Id": 35,
+    "Key": "SummonTtl",
+    "Value": 20,
+    "Group": "\u53ec\u5524",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u53ec\u5524\u7269\u9ed8\u8ba4\u5b58\u5728\u65f6\u95f4\uff08\u79d2\uff09\uff1bSummonConfig.Ttl \u53ef\u8986\u76d6"
+  },
+  {
+    "Id": 36,
+    "Key": "SummonAoeDr",
+    "Value": 0.5,
+    "Group": "\u53ec\u5524",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u53ec\u5524\u7269\u53d7\u7fa4\u4f53\u4f24\u5bb3\u51cf\u4f24\uff08\u7528\u6237\u62a5'\u53ec\u5524\u7269\u88ab\u4e00\u4e2a AoE \u522e\u6b7b'\u540e\u6211\u53d6 0.5\uff09"
+  },
+  {
+    "Id": 37,
+    "Key": "BossEvery",
+    "Value": 10,
+    "Group": "\u63a8\u56fe",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u6bcf 10 \u5c42\u4e00\u4e2a\u5c42\u4e3b\uff08\u7528\u6237\u53e3\u5f84'\u6bcf10\u5c42'\uff09"
+  },
+  {
+    "Id": 38,
+    "Key": "WaveSize",
+    "Value": 4,
+    "Group": "\u63a8\u56fe",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u6bcf\u6ce2\u654c\u65b9\u5355\u4f4d\u6570\uff08\u7528\u6237\u53e3\u5f84'\u6bcf\u6ce24\u4e2a'\uff1b\u4e0e\u73a9\u5bb6 4 \u4eba\u5bf9\u79f0\uff09"
+  },
+  {
+    "Id": 39,
+    "Key": "RetryEvery",
+    "Value": 10,
+    "Group": "\u63a8\u56fe",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6302\u673a\u6a21\u5f0f\u4e0b\u6bcf\u5237\u591a\u5c11\u573a\u81ea\u52a8\u91cd\u8bd5\u4e0a\u4e00\u5c42\u4e00\u6b21\uff080=\u53ea\u624b\u52a8\uff09"
+  },
+  {
+    "Id": 40,
+    "Key": "FirstMobWaves",
+    "Value": 5,
+    "Group": "\u63a8\u56fe",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u7b2c 1 \u5c42\u7684\u666e\u901a\u6ce2\u6570\uff08\u7528\u6237\u53e3\u5f84'\u8d77\u59cb\u8981\u5237 5 \u6ce2\u666e\u901a\u654c\u4eba\u624d\u6253\u5c42\u4e3b'\uff09"
+  },
+  {
+    "Id": 41,
+    "Key": "WaveStepEvery",
+    "Value": 10,
+    "Group": "\u63a8\u56fe",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6bcf\u591a\u5c11\u5c42\u666e\u901a\u6ce2\u6570 +1\uff08\u7528\u6237\u53e3\u5f84'\u6bcf 10 \u5c42\u52a0 1 \u6ce2'\uff09"
+  },
+  {
+    "Id": 42,
+    "Key": "WaveHealRatio",
+    "Value": 0.1,
+    "Group": "\u63a8\u56fe",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6ce2\u95f4\u6062\u590d\u6bd4\u4f8b\uff08\u7528\u6237\u53e3\u5f84'\u6bcf\u6ce2\u654c\u4eba\u95f4\u53ea\u6062\u590d 10% \u7684\u8840\u91cf'\uff09"
+  },
+  {
+    "Id": 43,
+    "Key": "KillGainC",
+    "Value": 0.5,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u6bcf\u6b21\u51fb\u6740\u7684\u4fee\u4e3a\uff08=\u7ecf\u9a8c\uff09\u3002\u7528\u6237\u53e3\u5f84'\u51fb\u6740\u5373\u65f6\u6389\u843d'\uff1b\u503c\u6211\u53d6 0.5\uff0c\u4f7f\u4e00\u5c42 4 \u6740\u5408\u8ba1 = \u539f 2.0"
+  },
+  {
+    "Id": 44,
+    "Key": "GainA",
+    "Value": 1.16,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u4fee\u4e3a\u6389\u843d\u5e95\u6570\uff08\u6846\u67b6 \u00a74\uff1a\u4e0e\u654c\u65b9 HP \u540c\u5e95\u6570 1.16\uff09\u30022026-10-16 \u7528\u6237\u53e3\u5f84\"\u5c42\u7ea7\u9ad8\u7684\u4ea7\u51fa\u4e5f\u63d0\u9ad8\"\u2192 \u6838\u67e5\u540e\u786e\u8ba4**\u672c\u5c31\u5728\u968f\u5c42\u6da8**\uff0c**\u4e0d\u6539**"
+  },
+  {
+    "Id": 45,
+    "Key": "KillSilverC",
+    "Value": 2.5,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u6bcf\u6b21\u51fb\u6740\u7684\u94f6\u4e24\u3002\u6211\u53d6 2.5\uff0c\u4f7f\u4e00\u5c42 4 \u6740\u5408\u8ba1 = 10"
+  },
+  {
+    "Id": 46,
+    "Key": "SilverA",
+    "Value": 1.16,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u94f6\u4e24\u6389\u843d\u5e95\u6570\uff08\u6846\u67b6 \u00a74\uff1a\u540c 1.16\uff09\u3002\u540c GainA\uff0c**\u4e0d\u6539**"
+  },
+  {
+    "Id": 47,
+    "Key": "LevelBase",
+    "Value": 30,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u5347 L1\u2192L2 \u6240\u9700\u4fee\u4e3a\uff08[PLACEHOLDER]\uff09"
+  },
+  {
+    "Id": 48,
+    "Key": "LevelD",
+    "Value": 1.18,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u5347\u7ea7\u6210\u672c\u5e95\u6570\uff08\u6846\u67b6 \u00a74\uff1a\u5fc5\u987b\u7565\u5927\u4e8e GainA\uff0c\u6d88\u8d39\u6da8\u5f97\u6bd4\u4ea7\u51fa\u5feb\uff09"
+  },
+  {
+    "Id": 49,
+    "Key": "MaxLevel",
+    "Value": 40,
+    "Group": "\u7ecf\u6d4e",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u7b49\u7ea7\u4e0a\u9650\uff08\u4e0e HeroLevelMax \u540c\u4e49\uff0c\u7528\u6237\u5b9a\uff09"
+  },
+  {
+    "Id": 50,
+    "Key": "StarStep",
+    "Value": 0.15,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u661f\u7ea7\u4e58\u6570\uff1a\u26051=\u00d71.0\uff0c\u6bcf\u661f +15%\uff08\u300a\u4fa0\u5ba2\u4e0e\u8d44\u8d28\u300b\u00a7\u4e8c\uff09"
+  },
+  {
+    "Id": 51,
+    "Key": "StarW1",
+    "Value": 50,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u26051 \u6982\u7387(%): 50/30/12/6/2"
+  },
+  {
+    "Id": 52,
+    "Key": "StarW2",
+    "Value": 30,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u26052 \u6982\u7387(%)"
+  },
+  {
+    "Id": 53,
+    "Key": "StarW3",
+    "Value": 12,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u26053 \u6982\u7387(%)"
+  },
+  {
+    "Id": 54,
+    "Key": "StarW4",
+    "Value": 6,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u26054 \u6982\u7387(%)"
+  },
+  {
+    "Id": 55,
+    "Key": "StarW5",
+    "Value": 2,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u26055 \u6982\u7387(%)\uff08\u5236\u9020'\u5ba2\u6808\u5237\u5c4f\u65f6\u523b'\uff09"
+  },
+  {
+    "Id": 56,
+    "Key": "StatRollMin",
+    "Value": -20,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u6210\u957f\u7387\u4e0b\u9650(%)\uff1a\u4e09\u7ef4\u5404\u81ea\u72ec\u7acb\u3001\u5747\u5300\u63b7 \u221220~+30"
+  },
+  {
+    "Id": 57,
+    "Key": "StatRollMax",
+    "Value": 30,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u6210\u957f\u7387\u4e0a\u9650(%)"
+  },
+  {
+    "Id": 58,
+    "Key": "AffixW0",
+    "Value": 40,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u8bcd\u6761 0 \u4e2a\u6982\u7387(%): 40/45/15"
+  },
+  {
+    "Id": 59,
+    "Key": "AffixW1",
+    "Value": 45,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u8bcd\u6761 1 \u4e2a\u6982\u7387(%)"
+  },
+  {
+    "Id": 60,
+    "Key": "AffixW2",
+    "Value": 15,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u8bcd\u6761 2 \u4e2a\u6982\u7387(%)"
+  },
+  {
+    "Id": 61,
+    "Key": "InnSlots",
+    "Value": 4,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u5ba2\u6808\u680f\u4f4d\u6570\uff08\u9ed8\u8ba4 4\uff1b\u5929\u8d4b\u6811'\u5ba2\u6808\u6269\u5efa'\u53ef +1\uff09"
+  },
+  {
+    "Id": 62,
+    "Key": "InnFreeRefresh",
+    "Value": 1,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u6bcf\u4e16\u514d\u8d39\u624b\u52a8\u5237\u65b0\u6b21\u6570"
+  },
+  {
+    "Id": 63,
+    "Key": "InnRefreshBase",
+    "Value": 20,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u624b\u52a8\u5237\u65b0\u57fa\u7840\u4ef7\uff08**\u94f6\u4e24**\uff09[\u6211\u81ea\u62df \u00b7 PLACEHOLDER \u5f85\u5b9a\u4ef7]"
+  },
+  {
+    "Id": 64,
+    "Key": "InnRefreshGrowth",
+    "Value": 2,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u4ed8\u8d39\u5237\u65b0\u4ef7\u683c\u9012\u589e\u500d\u7387 [\u6211\u81ea\u62df \u00b7 PLACEHOLDER]"
+  },
+  {
+    "Id": 65,
+    "Key": "RecruitBase",
+    "Value": 30,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u62db\u52df\u57fa\u7840\u4ef7\uff08**\u94f6\u4e24**\uff1b\u6587\u6863\u5199'\u4fee\u4e3a'\uff0c\u56e0\u4fee\u4e3a=\u7ecf\u9a8c\u5df2\u6539\u53e3\u5f84\uff09[\u6211\u81ea\u62df \u00b7 PLACEHOLDER]"
+  },
+  {
+    "Id": 66,
+    "Key": "StarCostStep",
+    "Value": 1,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u661f\u7ea7\u8d39\u9636\uff1a\u8d39\u7528\u7cfb\u6570 = 1+(\u661f\u22121)\u00d7\u672c\u503c\uff08\u26051=1\u00d7\u3001\u26055=5\u00d7\uff09"
+  },
+  {
+    "Id": 67,
+    "Key": "RosterSize",
+    "Value": 4,
+    "Group": "\u5ba2\u6808\u8d44\u8d28",
+    "Runtime": true,
+    "Source": "\u6587\u6863\u89c4\u5b9a",
+    "Note": "\u7f16\u961f\u4eba\u6570\u4e0a\u9650\uff08\u4e0e\u6218\u6597\u7f16\u5236 4 \u4eba\u4e00\u81f4\uff09"
+  },
+  {
+    "Id": 68,
+    "Key": "SPD_COEF",
+    "Value": 0.6,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u901f\u5ea6\u5360\u6a21\u7cfb\u6570\uff1aocc = clamp(1\u22120.6\u00d7(SPD\u221250)/50, \u2026)\u3002\u7528\u6237\u53ea\u8bf4'\u8981\u8003\u8651\u901f\u5ea6\u5f71\u54cd'\uff0c\u7cfb\u6570\u6211\u53d6"
+  },
+  {
+    "Id": 69,
+    "Key": "OCC_MIN",
+    "Value": 0.75,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u901f\u5ea6\u5360\u6a21\u4e0b\u9650"
+  },
+  {
+    "Id": 70,
+    "Key": "OCC_MAX",
+    "Value": 1.25,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u901f\u5ea6\u5360\u6a21\u4e0a\u9650"
+  },
+  {
+    "Id": 71,
+    "Key": "B_RANGE_LO",
+    "Value": 0.6,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u57fa\u7840\u968f\u673a\u4e0b\u9650\uff08\u7528\u6237\u53e3\u5f84 \u00b140%\uff09"
+  },
+  {
+    "Id": 72,
+    "Key": "B_RANGE_HI",
+    "Value": 1.4,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u57fa\u7840\u968f\u673a\u4e0a\u9650\uff08\u7528\u6237\u53e3\u5f84 \u00b140%\uff09"
+  },
+  {
+    "Id": 73,
+    "Key": "G_RANGE_LO",
+    "Value": 0.8,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6210\u957f\u968f\u673a\u4e0b\u9650\uff08\u7528\u6237\u53e3\u5f84 \u00b120%\uff09"
+  },
+  {
+    "Id": 74,
+    "Key": "G_RANGE_HI",
+    "Value": 1.2,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6210\u957f\u968f\u673a\u4e0a\u9650\uff08\u7528\u6237\u53e3\u5f84 \u00b120%\uff09"
+  },
+  {
+    "Id": 75,
+    "Key": "N_RUNS",
+    "Value": 10,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u968f\u673a\u8dd1\u591a\u5c11\u6b21\u53d6\u6700\u5747\u8861\uff08\u7528\u6237\u53e3\u5f84'\u968f\u673a\u8dd110\u6b21'\uff09"
+  },
+  {
+    "Id": 76,
+    "Key": "ENEMY_MOB_BUFF",
+    "Value": 1.1,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u7528\u6237\u53e3\u5f84",
+    "Note": "\u666e\u901a\u654c\u4eba\u57fa\u7840\u5c5e\u6027\u4e0a\u8c03\uff08\u7528\u6237\u53e3\u5f84'\u7565\u5fae\u63d0\u9ad8'\uff0c\u503c\u6211\u53d6 \u00d71.10\uff09\uff1b\u5df2\u843d EnemyConfig \u8868"
+  },
+  {
+    "Id": 77,
+    "Key": "ELITE_HP_MUL",
+    "Value": 2,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u7cbe\u82f1 = \u540c\u6863\u6742\u5175 \u00d72.0 HP\uff1b\u5df2\u843d EnemyConfig \u8868"
+  },
+  {
+    "Id": 78,
+    "Key": "ELITE_ATK_MUL",
+    "Value": 1.3,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u7cbe\u82f1 = \u540c\u6863\u6742\u5175 \u00d71.3 ATK\uff1b\u5df2\u843d EnemyConfig \u8868"
+  },
+  {
+    "Id": 79,
+    "Key": "ELITE_DEF_MUL",
+    "Value": 1.3,
+    "Group": "\u6784\u5efa\u671f",
+    "Runtime": false,
+    "Source": "\u6211\u81ea\u62df",
+    "Note": "\u7cbe\u82f1 = \u540c\u6863\u6742\u5175 \u00d71.3 DEF\uff1b\u5df2\u843d EnemyConfig \u8868"
+  },
+  {
+    "Id": 80,
+    "Key": "SummonHpPenaltyPerSkill",
+    "Value": 0.15,
+    "Group": "\u53ec\u5524",
+    "Runtime": true,
+    "Source": "\u7528\u6237\u6307\u5b9a",
+    "Note": "\u6bcf\u643a\u5e26 1 \u4e2a\u53ec\u5524\u7c7b\u6b66\u5b66\uff0c\u6240\u5c5e\u4fa0\u5ba2\u6700\u5927\u751f\u547d \u2212\u672c\u503c\uff08\u53e0\u52a0\uff1aN \u4e2a = N\u00d7\u672c\u503c\uff09\u3002\u9501\u6b7b\u90e8\u5206\u8bb0\u5165 BattleUnit.LockedHp\uff0c\u8840\u6761 UI \u4ee5\u94f6\u7070\u8272\u663e\u793a"
+  }
+]

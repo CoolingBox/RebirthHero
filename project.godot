@@ -1,0 +1,55 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="RebirthHero"
+run/main_scene="uid://igyxbo0l4bn0"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+
+[audio]
+
+buses/default_bus_layout="uid://b8rd3oxrdq1t1"
+
+[autoload]
+
+GameRoot="*uid://cjdryeekqfwsr"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1920
+window/size/window_height_override=1080
+window/hdr/request_hdr_output=true
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[dotnet]
+
+project/assembly_name="RebirthHero"
+
+[editor]
+
+naming/scene_name_casing=1
+naming/script_name_casing=1
+
+[editor_plugins]
+
+enabled=PackedStringArray()
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"
+viewport/hdr_2d=true
