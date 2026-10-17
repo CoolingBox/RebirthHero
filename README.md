@@ -43,6 +43,9 @@ Resources/
 ├── Config/                   # 运行期 JSON 配置（由 xlsx 生成）
 ├── Scene/  UI/               # 场景与 UI 外壳（.tscn）
 addons/TinyTools/             # 配置生成 / UI 代码生成（编辑器插件）
+.codebuddy/
+├── tools/                    # 开发脚本（GenConfig.py / GenUICode.py）
+└── docs/                     # 设计文档（GDD / 数值框架 / 武学清单 / 装备 / 境界 ...）
 ```
 
 ---
