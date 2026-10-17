@@ -67,6 +67,10 @@ public static class HeroBuilder
         if (ids != null)
             foreach (int id in ids)
             {
+                // 0 = 空槽（SkillLoadout.Empty）。空槽是合法的装配状态，不该去查表 ——
+                // 查了会命中 GetOne 的"找不到ID为 0"报错，每个空槽刷一条。
+                if (id <= 0) continue;
+
                 SkillConfig cfg = skillLookup?.Invoke(id);
                 if (cfg == null) continue;
                 if (!includePending && cfg.Status == SkillStatus.Pending) continue;
@@ -105,6 +109,9 @@ public static class HeroBuilder
         int n = 0;
         foreach (int id in ids)
         {
+            // 0 = 空槽，跳过（同上：空槽不查表）
+            if (id <= 0) continue;
+
             SkillConfig cfg = skillLookup?.Invoke(id);
             if (cfg == null) continue;
             if (!includePending && cfg.Status == SkillStatus.Pending) continue;
