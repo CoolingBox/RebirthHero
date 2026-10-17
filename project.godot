@@ -11,16 +11,16 @@ config_version=5
 [application]
 
 config/name="RebirthHero"
-run/main_scene="uid://igyxbo0l4bn0"
+run/main_scene="res://Resources/Scene/Game.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
 [audio]
 
-buses/default_bus_layout="uid://b8rd3oxrdq1t1"
+buses/default_bus_layout="res://default_bus_layout.tres"
 
 [autoload]
 
-GameRoot="*uid://cjdryeekqfwsr"
+GameRoot="*res://Scripts/GameRoot.cs"
 
 [display]
 
