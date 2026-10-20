@@ -1,6 +1,9 @@
 <Project Sdk="Godot.NET.Sdk/4.7.2">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Android 仍是 net9：这是 Godot 4.7.2 工程模板的默认值，未擅自改动。
+         .NET 9 于 2026-11-10 终止支持，将来真要做 Android 导出时需实测能否一并升到 net10
+         （Godot 的 Android 导出模板是否支持 net10 尚未验证）。 -->
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
