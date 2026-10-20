@@ -55,7 +55,10 @@ public partial class SettingPanel : BasePanel
         UIThemeManager.ApplyTo(GameObject);
 
         _onClose = _ctxOnClose;
-        EnsureBackdrop();
+        // 弹窗不放山水图：同一张 1920×1080 的图裁进小窗口会有"截图放大"感。
+        // 让背后的战斗场景透过半透明的 BgPanel 底自然显出来（见主题资源 bgpanel 的 alpha）。
+        // 方法保留：将来若某个弹窗需要独立全屏底，取消注释即可。
+        // EnsureBackdrop();
 
         if (!_wired)
         {
@@ -155,7 +158,7 @@ public partial class SettingPanel : BasePanel
 
             Label desc = new Label();
             desc.Text = UIThemeManager.DescOf(i);
-            desc.AddThemeFontSizeOverride("font_size", 12);
+            desc.AddThemeFontSizeOverride("font_size", 15);
             desc.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);
             col.AddChild(desc);
 
@@ -216,7 +219,7 @@ public partial class SettingPanel : BasePanel
     {
         Label label = new Label();
         label.Text = text;
-        label.AddThemeFontSizeOverride("font_size", 15);
+        label.AddThemeFontSizeOverride("font_size", 18);
         label.AddThemeColorOverride("font_color", UIThemeManager.Accent);
         return label;
     }

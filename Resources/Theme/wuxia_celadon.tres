@@ -218,11 +218,11 @@ shadow_offset = Vector2(0, 2)
 bg_color = Color(0.06666667, 0.101960786, 0.09411765, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bgpanel"]
-bg_color = Color(0.101960786, 0.16078432, 0.14509805, 1)
+bg_color = Color(0.101960786, 0.16078432, 0.14509805, 0.94)
 
 [resource]
 default_font = ExtResource("2_58e5o")
-default_font_size = 16
+default_font_size = 17
 BgFull/base_type = &"Panel"
 BgFull/styles/panel = SubResource("StyleBoxFlat_bgfull")
 BgPanel/base_type = &"Panel"

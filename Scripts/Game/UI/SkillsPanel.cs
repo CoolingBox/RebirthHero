@@ -94,7 +94,10 @@ public partial class SkillsPanel : BasePanel
         _selHero = -1;
         _selSlot = -1;
 
-        EnsureBackdrop();
+        // 弹窗不放山水图：同一张 1920×1080 的图裁进小窗口会有"截图放大"感。
+        // 让背后的战斗场景透过半透明的 BgPanel 底自然显出来（见主题资源 bgpanel 的 alpha）。
+        // 方法保留：将来若某个弹窗需要独立全屏底，取消注释即可。
+        // EnsureBackdrop();
 
         if (!_wired)
         {
@@ -165,7 +168,7 @@ public partial class SkillsPanel : BasePanel
             Label nameL = new Label();
             nameL.CustomMinimumSize = new Vector2(180, 44);
             nameL.Text = h.Name;
-            nameL.AddThemeFontSizeOverride("font_size", 16);
+            nameL.AddThemeFontSizeOverride("font_size", 19);
             nameL.AddThemeColorOverride("font_color", Gold);
             row.AddChild(nameL);
 

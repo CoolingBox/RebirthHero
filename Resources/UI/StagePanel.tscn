@@ -42,7 +42,7 @@ offset_top = 12.0
 offset_right = 560.0
 offset_bottom = 44.0
 horizontal_alignment = 0
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 theme_type_variation = &"HeadingLabel"
 text = "选关 · 前往挂机层"
 
@@ -71,7 +71,7 @@ offset_top = 52.0
 offset_right = 1220.0
 offset_bottom = 78.0
 horizontal_alignment = 0
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 18
 theme_type_variation = &"BodyLabel"
 
 [node name="TContent" type="VBoxContainer" parent="."]
@@ -99,5 +99,5 @@ offset_top = 800.0
 offset_right = 1220.0
 offset_bottom = 826.0
 horizontal_alignment = 0
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 17
 theme_type_variation = &"HintLabel"

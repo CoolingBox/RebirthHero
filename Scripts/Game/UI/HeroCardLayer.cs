@@ -10,7 +10,12 @@ using Godot;
 
 public partial class HeroCardLayer : Control
 {
-    private const float CardW = 460f, CardH = 160f, Gap = 24f, TopY = 140f, SideX = 120f;
+    // 尺寸与间距统一由 BattleLayout 提供（堆叠卡也要用 CardW 贴边，两处写死必然不同步）
+    private const float CardW = BattleLayout.CardW;
+    private const float CardH = BattleLayout.CardH;
+    private const float Gap = BattleLayout.CardGap;
+    private const float TopY = BattleLayout.TopY;
+    private const float SideX = BattleLayout.SideX;
 
     private sealed class Card
     {
@@ -62,35 +67,35 @@ public partial class HeroCardLayer : Control
             case 4: slotTag = "④"; break;
             default: slotTag = ""; break;
         }
-        var name = new Label { Text = slotTag + u.Name, Position = new Vector2(8, 4), Size = new Vector2(CardW - 16, 20), HorizontalAlignment = HorizontalAlignment.Center };
-        name.AddThemeFontSizeOverride("font_size", 16);
+        var name = new Label { Text = slotTag + u.Name, Position = new Vector2(8, 6), Size = new Vector2(CardW - 16, 26), HorizontalAlignment = HorizontalAlignment.Center };
+        name.AddThemeFontSizeOverride("font_size", 18);
         root.AddChild(name);
 
-        var hpbg = new ColorRect { Color = UISignalColors.HpBack, Position = new Vector2(8, 28), Size = new Vector2(CardW - 16, 16) };
+        var hpbg = new ColorRect { Color = UISignalColors.HpBack, Position = new Vector2(8, 38), Size = new Vector2(CardW - 16, BattleLayout.HpBarH) };
         var hpfill = new ColorRect { Color = UISignalColors.HpGood, Position = hpbg.Position, Size = hpbg.Size };
         // 银灰色段：被召唤武学锁死的生命上限（固定在血条最右端；宽度由 Refresh 按 LockedHp 计算）
-        var hplock = new ColorRect { Color = UISignalColors.HpLocked, Position = hpbg.Position, Size = new Vector2(0, 16), Visible = false };
+        var hplock = new ColorRect { Color = UISignalColors.HpLocked, Position = hpbg.Position, Size = new Vector2(0, BattleLayout.HpBarH), Visible = false };
         root.AddChild(hpbg); root.AddChild(hpfill); root.AddChild(hplock);
 
         var hptext = new Label { Position = hpbg.Position, Size = hpbg.Size, HorizontalAlignment = HorizontalAlignment.Center };
-        hptext.AddThemeFontSizeOverride("font_size", 12);
+        hptext.AddThemeFontSizeOverride("font_size", 14);
         root.AddChild(hptext);
 
-        var gbg = new ColorRect { Color = UISignalColors.GaugeBack, Position = new Vector2(8, 48), Size = new Vector2(CardW - 16, 10) };
+        var gbg = new ColorRect { Color = UISignalColors.GaugeBack, Position = new Vector2(8, 64), Size = new Vector2(CardW - 16, BattleLayout.GaugeH) };
         var gfill = new ColorRect { Color = UISignalColors.GaugeFill, Position = gbg.Position, Size = gbg.Size };
         root.AddChild(gbg); root.AddChild(gfill);
 
-        var stats = new Label { Position = new Vector2(8, 62), Size = new Vector2(CardW - 16, 18), Text = "ATK " + u.BaseAtk.ToString("0") + "  SPD " + u.BaseSpd.ToString("0") };
-        stats.AddThemeFontSizeOverride("font_size", 12);
+        var stats = new Label { Position = new Vector2(8, 84), Size = new Vector2(CardW - 16, 22), Text = "ATK " + u.BaseAtk.ToString("0") + "  SPD " + u.BaseSpd.ToString("0") };
+        stats.AddThemeFontSizeOverride("font_size", 14);
         root.AddChild(stats);
 
-        var shtext = new Label { Position = new Vector2(8, 82), Size = new Vector2(CardW - 16, 18), Text = "" };
-        shtext.AddThemeFontSizeOverride("font_size", 12);
+        var shtext = new Label { Position = new Vector2(8, 110), Size = new Vector2(CardW - 16, 22), Text = "" };
+        shtext.AddThemeFontSizeOverride("font_size", 14);
         shtext.AddThemeColorOverride("font_color", UISignalColors.Shield);
         root.AddChild(shtext);
 
-        var sktext = new Label { Position = new Vector2(8, 100), Size = new Vector2(CardW - 16, 16), Text = SkillsText(u) };
-        sktext.AddThemeFontSizeOverride("font_size", 11);
+        var sktext = new Label { Position = new Vector2(8, 136), Size = new Vector2(CardW - 16, 22), Text = SkillsText(u) };
+        sktext.AddThemeFontSizeOverride("font_size", 13);
         sktext.AddThemeColorOverride("font_color", UIThemeManager.TextSecondary);
         root.AddChild(sktext);
 
@@ -116,15 +121,15 @@ public partial class HeroCardLayer : Control
             double availFrac = total > 0 ? u.BaseHp / total : 1;
             double hpFrac = total > 0 ? Math.Clamp(u.Hp / total, 0, 1) : 0;
             float barW = CardW - 16;
-            c.HpFill.Size = new Vector2((float)(barW * hpFrac), 16);
+            c.HpFill.Size = new Vector2((float)(barW * hpFrac), BattleLayout.HpBarH);
             c.HpFill.Color = u.Hp / u.BaseHp > 0.5 ? UISignalColors.HpGood
                 : u.Hp / u.BaseHp > 0.25 ? UISignalColors.HpWarn : UISignalColors.HpBad;
             string hpText = Math.Max(0, u.Hp).ToString("0") + "/" + u.BaseHp.ToString("0");
             if (u.LockedHp > 0)
             {
                 c.LockHpFill.Visible = true;
-                c.LockHpFill.Position = new Vector2(8 + (float)(barW * availFrac), 28);
-                c.LockHpFill.Size = new Vector2((float)(barW * (1 - availFrac)), 16);
+                c.LockHpFill.Position = new Vector2(BattleLayout.CardPadX + (float)(barW * availFrac), 38);
+                c.LockHpFill.Size = new Vector2((float)(barW * (1 - availFrac)), BattleLayout.HpBarH);
                 hpText += " 锁" + u.LockedHp.ToString("0");
             }
             else
@@ -133,7 +138,7 @@ public partial class HeroCardLayer : Control
             }
             c.HpText.Text = hpText;
             float gfrac = (float)Math.Clamp(u.Gauge / BattleEngine.GaugeMax, 0, 1);
-            c.GaugeFill.Size = new Vector2((float)((CardW - 16) * gfrac), 10);
+            c.GaugeFill.Size = new Vector2((float)((CardW - 16) * gfrac), BattleLayout.GaugeH);
             c.ShieldText.Text = u.Shield > 0 ? "🛡 护盾 " + u.Shield.ToString("0") : (u.Silenced(engine.T) ? "⛔ 沉默" : "");
             c.Root.Modulate = u.Alive ? Colors.White : new Color(1, 1, 1, 0.3f);
         }

@@ -73,7 +73,10 @@ public partial class StagePanel : BasePanel
         _onGo = _ctxOnGo;
         _onClose = _ctxOnClose;
 
-        EnsureBackdrop();
+        // 弹窗不放山水图：同一张 1920×1080 的图裁进小窗口会有"截图放大"感。
+        // 让背后的战斗场景透过半透明的 BgPanel 底自然显出来（见主题资源 bgpanel 的 alpha）。
+        // 方法保留：将来若某个弹窗需要独立全屏底，取消注释即可。
+        // EnsureBackdrop();
 
         if (!_wired)
         {
@@ -146,7 +149,7 @@ public partial class StagePanel : BasePanel
         Label tag = new Label();
         tag.CustomMinimumSize = new Vector2(300, 40);
         tag.Text = tier + " 档 · " + MaterialCatalog.NameOf(tier) + "（" + lo + "~" + hi + " 层）";
-        tag.AddThemeFontSizeOverride("font_size", 15);
+        tag.AddThemeFontSizeOverride("font_size", 18);
         tag.AddThemeColorOverride("font_color", UIThemeManager.Accent);
         row.AddChild(tag);
 
