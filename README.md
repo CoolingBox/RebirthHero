@@ -105,6 +105,31 @@ addons/TinyTools/             # 配置生成 / UI 代码生成（编辑器插件
 - 入口：顶栏「装备 ⚒」→ `EquipPanel`
 - 待做：6 套套装（2/4 件参数修正）与随机词条
 
+### 存档（M2.6）
+- **落盘归框架**：`TinyFramework.SaveManager.Save(data)` / `Load<T>()` —— user:// 路径、JSON、字段序列化、**缺文件时返回 `new T()`**；文件名默认取 `typeof(T).Name`
+- **游戏侧三块**（与 `SettingData` + `SettingManager` 同一范式）：
+  - `Scripts/Game/Save/GameSave.cs` —— `SaveData` 子类，扁平 DTO，可人肉读改
+  - `Scripts/Game/Save/GameProgress.cs` —— `Capture(...)` 抓成存档 / `Apply(...)` 灌回状态机；**不叫 Save/Load、不碰文件系统**
+  - `Scripts/Game/Save/SaveBackup.cs` —— 框架管不到的部分：备份目录列举、改名、复制到任意路径、按时间排序（`SaveManager` 只有单文件 Save/Load，没有 List/Rename/Copy）
+  - 各状态机只暴露窄的 `Restore(...)`，存档格式不会渗进引擎
+- **四个功能**（顶栏「存档」→ `SavePanel`）：
+  1. **保存**：立即把当前进度写进主档；可开关「每 10 分钟自动保存」（开关存 `SettingData.AutoSave`，间隔是 `SaveBackup.AutoSaveMinutes`）
+  2. **备份**：默认名 `v版本号_年月日_时分`（版本号取 `project.godot` 的 `application/config/version`），可改
+     - 桌面：弹文件对话框选路径，同时复制一份进存档夹（否则玩家选了路径却在载入列表里找不到）
+     - **移动端：只能改名**，存进 `user://Backups/`（沙盒内不能浏览外部路径）
+  3. **载入**：列表展示主档 + 全部备份（层、最高层、银两、时间），点「载入」覆盖当前进度并重开一场；备份可删，主档不可删
+  4. **启动默认载入主档**：`BattlePanel.LoadProgress` 在首次显示时执行
+- ⚠️ **判别"有没有存档"不能靠 `File.Exists`**：`SaveManager.Load<T>` 无文件时返回 `new T()`（全默认值），直接灌会把初始编队和已掷好的客栈栏位清空。判据是数据自带的 `GameSave.Written`（`Capture` 时置 true）
+- **账本口径（GDD §3.3）**：
+  - 跨世（重开本世不清）：武学装配
+  - 本世（重开本世清空，关游戏不丢）：推图层/波/最高层、修为等级与池、银两、材料、装备实例与穿戴、客栈（栏位/已招/编队/刷新次数）
+  - 设置单独一份（`SettingData`），与游戏进度互不影响
+- **主档存盘时机**：每场战斗结算 / 关闭客栈·武学·装备·选关·存档面板 / 选层 / 重开本世 / 自动保存计时器 / 退出游戏（`TreeExiting` 兜底）
+  - 刻意**不做**每次掉落就存：一只怪写一次盘既慢又无意义，崩溃最多损失一场
+- **不存战斗过程**（引擎状态、波内血量、飘字）：存档粒度 = 一场战斗的结算点，读档从该层该波满血重打
+- `Version` 用于将来迁移：读到不认识的版本整份丢弃（宁可从第 1 层重开，也不要读半份脏数据）
+- 待做：多存档槽 UI 化（当前靠备份名区分）/ 云同步 / 迁移函数（当前只有 v1）
+
 ### 音频
 - **总线**：`Master → BGM / SFX（近场干声 + Limiter）/ SFX_Far（低通 4k + 混响）/ SFX_UI（纯干声）/ Ambient`
 - **BGM**：`Resources/Audio/BGM/battle_01~03.mp3`（国风战斗，可试听后换），循环由 `.import` 的 `loop=true` + 代码兜底双保险
@@ -130,6 +155,26 @@ addons/TinyTools/             # 配置生成 / UI 代码生成（编辑器插件
 
 - **素材替换**：`Resources/Audio/SFX/` 语义化命名，替换同名文件即可换音，零代码改动
 - ⚠️ 远场总线在当前 1920×1080 布局下**不会触发**（卡片离中心最远约 1100px，阈值 1650），保留给屏外音源 / 镜头缩放场景
+
+### 顶部导航条（2026-10-20 重构）
+战斗界面顶部原本是 **7 个按钮各自绝对定位**，而 `TTitle` 是全宽居中 Label —— 标题一长（带"本世最高 N 层 · 已战 M 场"）就被右侧按钮压住。
+
+改成真正的导航条结构：
+
+```
+TNavBar（Panel · BgPanel，高 72，横向撑满，底色不透明）
+└── TNavRow（HBoxContainer，四周留 16/10 边距，separation 10）
+    ├── TTitle（Label · 左对齐，size_flags_horizontal = 3 吃掉剩余宽度）
+    └── 客栈 / 装备 / 武学 / 选关 / 战报 / 存档 / 设置（7 个 Button，各 min 112×38）
+TExp（战况行，独立一行 y 78~106，居中）
+```
+
+- **按钮进容器后不再有绝对坐标**：加/删/换顺序只改 `TNavRow` 的子节点，不会撞位置
+- **标题与按钮物理隔离**：标题只占左侧剩余空间，且加了 `text_overrun_behavior = 3`（超长显示省略号），永远不会画到按钮上
+- **TExp 下移到导航条下方**（78 > 72），和标题不再同排；卡牌从 y=140 起，三层不交叠
+- 措辞同步调整：标题只留"当前在哪"（`《轮回大侠》· 第 N 层 W/T 波`），最高层/场次这类统计挪到战况行
+
+⚠️ `TNavBar` 用 `BgPanel` 变体而不是 ColorRect：底色归 Theme，四套主题自动跟随。
 
 ### UI 主题（4 套武侠调性）
 顶栏「设置 ⚙」→ 外观，点即生效并写盘（`SettingData.ThemeId`）。
@@ -181,7 +226,9 @@ Resources/Theme/wuxia_*.tres  ←──(唯一真值，编辑器双击可视化�
 | variation | 色值来源 | 用于 | 出现在 |
 |---|---|---|---|
 | `BgFull` | `bg_base` | 主屏最底层背景 | BattlePanel / InnPanel 的 `TBg` |
-| `BgPanel` | `panel_fill` | 子面板背景 | SettingPanel / SkillsPanel / StagePanel / StatsPanel 的 `TBg` |
+| `BgPanel` | `panel_fill` | 子面板背景（**不透明，alpha = 1.0**） | SettingPanel / SkillsPanel / StagePanel / StatsPanel / EquipPanel / SavePanel 的 `TBg` |
+
+⚠️ **子面板背景必须完全不透明**（2026-10-20 用户反馈："面板不要半透，被后方面板干扰严重"）。曾经试过 0.94 让战场透出 6%，观感上"层次更好"，但战斗界面的卡牌、飘字、战报侧栏会透到面板文字底下，读起来很吵。现在弹窗不铺山水图（图会裁切放大），底也不透 —— 靠 `panel_fill` 的实色 + 边框 + 暗角承担层次。
 
 写法：`[node name="TBg" type="Panel" parent="."]` + `theme_type_variation = &"BgFull"`。
 
@@ -288,4 +335,4 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 | M2.3 客栈 | ✅ |
 | M2.4 武学装配 | ✅ |
 | M2.5 装备 | ✅ 最小实现（套装/词条待做） |
-| M2.6 存档 | ⏳ |
+| M2.6 存档 | ✅ 单槽自动存 |

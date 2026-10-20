@@ -78,32 +78,89 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_float")
 
-[node name="TTitle" type="Label" parent="."]
+[node name="TNavBar" type="Panel" parent="."]
+theme_type_variation = &"BgPanel"
 layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+anchors_preset = 10
+anchor_right = 1.0
 offset_left = 0.0
-offset_top = 14.0
-offset_right = 1920.0
-offset_bottom = 42.0
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 25
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 72.0
+grow_horizontal = 2
+mouse_filter = 0
+
+[node name="TNavRow" type="HBoxContainer" parent="TNavBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="TTitle" type="Label" parent="TNavBar/TNavRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
+theme_override_font_sizes/font_size = 26
 theme_type_variation = &"TitleLabel"
+
+[node name="TInnBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "客栈 ⌂"
+
+[node name="TEquipBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "装备 ⚒"
+
+[node name="TSkillBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "武学 ⚔"
+
+[node name="TStageBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "选关 ⊞"
+
+[node name="TStatsBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "战报 ▤"
+
+[node name="TSaveBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "存档 ⌸"
+
+[node name="TSettingBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "设置 ⚙"
 
 [node name="TExp" type="Label" parent="."]
 layout_mode = 0
 anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 0.0
-offset_top = 44.0
+offset_top = 78.0
 offset_right = 1920.0
-offset_bottom = 70.0
+offset_bottom = 106.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 19
 theme_type_variation = &"AccentLabel"
@@ -150,81 +207,3 @@ offset_right = 1150.0
 offset_bottom = 1064.0
 text = "重开本世 ↺"
 visible = false
-
-[node name="TInnBtn" type="Button" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 14.0
-offset_right = 130.0
-offset_bottom = 48.0
-text = "客栈 ⌂"
-
-[node name="TEquipBtn" type="Button" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1170.0
-offset_top = 14.0
-offset_right = 1290.0
-offset_bottom = 48.0
-text = "装备 ⚒"
-
-[node name="TSkillBtn" type="Button" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1320.0
-offset_top = 14.0
-offset_right = 1440.0
-offset_bottom = 48.0
-text = "武学 ⚔"
-
-[node name="TStageBtn" type="Button" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1470.0
-offset_top = 14.0
-offset_right = 1590.0
-offset_bottom = 48.0
-text = "选关 ⊞"
-
-[node name="TStatsBtn" type="Button" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1620.0
-offset_top = 14.0
-offset_right = 1740.0
-offset_bottom = 48.0
-text = "战报 ▤"
-
-[node name="TSettingBtn" type="Button" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1770.0
-offset_top = 14.0
-offset_right = 1890.0
-offset_bottom = 48.0
-text = "设置 ⚙"

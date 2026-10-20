@@ -39,6 +39,8 @@ public partial class BattlePanel : BasePanel
 
     private Timer _timer;
     private Timer _advanceTimer;
+    private Timer _autoSave;              // M2.6 自动保存主档（间隔见 SaveBackup.AutoSaveMinutes）
+    private bool _needRestart;            // 载入存档后要按新进度重开一场（面板关掉后执行）
 
     private BattleEngine _engine;
     private bool _built, _resultShown;
@@ -83,6 +85,7 @@ public partial class BattlePanel : BasePanel
         if (!_built)
         {
             Init();
+            LoadProgress();   // M2.6：把盘上的进度灌回状态机 —— 必须早于第一场战斗
             InitStatic();
             _built = true;
         }
@@ -149,6 +152,89 @@ public partial class BattlePanel : BasePanel
 
         // M2.4 武学装配：初始 = 表内默认武学（每人 2 个），第 3 槽留给玩家填
         _loadout.Init(heroes);
+
+        // M2.6 存档：退出游戏时兜底存一次。其余存档点在"每个可能改状态的时刻"，
+        // 这里只防"直接关窗口"这一类漏网（结算后没关子界面就退出）。
+        GameObject.TreeExiting += SaveProgress;
+    }
+
+    // ============ M2.6 存档 ============
+    // 落盘/读盘一律走框架的 SaveManager（user://GameSave，JSON）；本面板只负责"什么时候存"。
+    // 抓/灌的字段映射在 GameProgress 里，备份/导出/列表在 SaveBackup 里，此处不出现文件路径。
+    //
+    /// <summary>
+    /// 存档粒度 = **一场战斗的结算点**（不是每次掉落）。击杀时每只敌人都写盘既慢又无意义 ——
+    /// 崩溃损失最多一场战斗的掉落，对放置游戏可接受。
+    /// 触发点：每场结算 / 关子界面 / 选层 / 重开本世 / 自动保存计时器 / 退出兜底 / 面板手动保存。
+    /// </summary>
+    private void SaveProgress()
+    {
+        GameSave data = CaptureProgress();
+        if (data == null) return;
+
+        SaveManager.Save(data);
+    }
+
+    /// <summary>抓当前进度（给存档面板的"保存/备份/导出"共用同一条路径）。</summary>
+    private GameSave CaptureProgress()
+    {
+        // 状态机还没造好（Init 未跑完）时返回 null，避免初始化的中间态被写盘
+        if (_run == null || _cult == null || _silver == null) return null;
+
+        return GameProgress.Capture(_run, _cult, _silver, _materials, _equips, _loadout, _inn, RosterIds());
+    }
+
+    /// <summary>读主档：没存过盘 / 版本不认识时保持"新一局"状态（各状态机已是初始值）。</summary>
+    private void LoadProgress()
+    {
+        GameSave data = SaveManager.Load<GameSave>();
+        GameProgress.Apply(data, _run, _cult, _silver, _materials, _equips, _loadout, _inn);
+    }
+
+    // ---------- 存档面板（保存 / 备份 / 载入）----------
+    private void OnOpenSave()
+    {
+        AudioManager.PlayUISFX("ui_open");
+        _timer.Stop();
+        _advanceTimer.Stop();
+
+        SavePanel.BindData(CaptureProgress, ApplyProgress, SyncAutoSave, OnCloseSave);
+        UIManager.ShowPanel<SavePanel>();
+    }
+
+    /// <summary>载入某份存档：灌回状态机 → 立刻写成主档（下次启动就是这份）→ 标记重开一场。</summary>
+    private bool ApplyProgress(GameSave data)
+    {
+        bool ok = GameProgress.Apply(data, _run, _cult, _silver, _materials, _equips, _loadout, _inn);
+        if (!ok) return false;
+
+        StatsPanel.InvalidateCurrent();   // 换档 → 战报清零
+        SaveProgress();
+        _needRestart = true;              // 面板关闭后按新进度重开（不在面板还开着时起战斗）
+        return true;
+    }
+
+    private void OnCloseSave()
+    {
+        if (_needRestart)
+        {
+            _needRestart = false;
+            StartBattle();
+            return;
+        }
+
+        ResumeBattle();
+    }
+
+    /// <summary>自动保存开关变了 → 启停计时器（设置本身由面板写盘）。</summary>
+    private void SyncAutoSave()
+    {
+        if (_autoSave == null) return;
+
+        SettingData settings = SettingManager.Data;
+        bool on = settings != null && settings.AutoSave;
+        if (on) _autoSave.Start();
+        else _autoSave.Stop();
     }
 
     /// <summary>M2.3 客栈：当前出战阵容 = 客栈编队（带当世资质）。编队为空即真正空编队（不再回退开局 4 名）。</summary>
@@ -232,6 +318,7 @@ public partial class BattlePanel : BasePanel
         if (_TStageBtn != null) _TStageBtn.Pressed += OnOpenStage;
         if (_TSkillBtn != null) _TSkillBtn.Pressed += OnOpenSkills;
         if (_TEquipBtn != null) _TEquipBtn.Pressed += OnOpenEquips;
+        if (_TSaveBtn != null) _TSaveBtn.Pressed += OnOpenSave;
         if (_TSettingBtn != null) _TSettingBtn.Pressed += OnOpenSettings;
 
         _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
@@ -241,6 +328,12 @@ public partial class BattlePanel : BasePanel
         _advanceTimer = new Timer { WaitTime = 1.1, OneShot = true, Autostart = false };
         GameObject.AddChild(_advanceTimer);
         _advanceTimer.Timeout += OnAdvance;
+
+        // 自动保存：整 10 分钟一次主档。开关读 SettingData（玩家在存档面板里改）
+        _autoSave = new Timer { WaitTime = SaveBackup.AutoSaveMinutes * 60, OneShot = false, Autostart = false };
+        GameObject.AddChild(_autoSave);
+        _autoSave.Timeout += SaveProgress;
+        SyncAutoSave();
 
         UIThemeManager.ApplyTo(GameObject);
         ApplyThemeColors();
@@ -284,6 +377,7 @@ public partial class BattlePanel : BasePanel
         _materials.Reset();         // 材料也是"此生"资产
         _equips.Reset();            // 装备同样归零（GDD §3.3：装备不跨世）
         StatsPanel.InvalidateCurrent();   // 重开本世 → 下次开战强制清零统计
+        SaveProgress();             // 归零结果立刻落盘，避免"重开了但没退游戏"的错位
         StartBattle();
     }
 
@@ -318,6 +412,7 @@ public partial class BattlePanel : BasePanel
     {
         AudioManager.PlayUISFX("ui_close");
         if (_TInnBtn != null) _TInnBtn.Disabled = false;
+        SaveProgress();   // 招募 / 换编队 / 刷新都在客栈里发生
         if (_engine != null && !_engine.IsOver) _timer.Start();
         else if (_resultShown) _advanceTimer.Start();
     }
@@ -343,6 +438,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>关武学面板：恢复战斗节奏。</summary>
     private void OnCloseSkills()
     {
+        SaveProgress();   // 武学装配是跨世资产，改完立刻落盘
         ResumeBattle();
     }
 
@@ -359,6 +455,7 @@ public partial class BattlePanel : BasePanel
 
     private void OnCloseEquips()
     {
+        SaveProgress();   // 穿脱 / 强化都在面板里改，关闭时才写盘
         ResumeBattle();
     }
 
@@ -378,12 +475,14 @@ public partial class BattlePanel : BasePanel
     {
         _run.JumpTo(layer);
         UIManager.ClosePanel<StagePanel>();   // 选完即销毁，下次重开时按新层重建
+        SaveProgress();                       // 层数已变，立刻落盘
         ResumeBattle();
         StartBattle();
     }
 
     private void OnCloseStage()
     {
+        SaveProgress();
         ResumeBattle();
     }
 
@@ -431,9 +530,10 @@ public partial class BattlePanel : BasePanel
             ? (_run.IsBossLayer ? "  ★层主波" : "  ◆精英波")
             : "";
         string mode = _run.AutoPush ? "" : "  ⏸挂机中";
+        // 标题只留"当前在哪"（短、稳定）；最高层/场次这类统计挪到下面的战况行 ——
+        // 导航条里标题宽度有限，长句会被按钮压住（2026-10-20 用户反馈的遮挡问题）
         if (_TTitle != null)
-            _TTitle.Text = "《轮回大侠》M2.2 推图 · 第 " + _run.Layer + " 层 " + _run.Wave + "/" + _run.WavesInLayer + " 波" + waveTag + mode
-                         + "　（本世最高 " + _run.BestLayer + " 层 · 已战 " + _run.Battles + " 场）";
+            _TTitle.Text = "《轮回大侠》· 第 " + _run.Layer + " 层 " + _run.Wave + "/" + _run.WavesInLayer + " 波" + waveTag + mode;
 
         // 修为池是"每侠客各一份"，绝对值不如进度直观；战斗中途未结算升级，故进度会冲到 100% 以上 → clamp
         var lvParts = new List<string>();
@@ -454,7 +554,8 @@ public partial class BattlePanel : BasePanel
         }
         string lv = string.Join(" · ", lvParts);
         if (_TExp != null)
-            _TExp.Text = "银两 " + BigNum.From(_silver.Amount).ToString(2) + "（本世累计 " + BigNum.From(_silver.TotalGained).ToString(2) + "）"
+            _TExp.Text = "最高 " + _run.BestLayer + " 层 · 已战 " + _run.Battles + " 场　｜　"
+                       + "银两 " + BigNum.From(_silver.Amount).ToString(2) + "（本世累计 " + BigNum.From(_silver.TotalGained).ToString(2) + "）"
                        + "　修为累计 " + BigNum.From(_cult.TotalGained).ToString(2) + "　｜　" + lv;
     }
 
@@ -634,6 +735,7 @@ public partial class BattlePanel : BasePanel
             _advanceTimer.Start();      // 卡关不停机：退回上一层继续刷
         }
         RefreshHeader();
+        SaveProgress();   // 每场结算都落一次：场次 = 放置游戏的最小有意义进度单位
     }
 
     // ============ 飘字锚点（编排：先问侠客卡，再问召唤堆叠卡） ============
@@ -681,6 +783,7 @@ public partial class BattlePanel : BasePanel
         StatsPanel.ApplyThemeCurrent();
         SettingPanel.ApplyThemeCurrent();
         EquipPanel.ApplyThemeCurrent();
+        SavePanel.ApplyThemeCurrent();
 
         // 卡牌与堆叠卡的底色是在 Build 时写进 ColorRect 的，换主题必须重建节点。
         // 只重建表现层（读现有 BattleUnit），不碰引擎状态与战斗进度。
