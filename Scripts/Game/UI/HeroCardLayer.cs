@@ -46,8 +46,11 @@ public partial class HeroCardLayer : Control
 
     private void BuildOne(BattleUnit u, float x, float y, bool right)
     {
+        // 卡牌底属"氛围色"→ 随主题变；血条/护盾属"语义色"→ 所有主题共用（见 UISignalColors）。
+        // 换主题时面板会重建卡牌，所以这里每次 Build 现取当前色板即可，不需要缓存。
         var root = new Control { Position = new Vector2(x, y), Size = new Vector2(CardW, CardH) };
-        var bg = new ColorRect { Color = right ? new Color(0.18f, 0.10f, 0.12f) : new Color(0.12f, 0.14f, 0.18f), Size = root.Size, Position = Vector2.Zero };
+        Color cardBg = right ? UIThemeManager.CardEnemy : UIThemeManager.CardAlly;
+        var bg = new ColorRect { Color = cardBg, Size = root.Size, Position = Vector2.Zero };
         root.AddChild(bg);
 
         string slotTag;
@@ -63,18 +66,18 @@ public partial class HeroCardLayer : Control
         name.AddThemeFontSizeOverride("font_size", 16);
         root.AddChild(name);
 
-        var hpbg = new ColorRect { Color = new Color(0.30f, 0.10f, 0.10f), Position = new Vector2(8, 28), Size = new Vector2(CardW - 16, 16) };
-        var hpfill = new ColorRect { Color = new Color(0.25f, 0.85f, 0.35f), Position = hpbg.Position, Size = hpbg.Size };
+        var hpbg = new ColorRect { Color = UISignalColors.HpBack, Position = new Vector2(8, 28), Size = new Vector2(CardW - 16, 16) };
+        var hpfill = new ColorRect { Color = UISignalColors.HpGood, Position = hpbg.Position, Size = hpbg.Size };
         // 银灰色段：被召唤武学锁死的生命上限（固定在血条最右端；宽度由 Refresh 按 LockedHp 计算）
-        var hplock = new ColorRect { Color = new Color(0.50f, 0.52f, 0.55f), Position = hpbg.Position, Size = new Vector2(0, 16), Visible = false };
+        var hplock = new ColorRect { Color = UISignalColors.HpLocked, Position = hpbg.Position, Size = new Vector2(0, 16), Visible = false };
         root.AddChild(hpbg); root.AddChild(hpfill); root.AddChild(hplock);
 
         var hptext = new Label { Position = hpbg.Position, Size = hpbg.Size, HorizontalAlignment = HorizontalAlignment.Center };
         hptext.AddThemeFontSizeOverride("font_size", 12);
         root.AddChild(hptext);
 
-        var gbg = new ColorRect { Color = new Color(0.10f, 0.10f, 0.32f), Position = new Vector2(8, 48), Size = new Vector2(CardW - 16, 10) };
-        var gfill = new ColorRect { Color = new Color(0.35f, 0.55f, 1.0f), Position = gbg.Position, Size = gbg.Size };
+        var gbg = new ColorRect { Color = UISignalColors.GaugeBack, Position = new Vector2(8, 48), Size = new Vector2(CardW - 16, 10) };
+        var gfill = new ColorRect { Color = UISignalColors.GaugeFill, Position = gbg.Position, Size = gbg.Size };
         root.AddChild(gbg); root.AddChild(gfill);
 
         var stats = new Label { Position = new Vector2(8, 62), Size = new Vector2(CardW - 16, 18), Text = "ATK " + u.BaseAtk.ToString("0") + "  SPD " + u.BaseSpd.ToString("0") };
@@ -83,12 +86,12 @@ public partial class HeroCardLayer : Control
 
         var shtext = new Label { Position = new Vector2(8, 82), Size = new Vector2(CardW - 16, 18), Text = "" };
         shtext.AddThemeFontSizeOverride("font_size", 12);
-        shtext.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1.0f));
+        shtext.AddThemeColorOverride("font_color", UISignalColors.Shield);
         root.AddChild(shtext);
 
         var sktext = new Label { Position = new Vector2(8, 100), Size = new Vector2(CardW - 16, 16), Text = SkillsText(u) };
         sktext.AddThemeFontSizeOverride("font_size", 11);
-        sktext.AddThemeColorOverride("font_color", new Color(0.72f, 0.74f, 0.86f));
+        sktext.AddThemeColorOverride("font_color", UIThemeManager.TextSecondary);
         root.AddChild(sktext);
 
         AddChild(root);
@@ -114,8 +117,8 @@ public partial class HeroCardLayer : Control
             double hpFrac = total > 0 ? Math.Clamp(u.Hp / total, 0, 1) : 0;
             float barW = CardW - 16;
             c.HpFill.Size = new Vector2((float)(barW * hpFrac), 16);
-            c.HpFill.Color = u.Hp / u.BaseHp > 0.5 ? new Color(0.25f, 0.85f, 0.35f)
-                : u.Hp / u.BaseHp > 0.25 ? new Color(0.95f, 0.85f, 0.2f) : new Color(0.9f, 0.25f, 0.2f);
+            c.HpFill.Color = u.Hp / u.BaseHp > 0.5 ? UISignalColors.HpGood
+                : u.Hp / u.BaseHp > 0.25 ? UISignalColors.HpWarn : UISignalColors.HpBad;
             string hpText = Math.Max(0, u.Hp).ToString("0") + "/" + u.BaseHp.ToString("0");
             if (u.LockedHp > 0)
             {

@@ -14,10 +14,6 @@ config/name="RebirthHero"
 run/main_scene="res://Resources/Scene/Game.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
-[audio]
-
-buses/default_bus_layout="res://default_bus_layout.tres"
-
 [autoload]
 
 GameRoot="*res://Scripts/GameRoot.cs"
@@ -44,6 +40,10 @@ naming/script_name_casing=1
 [editor_plugins]
 
 enabled=PackedStringArray()
+
+[gui]
+
+theme/custom="res://Resources/Theme/wuxia_nightblade.tres"
 
 [physics]
 
