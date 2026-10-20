@@ -15,16 +15,23 @@ public static class HeroBuilder
     /// quality：该侠客**当世的资质**（M2.3 客栈；null = 无资质基准版）。
     ///   资质必须在**技能装配之前**应用 —— 因为"气血上限%"类武学的数值是按 BaseHp 折算成绝对量的。
     /// includePending=false 时跳过 Status=待实装 的卡（引擎尚未实现其机制）。
+    /// equipOf：该侠客四栏装备的属性合计（M2.5）。**基础数值加算**到成长结果上，
+    ///   与 GDD §4.2「③装备乘区」的基础层一致 —— 套装/词条的百分比乘算属 P1，不在此处。
     /// </summary>
     public static BattleUnit Build(HeroConfig hero, int slot, Func<int, SkillConfig> skillLookup, int level = 1,
                                    bool includePending = false,
                                    HeroQuality quality = null, Func<int, QualityConfig> affixLookup = null,
-                                   Func<int, int[]> skillIdsOf = null)
+                                   Func<int, int[]> skillIdsOf = null,
+                                   Func<int, EquipBonus> equipOf = null)
     {
         if (hero == null) return null;
 
         // M2.4 武学装配：默认用表里的 SkillIds；面板装配后由 skillIdsOf 提供 3 槽（0 = 空槽）
         int[] ids = skillIdsOf != null ? skillIdsOf(hero.Id) : hero.SkillIds;
+
+        // M2.5 装备：只取一次，避免同一侠客重复遍历四栏
+        EquipBonus eq = new EquipBonus();
+        if (equipOf != null) eq = equipOf(hero.Id);
 
         double hpBonus = slot == 1 ? BattleConfig.Slot1HpBonus : 1.0;
         double slotW = slot == 1 ? BattleConfig.Slot1W : BattleConfig.OtherW;
@@ -32,8 +39,9 @@ public static class HeroBuilder
         double w = hero.BaseW > 0 ? hero.BaseW * (slotW / BattleConfig.OtherW) : slotW;
 
         // 纯加算成长：基础值(L1) + 每级成长 × (L−1)，三属性各自独立
-        double hp = HeroGrowth.Hp((double)hero.BaseHP, hero.HpGrowth, level);
-        double atk = HeroGrowth.Atk((double)hero.BaseATK, hero.AtkGrowth, level);
+        // 装备加成同为加算，接在成长结果之后（"生命+120"就是实打实的 120 点上限）
+        double hp = HeroGrowth.Hp((double)hero.BaseHP, hero.HpGrowth, level) + eq.Hp;
+        double atk = HeroGrowth.Atk((double)hero.BaseATK, hero.AtkGrowth, level) + eq.Atk;
         double def = HeroGrowth.Def((double)hero.BaseDEF, hero.DefGrowth, level);
 
         var u = new BattleUnit
@@ -43,7 +51,7 @@ public static class HeroBuilder
             BaseHp = hp * hpBonus * BattleConfig.HpScale,
             BaseAtk = atk * BattleConfig.AtkScale,
             BaseDef = def * BattleConfig.DefScale,
-            BaseSpd = hero.BaseSPD,          // SPD 不随等级成长（来源留给装备/境界）
+            BaseSpd = hero.BaseSPD + eq.Spd,  // SPD 不随等级成长，装备是它的主要来源（境界后续接）
             BaseW = w,
             IsSummon = hero.IsSummon,
         };
@@ -124,13 +132,14 @@ public static class HeroBuilder
     public static List<BattleUnit> BuildTeam(IEnumerable<HeroConfig> heroes, Func<int, SkillConfig> skillLookup,
                                              int level = 1, bool includePending = false,
                                              Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
-                                             Func<int, int[]> skillIdsOf = null)
+                                             Func<int, int[]> skillIdsOf = null,
+                                             Func<int, EquipBonus> equipOf = null)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
-            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf);
+            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf);
             if (u != null) { list.Add(u); slot++; }
         }
         return list;
@@ -140,14 +149,15 @@ public static class HeroBuilder
     public static List<BattleUnit> BuildTeam(IEnumerable<HeroConfig> heroes, Func<int, SkillConfig> skillLookup,
                                              Func<int, int> levelOf, bool includePending = false,
                                              Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
-                                             Func<int, int[]> skillIdsOf = null)
+                                             Func<int, int[]> skillIdsOf = null,
+                                             Func<int, EquipBonus> equipOf = null)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
             int lv = levelOf?.Invoke(h.Id) ?? 1;
-            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf);
+            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf);
             if (u != null) { list.Add(u); slot++; }
         }
         return list;

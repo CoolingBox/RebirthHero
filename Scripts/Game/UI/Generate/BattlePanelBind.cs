@@ -13,6 +13,7 @@ public partial class BattlePanel : BasePanel
 	private Button _TPushBtn;
 	private Button _TNextBtn;
 	private Button _TInnBtn;
+	private Button _TEquipBtn;
 	private Button _TSkillBtn;
 	private Button _TStageBtn;
 	private Button _TStatsBtn;
@@ -30,6 +31,7 @@ public partial class BattlePanel : BasePanel
 		_TPushBtn = GameObject.FindChild("TPushBtn") as Button;
 		_TNextBtn = GameObject.FindChild("TNextBtn") as Button;
 		_TInnBtn = GameObject.FindChild("TInnBtn") as Button;
+		_TEquipBtn = GameObject.FindChild("TEquipBtn") as Button;
 		_TSkillBtn = GameObject.FindChild("TSkillBtn") as Button;
 		_TStageBtn = GameObject.FindChild("TStageBtn") as Button;
 		_TStatsBtn = GameObject.FindChild("TStatsBtn") as Button;

@@ -25,4 +25,24 @@ public static class UISignalColors
     public static readonly Color Reward = new Color(1.00f, 0.92f, 0.45f);   // 掉落飘字
     public static readonly Color Win = new Color(0.40f, 1.00f, 0.50f);
     public static readonly Color Lose = new Color(1.00f, 0.45f, 0.35f);
+
+    // 装备稀有度（白/绿/蓝/紫/橙）—— 玩家对这套配色有跨游戏的共识，
+    // 换主题也不该动：玩家是靠颜色而不是文字在扫"出没出好货"。
+    public static readonly Color RarityCommon = new Color(0.85f, 0.85f, 0.85f);
+    public static readonly Color RarityFine = new Color(0.35f, 0.95f, 0.45f);
+    public static readonly Color RarityEpic = new Color(0.35f, 0.65f, 1.00f);
+    public static readonly Color RarityLegend = new Color(0.75f, 0.45f, 1.00f);
+    public static readonly Color RarityMyth = new Color(1.00f, 0.65f, 0.20f);
+
+    public static Color RarityOf(Rarity rarity)
+    {
+        switch (rarity)
+        {
+            case Rarity.Fine: return RarityFine;
+            case Rarity.Epic: return RarityEpic;
+            case Rarity.Legend: return RarityLegend;
+            case Rarity.Myth: return RarityMyth;
+            default: return RarityCommon;
+        }
+    }
 }
