@@ -39,6 +39,14 @@ public sealed class Silver
         return true;
     }
 
+    /// <summary>读档：写回余额与本世累计（累计只用于展示，负数会夹成 0）。</summary>
+    public void Restore(double amount, double total)
+    {
+        Amount = amount > 0 ? amount : 0;
+        TotalGained = total > 0 ? total : 0;
+        BattleGained = 0;   // "本场掉落"不跨进程
+    }
+
     public void Reset()
     {
         Amount = 0;

@@ -182,6 +182,28 @@ public sealed class StageRun
         _carry = null;
     }
 
+    /// <summary>
+    /// 读档（M2.6）：恢复到某层的某波。**层内续战的血量不存**（_carry 置空）——
+    /// 读档后按满血从头打本波，比"半血续战"更可预期，也避免跨进程复活阵亡者。
+    /// </summary>
+    public void Restore(int layer, int wave, int bestLayer, bool autoPush)
+    {
+        int lv = layer > 0 ? layer : 1;
+        int best = bestLayer > 0 ? bestLayer : 1;
+        if (best < lv) best = lv;      // 脏档：层比最高层还高 → 抬高最高层，别让选关卡死
+
+        Layer = lv;
+        BestLayer = best;
+
+        int maxWave = WavesInLayer;    // 依赖 Layer，必须在 Layer 定好之后算
+        int w = wave > 0 ? wave : 1;
+        Wave = w > maxWave ? maxWave : w;
+
+        AutoPush = autoPush;
+        _carry = null;
+        _idle = 0;
+    }
+
     public void Reset()
     {
         Layer = 1;

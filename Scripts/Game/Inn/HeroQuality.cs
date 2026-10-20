@@ -57,6 +57,29 @@ public sealed class HeroQuality
         return q;
     }
 
+    /// <summary>
+    /// 读档（M2.6）：按存档里的值原样重建一份资质。
+    /// 只恢复"掷骰结果"（星级/三维成长率/词条/是否已招），派生加成（HealPct/MulBonus）在 ApplyTo 时按词条重算。
+    /// </summary>
+    public static HeroQuality Restore(int heroId, int star, double hpPct, double atkPct, double spdPct,
+                                      IEnumerable<int> affixIds, bool recruited, bool isBase)
+    {
+        HeroQuality q = new HeroQuality();
+        q.HeroId = heroId;
+        q.Star = Math.Clamp(star, 1, 5);
+        q.HpPct = hpPct;
+        q.AtkPct = atkPct;
+        q.SpdPct = spdPct;
+        q.Recruited = recruited;
+        q.IsBase = isBase;
+
+        if (affixIds != null)
+            foreach (int id in affixIds)
+                if (id > 0) q.AffixIds.Add(id);
+
+        return q;
+    }
+
     /// <summary>掷一份资质（确定性：传入 rng，便于复现/做分布验证）。</summary>
     public static HeroQuality Roll(int heroId, Random rng, IReadOnlyList<QualityConfig> affixPool)
     {

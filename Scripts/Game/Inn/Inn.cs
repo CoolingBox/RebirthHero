@@ -70,6 +70,34 @@ public sealed class Inn
         }
     }
 
+    /// <summary>
+    /// 读档（M2.6）：直接恢复刷新的栏位 / 已招名单 / 编队 / 刷新次数。
+    /// **不走随机** —— 存档里存的是掷好的资质，重开一局必须一模一样。
+    /// </summary>
+    public void Restore(int refreshUsed, List<HeroQuality> slots, List<HeroQuality> recruited, List<int> roster)
+    {
+        RefreshUsed = refreshUsed > 0 ? refreshUsed : 0;
+
+        Slots.Clear();
+        if (slots != null)
+            foreach (HeroQuality q in slots)
+                if (q != null) Slots.Add(q);
+
+        Recruited.Clear();
+        if (recruited != null)
+            foreach (HeroQuality q in recruited)
+                if (q != null) Recruited.Add(q);
+
+        Roster.Clear();
+        if (roster != null)
+            foreach (int id in roster)
+            {
+                if (id <= 0 || Roster.Contains(id)) continue;
+                if (Roster.Count >= InnConfig.RosterSize) break;
+                Roster.Add(id);
+            }
+    }
+
     // ---------- 刷新 ----------
 
     /// <summary>下一次手动刷新是否免费。</summary>

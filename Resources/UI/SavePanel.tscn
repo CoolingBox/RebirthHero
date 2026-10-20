@@ -1,0 +1,161 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Theme" path="res://Resources/Theme/wuxia_nightblade.tres" id="theme_default"]
+
+[node name="SavePanel" type="Control"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 360.0
+offset_top = 90.0
+offset_right = 1560.0
+offset_bottom = 990.0
+mouse_filter = 0
+theme = ExtResource("theme_default")
+
+[node name="TBg" type="Panel" parent="."]
+theme_type_variation = &"BgPanel"
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="THeading" type="Label" parent="."]
+layout_mode = 0
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 620.0
+offset_bottom = 44.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 24
+theme_type_variation = &"HeadingLabel"
+text = "存档"
+
+[node name="TCloseBtn" type="Button" parent="."]
+layout_mode = 0
+anchors_preset = 0
+offset_left = 1040.0
+offset_top = 10.0
+offset_right = 1160.0
+offset_bottom = 44.0
+text = "关闭 ✕"
+
+[node name="THint" type="Label" parent="."]
+layout_mode = 0
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 46.0
+offset_right = 1180.0
+offset_bottom = 72.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 17
+theme_type_variation = &"BodyLabel"
+text = "主存档会在打开游戏时自动载入；备份请用下面的「备份」或「导出」，载入会覆盖当前进度。"
+
+[node name="TStatus" type="Label" parent="."]
+layout_mode = 0
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 76.0
+offset_right = 1180.0
+offset_bottom = 102.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 17
+theme_type_variation = &"HintLabel"
+
+[node name="TContent" type="VBoxContainer" parent="."]
+layout_mode = 0
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 1180.0
+offset_bottom = 880.0
+theme_override_constants/separation = 14
+
+[node name="TSecMain" type="Label" parent="TContent"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_type_variation = &"AccentLabel"
+text = "主存档 · 自动保存"
+
+[node name="TRowMain" type="HBoxContainer" parent="TContent"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TChkAuto" type="CheckButton" parent="TContent/TRowMain"]
+custom_minimum_size = Vector2(310, 40)
+layout_mode = 2
+text = "每 10 分钟自动保存"
+
+[node name="TNoteAuto" type="Label" parent="TContent/TRowMain"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 16
+theme_type_variation = &"HintLabel"
+text = "关掉后只能手动保存；退出游戏时仍会兜底存一次。"
+
+[node name="TBtnSaveNow" type="Button" parent="TContent/TRowMain"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_horizontal = 10
+text = "立即保存"
+
+[node name="TSecBackup" type="Label" parent="TContent"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_type_variation = &"AccentLabel"
+text = "备份"
+
+[node name="TRowBackup" type="HBoxContainer" parent="TContent"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TLabelName" type="Label" parent="TContent/TRowBackup"]
+custom_minimum_size = Vector2(56, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 18
+text = "名字"
+
+[node name="TNameEdit" type="LineEdit" parent="TContent/TRowBackup"]
+custom_minimum_size = Vector2(430, 40)
+layout_mode = 2
+placeholder_text = "默认：版本号_日期_时分"
+
+[node name="TBtnBackup" type="Button" parent="TContent/TRowBackup"]
+custom_minimum_size = Vector2(180, 40)
+layout_mode = 2
+text = "备份"
+
+[node name="TBtnImport" type="Button" parent="TContent/TRowBackup"]
+custom_minimum_size = Vector2(180, 40)
+layout_mode = 2
+text = "导入存档…"
+
+[node name="TSecLoad" type="Label" parent="TContent"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_type_variation = &"AccentLabel"
+text = "载入 · 点选一条即覆盖当前进度"
+
+[node name="TScroll" type="ScrollContainer" parent="TContent"]
+custom_minimum_size = Vector2(1160, 420)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="TList" type="VBoxContainer" parent="TContent/TScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
