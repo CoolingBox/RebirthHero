@@ -2,7 +2,7 @@
 
 武侠风**放置 / 增量**游戏：ATB 自动战斗为体，滚雪球式增量为骨，自走棋式乘区收集构筑为用。
 
-- 引擎：**Godot 4.7 + C#（.NET 8）**
+- 引擎：**Godot 4.7 + C#（.NET 10）**
 - 分辨率：1920×1080（`canvas_items` 拉伸，`expand` 适配）
 - 渲染：Forward+ / d3d12（Windows 桌面）
 
@@ -10,7 +10,7 @@
 
 ## 快速开始
 
-1. 安装 [Godot 4.7 .NET 版](https://godotengine.org/download/) 与 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+1. 安装 [Godot 4.7 .NET 版](https://godotengine.org/download/) 与 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 2. 用 Godot 打开本目录（`project.godot`），首次导入会自动还原 NuGet 包
 3. F5 运行（主场景 `Resources/Scene/Game.tscn`）
 
@@ -37,8 +37,14 @@ Scripts/
     ├── Materials/            # 材料：品阶目录 / 库存 / 掉落常数
     ├── Inn/                  # 客栈：资质 / 词条 / 编队
     └── UI/                   # 表现层（Godot Control）
-        ├── BattlePanel.cs    # 纯编排层
-        ├── HeroCardLayer.cs / SummonStackLayer.cs / FloatLayer.cs / StatsPanelView.cs
+        ├── BattlePanel.cs    # 纯编排层（战斗循环 / 事件 / 音效 / 打开子界面）
+        ├── StagePanel.cs     # 选关（BasePanel，UIManager 开关）
+        ├── SkillsPanel.cs    # 武学装配（同）
+        ├── StatsPanel.cs     # 战报（同，常驻侧栏）
+        ├── SettingPanel.cs   # 设置（同）
+        ├── InnPanel.cs       # 客栈（同）
+        ├── Theme/            # UIThemeManager / UISignalColors（主题装载与信号色）
+        ├── HeroCardLayer.cs / SummonStackLayer.cs / FloatLayer.cs / BackdropLayer.cs
         └── Generate/         # UI 绑定（GenUICode.py 生成）
 Resources/
 ├── Config/                   # 运行期 JSON 配置（由 xlsx 生成）
@@ -111,6 +117,99 @@ addons/TinyTools/             # 配置生成 / UI 代码生成（编辑器插件
 - **素材替换**：`Resources/Audio/SFX/` 语义化命名，替换同名文件即可换音，零代码改动
 - ⚠️ 远场总线在当前 1920×1080 布局下**不会触发**（卡片离中心最远约 1100px，阈值 1650），保留给屏外音源 / 镜头缩放场景
 
+### UI 主题（4 套武侠调性）
+顶栏「设置 ⚙」→ 外观，点即生效并写盘（`SettingData.ThemeId`）。
+
+| 主题 | 语境 | 底色 | 强调 | 次强调 |
+|---|---|---|---|---|
+| **水墨** | 书卷 / 留白 / 文人江湖 | 宣纸米白 `#E9E0CB` | 朱砂 `#A32D1C` | 赭石 `#8A5A38` |
+| **朱漆** | 门派 / 官府 / 厚重 | 近黑朱 `#1A0906` | 鎏金 `#E4BD47` | 朱红 `#B23A29` |
+| **青瓷** | 宋瓷 / 清冷 / 雅 | 墨绿灰 `#111A18` | 淡金 `#D9C68C` | 釉青 `#7FA99B` |
+| **夜行**（默认） | 江湖夜雨 / 杀伐 | 墨蓝黑 `#090D12` | 金 `#CBA52A` | 血 `#A8322A` |
+
+- 实现：`Scripts/Game/UI/Theme/`
+  - `UIThemeManager.cs` —— 装载 `.tres`、切换、持久化、取色、`Changed` 广播
+  - `UISignalColors.cs` —— 读盘信号色（血条/飘字/胜负），不进资源
+  - `Scripts/Game/UI/BackdropLayer.cs` —— 全屏山水背景（底图 + 主题叠色 + 暗角）
+- **字体四套共用**：霞鹜臻楷（标题）+ 霞鹜文楷（正文），OFL 可商用可分发。
+  ⚠️ 不用系统自带的华文行楷 / 隶书：系统字体不能随游戏打包，换平台即失效，
+  一缺整套主题就退化成默认无衬线。字体是"武侠基底"，主题差异由配色承担。
+- **配色归属**：氛围色（背景 / 面板底 / 描边 / 文字 / 按钮 / 卡牌底 / 分隔线 / 输入框）由 `Theme` 统一提供；`.tscn` 只声明 `theme_type_variation`（TitleLabel / HeadingLabel / AccentLabel / BodyLabel / HintLabel），不再写 `font_color`
+- **信号色不随主题变**：血条绿黄红、护盾蓝、伤害/治疗飘字、胜负色（`UISignalColors`）—— 这些是玩家读盘的信息色，换肤换掉会让"红=危险"的认知失效。叫"信号色"而非"语义色"：它的作用是向玩家发信号（危险/安全/收益），不是表达语义
+- 字号、位置、尺寸、锚点仍在 `.tscn`（属于布局，不是皮肤）
+
+**大数显示（统一走 `BigNum`）**
+
+UI 上所有大数一律 `BigNum.From(x).ToString(2)`，**不要自己拼万/亿后缀**。
+
+- 单位覆盖到 1载（1e44）：万 / 亿 / 兆 / 京 / 垓 / 秭 / 穰 / 沟 / 涧 / 正 / 载，再往后自动回退科学串（`9.9E60`）
+- 默认显示模式在 `SettingData.NumberFormat` = `Chinese`（武侠语境不要 `15.0K` 这种写法）；`BigNum.DisplayMode` 由 `SettingManager` 在启动时写入，切换即全局生效
+- ⚠️ 曾经存在的 `UINumberText.Fmt()` 已删除：它只到 1兆（1e12），之后会把整段数字（含 double 精度垃圾）铺出来，例如 3.3e30 显示成 `3300000000000000000兆`
+
+**真值只有一处：`.tres`**
+
+```
+Resources/Theme/wuxia_*.tres  ←──(唯一真值，编辑器双击可视化改)
+        │
+        ├─ 控件样式：Label / Button / Panel / HSlider 的字体、颜色、StyleBox
+        └─ 自定义类型 "Wuxia"：15 个氛围色 + 2 个背景下沉参数
+                │
+        UIThemeManager.GetTheme() / Color(key)
+                │
+        ├─→ ApplyTo(Control)  → 控件继承换肤
+        └─→ Color("bg_base")  → 极少数仍需代码的场合（自定义 _Draw、动态 Material）
+```
+
+### 两个背景 variation
+
+`.tres` 里定义两个 Panel type variation，**不要让任何节点再去当纯色背景**：
+
+| variation | 色值来源 | 用于 | 出现在 |
+|---|---|---|---|
+| `BgFull` | `bg_base` | 主屏最底层背景 | BattlePanel / InnPanel 的 `TBg` |
+| `BgPanel` | `panel_fill` | 子面板背景 | SettingPanel / SkillsPanel / StagePanel / StatsPanel 的 `TBg` |
+
+写法：`[node name="TBg" type="Panel" parent="."]` + `theme_type_variation = &"BgFull"`。
+
+**为什么不是 ColorRect**：`ColorRect.color` 是节点属性，不吃 Theme 样式。以前靠 `ApplyThemeColors()` 里 `_TBg.Color = UIThemeManager.BgBase` 逐处喂，于是编辑器预览是一块刺眼的白，和运行时完全对不上。改成 Panel + variation 之后，编辑器与运行时走同一条 Theme 路径，那几行赋值全部删除。
+
+⚠️ 新增背景节点一律用 Panel + variation。若确实要用 ColorRect（卡牌/堆叠卡这类运行时动态生成的），记住它拿不到 Theme，颜色必须由代码喂——但那是动态内容，不参与编辑器预览。
+
+- 4 份资源：`wuxia_ink.tres` / `wuxia_lacquer.tres` / `wuxia_celadon.tres` / `wuxia_nightblade.tres`
+- **代码里没有任何色值**。改配色 = 改 `.tres`，不需要重新编译 C#
+- **编辑器预览**：`project.godot` 的 `[gui] theme/custom` 指向 `wuxia_nightblade.tres`（与 `SettingData.ThemeId=3` 一致），
+  使 `.tscn` 在编辑器里就直接显示武侠字体与控件配色，不再是引擎默认外观。
+  它只作用于项目场景里实例化的 Control —— **编辑器自身的菜单 / Inspector 不受影响**（那由 `editor_settings` 控制）。
+  运行时也不受影响：`UIThemeManager.ApplyTo()` 仍按存档把根节点 Theme 换成玩家选的那套，这里只是"无显式 Theme 时"的兜底。
+  ⚠️ `project.godot` 里**不要写注释**：Godot 的 CFG 解析器会把注释文本粘连成下一个 key 的前缀，
+  导致 `theme/custom` 变成空值而注释被吞进 key 名（实测踩过，表现为设置完全不生效）。
+  想在配置里留说明就写在 README，Godot 每次保存 `project.godot` 也会抹掉注释
+- 色板键（`Wuxia/colors/*`）：`bg_base` `panel_fill` `panel_border` `card_ally` `card_enemy` `text_primary` `text_secondary` `text_muted` `accent` `accent_alt` `button_fill` `button_hover` `button_pressed` `separator` `input_fill` `backdrop_tint` `backdrop_shade`
+- 为什么色板也塞进 `.tres`：背景/卡牌底色若留在 C# 里就会出现"样式在资源、背景色在代码"两份真值。现在背景走 variation拿到了 Theme，只剩卡牌这类**运行时动态生成**的 ColorRect 还需要从 `.tres` 取色
+- ⚠️ 读不到资源时返回**洋红**兜底色并打印错误 —— 宁可刺眼，也不要静默白屏
+
+**背景下沉（BackdropLayer）**
+
+- 三层结构：山水底图 → 主题叠色（`backdrop_tint`）→ 径向暗角（`backdrop_shade`）
+- 底图：`Resources/UI/Background/bg_ink_light.png`（水墨主题）/ `bg_night_dark.png`（其余三套共用，靠叠色区分冷暖）
+- 底图由生图模型生成，右下角 AI 水印已用"上方镜像 + 羽化"修补
+- 为什么不各生成四张：三套暗色主题差异主要靠叠色即可达成，一张底图也便于后期统一换图
+
+**配色三条硬规矩**（改色时必须守住）
+
+1. 底色不用纯黑纯白 —— 宣纸是暖的、漆器是带红的黑、青瓷是压低饱和的青
+2. 文字不用纯黑纯白 —— 纯黑在米白上发跳，纯白在朱底上发青
+3. 描边承担"形"，强调色承担"神" —— 两者混用会满屏都是重点
+
+**可读性校验**（WCAG 2.1 相对亮度，四套全部达标）
+
+| 组合 | 实测最低 | 要求 |
+|---|---|---|
+| 主文字 / 面板底 | 12.77:1 | AAA 7:1 |
+| 次要文字 / 面板底 | 6.11:1 | AA 4.5:1 |
+| 弱化文字 / 面板底 | 3.57:1 | 3:1 |
+| 强调色 / 面板底 | 6.06:1 | 3:1 |
+
 ---
 
 ## 配置管线
@@ -154,7 +253,11 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 
 - **显示与逻辑分离**：引擎纯 C#、不 `using Godot`；表现层只读数据渲染，经 `BattleEventBus` 解耦
 - **表现层按组件拆分**：面板膨胀时拆成独立 Godot 节点组件（`Control` 子类脚本 + `.tscn` 挂载），不用 partial 把一个类摊成多文件
-- **静态 UI 进 `.tscn`**：位置 / 尺寸 / 锚点 / 字号 / 配色写在场景里，可在编辑器直接调；代码只管动态内容与事件接线
+- **子界面一律做成 `BasePanel`**：`XxxPanel.tscn`（根节点不挂脚本）+ `XxxPanel.cs`（BasePanel 子类）+ `Generate/XxxPanelBind.cs`（`_T*` 字段）。由 `UIManager.ShowPanel<T>()` 开关，依赖用静态 `BindData(...)` 注入。**不要写成 `XxxView` 塞进父场景**——那样 BattlePanel 会越养越胖，且子界面无法独立复用
+  - 常驻型（战报）用 `ShowPanel`/`HidePanel` 切换（不销毁、复用实例），模态型用 `ClosePanel`（销毁重建）
+  - 静态入口（如 `RefreshCurrent`）必须判 `GameObject` 是否 `IsInstanceValid` —— `ClosePanel` 会 `QueueFree`，静态引用不清就会在下一次调用抛 `ObjectDisposedException`
+- **静态 UI 进 `.tscn`**：位置 / 尺寸 / 锚点 / 字号写在场景里，可在编辑器直接调；代码只管动态内容与事件接线
+- **配色进 `Theme`（不是 `.tscn`）**：`theme_override_*` 优先级高于 Theme，写死在场景里会让换肤失效。层级用 `theme_type_variation` 声明，颜色由 `UIThemeManager` 提供；信号色（血条/飘字/胜负）集中在 `UISignalColors`
 - **命名**：游戏脚本不加 namespace；仅 `TinyFramework` 保留
 - 未经 playtest 的数值一律视为待验证
 
@@ -169,6 +272,6 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 | M2.1 推图结构 | ✅ |
 | M2.2 修为经济 | ✅ |
 | M2.3 客栈 | ✅ |
-| M2.4 武学装配 | ⏳ |
+| M2.4 武学装配 | ✅ |
 | M2.5 装备 | ⏳ |
 | M2.6 存档 | ⏳ |

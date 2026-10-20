@@ -18,6 +18,9 @@ public partial class GameRoot : SingletonNode<GameRoot>
         SaveManager.Instance.Init();
         SettingManager.Instance.Init();
 
+        // UI 主题：必须早于任何面板创建（读存档里的 ThemeId，并准备字体）
+        UIThemeManager.Init();
+
         // 全局系数总账：把 TuningConfig 表注入 BattleConfig / StageConfig / StageRules / CultivationConfig。
         // 必须在任何建队 / 开战之前调用（表缺失时引擎退回代码兜底值，诊断见 Tuning.Errors）。
         Tuning.Load(ConfigManager.GetAll<TuningConfig>());

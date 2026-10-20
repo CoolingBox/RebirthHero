@@ -3,7 +3,7 @@ using TinyFramework;
 
 public partial class InnPanel : BasePanel
 {
-	private ColorRect _TBg;
+	private Panel _TBg;
 	private Label _TTitle;
 	private Label _TSilver;
 	private Label _THint;
@@ -15,7 +15,7 @@ public partial class InnPanel : BasePanel
 	public override void OnBind(Control control)
 	{
 		base.OnBind(control);
-		_TBg = GameObject.FindChild("TBg") as ColorRect;
+		_TBg = GameObject.FindChild("TBg") as Panel;
 		_TTitle = GameObject.FindChild("TTitle") as Label;
 		_TSilver = GameObject.FindChild("TSilver") as Label;
 		_THint = GameObject.FindChild("THint") as Label;

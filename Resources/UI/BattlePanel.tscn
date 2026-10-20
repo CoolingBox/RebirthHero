@@ -1,16 +1,16 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Game/UI/HeroCardLayer.cs" id="1_cards"]
 [ext_resource type="Script" path="res://Scripts/Game/UI/SummonStackLayer.cs" id="2_stacks"]
 [ext_resource type="Script" path="res://Scripts/Game/UI/FloatLayer.cs" id="3_float"]
-[ext_resource type="Script" path="res://Scripts/Game/UI/StatsPanelView.cs" id="4_stats"]
-[ext_resource type="Script" path="res://Scripts/Game/UI/StageSelectView.cs" id="5_stage"]
-[ext_resource type="Script" path="res://Scripts/Game/UI/SkillsPanelView.cs" id="6_skills"]
+[ext_resource type="Theme" path="res://Resources/Theme/wuxia_nightblade.tres" id="theme_default"]
 
 [node name="BattlePanel" type="Control"]
 mouse_filter = 0
+theme = ExtResource("theme_default")
 
-[node name="TBg" type="ColorRect" parent="."]
+[node name="TBg" type="Panel" parent="."]
+theme_type_variation = &"BgFull"
 layout_mode = 0
 anchors_preset = 15
 anchor_right = 1.0
@@ -22,7 +22,6 @@ offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
-color = Color(0.02, 0.03, 0.05, 1)
 
 [node name="UnitsArea" type="Control" parent="."]
 layout_mode = 0
@@ -92,7 +91,7 @@ offset_right = 1920.0
 offset_bottom = 42.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 21
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_type_variation = &"TitleLabel"
 
 [node name="TExp" type="Label" parent="."]
 layout_mode = 0
@@ -107,7 +106,7 @@ offset_right = 1920.0
 offset_bottom = 70.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
+theme_type_variation = &"AccentLabel"
 
 [node name="TResult" type="Label" parent="."]
 layout_mode = 0
@@ -122,7 +121,6 @@ offset_right = 1920.0
 offset_bottom = 974.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 23
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 visible = false
 
 [node name="TPushBtn" type="Button" parent="."]
@@ -173,9 +171,9 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-offset_left = 1470.0
+offset_left = 1320.0
 offset_top = 14.0
-offset_right = 1590.0
+offset_right = 1440.0
 offset_bottom = 48.0
 text = "武学 ⚔"
 
@@ -186,9 +184,9 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-offset_left = 1620.0
+offset_left = 1470.0
 offset_top = 14.0
-offset_right = 1740.0
+offset_right = 1590.0
 offset_bottom = 48.0
 text = "选关 ⊞"
 
@@ -199,309 +197,21 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
+offset_left = 1620.0
+offset_top = 14.0
+offset_right = 1740.0
+offset_bottom = 48.0
+text = "战报 ▤"
+
+[node name="TSettingBtn" type="Button" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
 offset_left = 1770.0
 offset_top = 14.0
 offset_right = 1890.0
 offset_bottom = 48.0
-text = "战报 ▤"
-
-[node name="TStatsPanel" type="Control" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 600.0
-offset_top = 620.0
-offset_right = 1320.0
-offset_bottom = 990.0
-mouse_filter = 0
-visible = false
-script = ExtResource("4_stats")
-
-[node name="Bg" type="ColorRect" parent="TStatsPanel"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 0
-color = Color(0.03, 0.04, 0.07, 0.92)
-
-[node name="Header" type="Label" parent="TStatsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 10.0
-offset_top = 8.0
-offset_right = 380.0
-offset_bottom = 34.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 15
-theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
-text = "第 1 层 · 战报（本层实时 · 每层刷新）"
-
-[node name="ViewBtn" type="Button" parent="TStatsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 400.0
-offset_top = 6.0
-offset_right = 540.0
-offset_bottom = 36.0
-text = "按侠客"
-
-[node name="SortBtn" type="Button" parent="TStatsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 560.0
-offset_top = 6.0
-offset_right = 710.0
-offset_bottom = 36.0
-text = "序：伤害"
-
-[node name="Body" type="VBoxContainer" parent="TStatsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 10.0
-offset_top = 44.0
-offset_right = 710.0
-offset_bottom = 372.0
-theme_override_constants/separation = 3
-
-[node name="TStagePanel" type="Control" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 340.0
-offset_top = 100.0
-offset_right = 1580.0
-offset_bottom = 980.0
-mouse_filter = 0
-visible = false
-script = ExtResource("5_stage")
-
-[node name="Bg" type="ColorRect" parent="TStagePanel"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 0
-color = Color(0.03, 0.04, 0.07, 0.95)
-
-[node name="Heading" type="Label" parent="TStagePanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 12.0
-offset_right = 560.0
-offset_bottom = 44.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
-text = "选关 · 前往挂机层"
-
-[node name="CloseBtn" type="Button" parent="TStagePanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1100.0
-offset_top = 10.0
-offset_right = 1220.0
-offset_bottom = 44.0
-text = "关闭 ✕"
-
-[node name="Hint" type="Label" parent="TStagePanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 52.0
-offset_right = 1220.0
-offset_bottom = 78.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 15
-theme_override_colors/font_color = Color(0.72, 0.74, 0.86, 1)
-
-[node name="Content" type="VBoxContainer" parent="TStagePanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 88.0
-offset_right = 1220.0
-offset_bottom = 780.0
-theme_override_constants/separation = 10
-
-[node name="BottomHint" type="Label" parent="TStagePanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 800.0
-offset_right = 1220.0
-offset_bottom = 826.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.62, 0.66, 0.74, 1)
-
-[node name="TSkillsPanel" type="Control" parent="."]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 340.0
-offset_top = 100.0
-offset_right = 1580.0
-offset_bottom = 980.0
-mouse_filter = 0
-visible = false
-script = ExtResource("6_skills")
-
-[node name="Bg" type="ColorRect" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 0
-color = Color(0.03, 0.04, 0.07, 0.95)
-
-[node name="Heading" type="Label" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 12.0
-offset_right = 560.0
-offset_bottom = 44.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
-text = "武学装配 · 每侠客 3 槽"
-
-[node name="CloseBtn" type="Button" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 1100.0
-offset_top = 10.0
-offset_right = 1220.0
-offset_bottom = 44.0
-text = "关闭 ✕"
-
-[node name="Hint" type="Label" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 52.0
-offset_right = 1220.0
-offset_bottom = 78.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 15
-theme_override_colors/font_color = Color(1, 0.86, 0.42, 1)
-
-[node name="Content" type="VBoxContainer" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 88.0
-offset_right = 1220.0
-offset_bottom = 300.0
-theme_override_constants/separation = 8
-
-[node name="Pool" type="GridContainer" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 320.0
-offset_right = 1220.0
-offset_bottom = 820.0
-columns = 8
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 8
-
-[node name="BottomHint" type="Label" parent="TSkillsPanel"]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 830.0
-offset_right = 1220.0
-offset_bottom = 856.0
-horizontal_alignment = 0
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.62, 0.66, 0.74, 1)
+text = "设置 ⚙"

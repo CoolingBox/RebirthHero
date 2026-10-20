@@ -31,6 +31,8 @@ public partial class InnPanel : BasePanel
     static readonly Color Dim     = new Color(0.62f, 0.66f, 0.74f);
     static readonly Color Green   = new Color(0.45f, 0.95f, 0.55f);
 
+    private BackdropLayer _backdrop;   // 全屏山水背景（懒创建）
+
     // —— 外部注入的依赖（UIManager.ShowPanel<T>() 不带参，故用静态上下文在打开前注入）——
     static Inn _ctxInn;
     static Silver _ctxSilver;
@@ -166,7 +168,23 @@ public partial class InnPanel : BasePanel
         if (_TBottomHint != null)
             _TBottomHint.Text = "上下阵 / 站位变更在**下一场战斗**生效；已招侠客当世锁定（不可退换）。";
 
-        BattlePanel.ApplyCjkFont(GameObject);
+        UIThemeManager.ApplyTo(GameObject);
+
+        if (_TBg != null)
+            EnsureBackdrop();
+    }
+
+    /// <summary>背景层只建一次；换主题时由 BackdropLayer 自己刷新，不重建节点。</summary>
+    void EnsureBackdrop()
+    {
+        if (_TBg == null)
+            return;
+
+        if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+            return;
+
+        _backdrop = new BackdropLayer();
+        _TBg.AddChild(_backdrop);
     }
 
     void OnRefreshClicked()

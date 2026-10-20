@@ -9,14 +9,14 @@ using System.Collections.Generic;
 /// </summary>
 public static class UICodeGenerator
 {
-    private const string UiResPath = "res://Resources/UI/";
-    private const string UiCodePath = "res://Scripts/Game/UI/";
-    private const string UiCodeBindPath = "res://Scripts/Game/UI/Generate";
+    private const string UIResPath = "res://Resources/UI/";
+    private const string UICodePath = "res://Scripts/Game/UI/";
+    private const string UICodeBindPath = "res://Scripts/Game/UI/Generate";
 
     public static void Generate()
     {
         Start();
-        List<string> uiResFiles = CollectTscnFiles(UiResPath);
+        List<string> uiResFiles = CollectTscnFiles(UIResPath);
         GenerateUiCode(uiResFiles);
         GenerateUiCodeBind(uiResFiles);
         End();
@@ -51,7 +51,7 @@ public static class UICodeGenerator
         {
             string name = fullName.GetFile().GetBaseName();
             GD.PrintRich("[color=Cyan]正在生成UI代码:[/color]" + name);
-            string path = ProjectSettings.GlobalizePath(UiCodePath + name + ".cs");
+            string path = ProjectSettings.GlobalizePath(UICodePath + name + ".cs");
             if (FileAccess.FileExists(path))
             {
                 GD.PrintRich("[color=Cyan]" + name + ".cs 文件已存在,跳过[/color]");
@@ -89,7 +89,7 @@ public static class UICodeGenerator
         {
             string name = fullName.GetFile().GetBaseName();
             GD.PrintRich("[color=Cyan]正在生成UI绑定代码:[/color]" + name);
-            string path = ProjectSettings.GlobalizePath(UiCodeBindPath + "/" + name + "Bind.cs");
+            string path = ProjectSettings.GlobalizePath(UICodeBindPath + "/" + name + "Bind.cs");
 
             PackedScene packedScene = ResourceLoader.Load<PackedScene>(fullName);
             if (packedScene == null)
@@ -159,8 +159,8 @@ public static class UICodeGenerator
     private static void Start()
     {
         GD.PrintRich("[color=Green]UI代码生成启动[/color]");
-        EnsureDir(UiCodePath);
-        EnsureDir(UiCodeBindPath);
+        EnsureDir(UICodePath);
+        EnsureDir(UICodeBindPath);
     }
 
     private static void EnsureDir(string resDir)

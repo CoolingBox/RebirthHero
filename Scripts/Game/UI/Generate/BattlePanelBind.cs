@@ -3,7 +3,7 @@ using TinyFramework;
 
 public partial class BattlePanel : BasePanel
 {
-	private ColorRect _TBg;
+	private Panel _TBg;
 	private Control _TCards;
 	private Control _TStacks;
 	private Control _TFxLayer;
@@ -16,13 +16,11 @@ public partial class BattlePanel : BasePanel
 	private Button _TSkillBtn;
 	private Button _TStageBtn;
 	private Button _TStatsBtn;
-	private Control _TStatsPanel;
-	private Control _TStagePanel;
-	private Control _TSkillsPanel;
+	private Button _TSettingBtn;
 	public override void OnBind(Control control)
 	{
 		base.OnBind(control);
-		_TBg = GameObject.FindChild("TBg") as ColorRect;
+		_TBg = GameObject.FindChild("TBg") as Panel;
 		_TCards = GameObject.FindChild("TCards") as Control;
 		_TStacks = GameObject.FindChild("TStacks") as Control;
 		_TFxLayer = GameObject.FindChild("TFxLayer") as Control;
@@ -35,8 +33,6 @@ public partial class BattlePanel : BasePanel
 		_TSkillBtn = GameObject.FindChild("TSkillBtn") as Button;
 		_TStageBtn = GameObject.FindChild("TStageBtn") as Button;
 		_TStatsBtn = GameObject.FindChild("TStatsBtn") as Button;
-		_TStatsPanel = GameObject.FindChild("TStatsPanel") as Control;
-		_TStagePanel = GameObject.FindChild("TStagePanel") as Control;
-		_TSkillsPanel = GameObject.FindChild("TSkillsPanel") as Control;
+		_TSettingBtn = GameObject.FindChild("TSettingBtn") as Button;
 	}
 }

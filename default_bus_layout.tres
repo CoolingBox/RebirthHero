@@ -1,8 +1,8 @@
 [gd_resource type="AudioBusLayout" format=3 uid="uid://b8rd3oxrdq1t1"]
 
 [sub_resource type="AudioEffectLimiter" id="AudioEffectLimiter_sfx"]
-threshold_db = -3.0
 ceiling_db = -0.5
+threshold_db = -3.0
 soft_clip_db = -2.0
 soft_clip_ratio = 2.0
 
@@ -11,22 +11,18 @@ cutoff_hz = 4000.0
 resonance = 0.4
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_far"]
+predelay_msec = 20.0
 room_size = 0.35
 damping = 0.6
-spread = 1.0
 hipass = 0.3
-dry = 1.0
 wet = 0.22
-predelay_msec = 20.0
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_ambient"]
+predelay_msec = 35.0
 room_size = 0.6
 damping = 0.45
-spread = 1.0
 hipass = 0.15
-dry = 1.0
 wet = 0.45
-predelay_msec = 35.0
 
 [resource]
 bus/1/name = &"BGM"

@@ -244,12 +244,27 @@ public struct BigNum : IComparable<BigNum>, IEquatable<BigNum>
         return FormatChineseNumber(v, decimals) + ChineseUnits[tier];
     }
 
+    /// <summary>中文单位下的尾数。量级越大位数越少(数字长了留位无用),且统一去掉多余尾零。</summary>
     private static string FormatChineseNumber(double v, int decimals)
     {
-        if (v >= 1000) return v.ToString("F0", CultureInfo.InvariantCulture);
-        if (v >= 100) return v.ToString("F1", CultureInfo.InvariantCulture);
-        if (v >= 10) return v.ToString("F2", CultureInfo.InvariantCulture);
-        return v.ToString("F" + decimals, CultureInfo.InvariantCulture);
+        string s;
+        if (v >= 1000) s = v.ToString("F0", CultureInfo.InvariantCulture);
+        else if (v >= 100) s = v.ToString("F1", CultureInfo.InvariantCulture);
+        else if (v >= 10) s = v.ToString("F2", CultureInfo.InvariantCulture);
+        else s = v.ToString("F" + decimals, CultureInfo.InvariantCulture);
+        return TrimTrailingZeros(s);
+    }
+
+    /// <summary>去掉小数末尾多余的 0 与空小数点:1.00→1、2.50→2.5、123.0→123。</summary>
+    private static string TrimTrailingZeros(string s)
+    {
+        int dot = s.IndexOf('.');
+        if (dot < 0) return s;
+
+        int end = s.Length;
+        while (end > dot + 1 && s[end - 1] == '0') end--;
+        if (end == dot + 1) end = dot;          // 小数点后全被削掉,连点一起去掉
+        return s.Substring(0, end);
     }
 
     /// <summary>紧凑科学计数串,如 "1.5E3",用于 JSON 序列化(无损往返)。</summary>

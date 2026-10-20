@@ -10,8 +10,7 @@
 //   · Scripts/Game/UI/HeroCardLayer.cs    —— 侠客单位卡（挂 TCards 节点）
 //   · Scripts/Game/UI/SummonStackLayer.cs —— 召唤物堆叠卡（挂 TStacks 节点）
 //   · Scripts/Game/UI/FloatLayer.cs       —— 战斗飘字（挂 TFxLayer 节点）
-//   · Scripts/Game/UI/StatsPanelView.cs   —— 战报统计面板（挂 TStatsPanel 节点；内部 Header/ViewBtn/SortBtn/Body 自管）
-//   · Scripts/Game/UI/UiUtil.cs           —— 共享数字格式化
+//   · Scripts/Game/UI/StatsPanel.cs    —— 战报（独立 BasePanel；常驻侧栏，点「战报」切换显隐）
 //   · Scripts/Game/UI/Generate/BattlePanelBind.cs —— 由 GenUICode.py 生成：_T* 字段 + OnBind 里的 FindChild 绑定
 //
 // 规则：显示组件互不直接引用，面板是唯一编排者 —— 事件在面板里解析锚点后转交 FloatLayer；
@@ -49,15 +48,16 @@ public partial class BattlePanel : BasePanel
     private HeroCardLayer _cards;
     private SummonStackLayer _stacks;
     private FloatLayer _floats;
-    private StatsPanelView _stats;
-    private StageSelectView _stage;
+    private BackdropLayer _backdrop;      // 全屏山水背景（懒创建，见 EnsureBackdrop）
+
+    // 子界面（战报 / 选关 / 武学 / 设置）已拆成独立 BasePanel，由 UIManager 开关，
+    // 本面板不再持有它们的引用 —— 只负责"注入依赖 + 打开 + 关闭后恢复战斗"。
 
     // —— 材料库存（本世资产；重开本世时清空）——
     private readonly MaterialBag _materials = new();
 
     // —— 武学装配（M2.4：每侠客 3 槽，玩家的构筑选择，不随重开本世清空）——
     private readonly SkillLoadout _loadout = new();
-    private SkillsPanelView _skills;
     private List<SkillConfig> _skillPool;   // 全部已实装武学（装配池）
 
     // —— M2.1 推图状态 ——
@@ -199,16 +199,15 @@ public partial class BattlePanel : BasePanel
         _cards = _TCards as HeroCardLayer;
         _stacks = _TStacks as SummonStackLayer;
         _floats = _TFxLayer as FloatLayer;
-        _stats = _TStatsPanel as StatsPanelView;
-        _stage = _TStagePanel as StageSelectView;
-        _skills = _TSkillsPanel as SkillsPanelView;
 
+        // 子界面按钮：不判断子面板是否存在 —— 它们由 UIManager 按需创建
         if (_TPushBtn != null) _TPushBtn.Pressed += OnResumePush;
         if (_TNextBtn != null) _TNextBtn.Pressed += OnNext;
         if (_TInnBtn != null) _TInnBtn.Pressed += OnOpenInn;
-        if (_TStatsBtn != null && _stats != null) _TStatsBtn.Pressed += OnToggleStats;
-        if (_TStageBtn != null && _stage != null) _TStageBtn.Pressed += OnOpenStage;
-        if (_TSkillBtn != null && _skills != null) _TSkillBtn.Pressed += OnOpenSkills;
+        if (_TStatsBtn != null) _TStatsBtn.Pressed += OnToggleStats;
+        if (_TStageBtn != null) _TStageBtn.Pressed += OnOpenStage;
+        if (_TSkillBtn != null) _TSkillBtn.Pressed += OnOpenSkills;
+        if (_TSettingBtn != null) _TSettingBtn.Pressed += OnOpenSettings;
 
         _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
         GameObject.AddChild(_timer);
@@ -218,7 +217,9 @@ public partial class BattlePanel : BasePanel
         GameObject.AddChild(_advanceTimer);
         _advanceTimer.Timeout += OnAdvance;
 
-        ApplyCjkFont(GameObject);
+        UIThemeManager.ApplyTo(GameObject);
+        ApplyThemeColors();
+        UIThemeManager.Changed += OnThemeChanged;
     }
 
     // ============ 开战 ============
@@ -236,7 +237,7 @@ public partial class BattlePanel : BasePanel
         HookEvents();
 
         _areaX = GetArea().X;
-        _stats.BeginBattle(_engine, _engine.A, _run.Layer);   // 挂总线 + 进新层清零 + 建报行
+        StatsPanel.BindBattle(_engine, _engine.A, _run.Layer);   // 战报：注入引擎/阵容/层（面板未创建则先存着）
         _cards.Build(_engine.A, _engine.B, _areaX);
 
         _resultShown = false;
@@ -256,7 +257,7 @@ public partial class BattlePanel : BasePanel
         _cult.Reset();
         _silver.Reset();
         _materials.Reset();         // 材料也是"此生"资产
-        _stats.InvalidateLayer();   // 重开本世 → 下次开战强制清零统计
+        StatsPanel.InvalidateCurrent();   // 重开本世 → 下次开战强制清零统计
         StartBattle();
     }
 
@@ -295,56 +296,83 @@ public partial class BattlePanel : BasePanel
         else if (_resultShown) _advanceTimer.Start();
     }
 
+    // ============ 子界面开关 ============
+    // 统一约定：
+    //   · 打开音在此处播（面板不知道是谁调它起来的）
+    //   · 关闭音在面板内部播（面板自己知道自己被关了）
+    //   · OnClose* 回调只负责"恢复战斗节奏"，不重复播音
+    //   · 打开前一律暂停战斗，关闭后按引擎状态恢复 —— 避免后台空转
+
     // ============ 武学装配（M2.4）============
-    /// <summary>打开武学装配面板：暂停战斗（与客栈 / 选关同一套恢复逻辑）。</summary>
     private void OnOpenSkills()
     {
         AudioManager.PlayUISFX("ui_open");
         _timer.Stop();
         _advanceTimer.Stop();
-        _skills.Bind(_loadout, ActiveRoster(), _lookup, _skillPool, OnCloseSkills);
+
+        SkillsPanel.BindData(_loadout, ActiveRoster(), _lookup, _skillPool, OnCloseSkills);
+        UIManager.ShowPanel<SkillsPanel>();
     }
 
     /// <summary>关武学面板：恢复战斗节奏。</summary>
     private void OnCloseSkills()
     {
-        AudioManager.PlayUISFX("ui_close");
-        if (_engine != null && !_engine.IsOver) _timer.Start();
-        else if (_resultShown) _advanceTimer.Start();
+        ResumeBattle();
     }
 
     // ============ 选关 ============
-    /// <summary>打开选关面板：暂停战斗（停 _timer / _advanceTimer），由面板点层后锁层开战。</summary>
     private void OnOpenStage()
     {
         AudioManager.PlayUISFX("ui_open");
         _timer.Stop();
         _advanceTimer.Stop();
-        _stage.Bind(_run, _materials, OnGoLayer, OnCloseStage);
+
+        StagePanel.BindData(_run, _materials, OnGoLayer, OnCloseStage);
+        UIManager.ShowPanel<StagePanel>();
     }
 
     /// <summary>选某层：锁层挂机 + 关面板 + 重开一场。</summary>
     private void OnGoLayer(int layer)
     {
         _run.JumpTo(layer);
-        _stage.Close();
-        OnCloseStage();
+        UIManager.ClosePanel<StagePanel>();   // 选完即销毁，下次重开时按新层重建
+        ResumeBattle();
         StartBattle();
     }
 
-    /// <summary>关选关面板：恢复战斗节奏（与客栈同一套恢复逻辑）。</summary>
     private void OnCloseStage()
     {
-        AudioManager.PlayUISFX("ui_close");
-        if (_engine != null && !_engine.IsOver) _timer.Start();
-        else if (_resultShown) _advanceTimer.Start();
+        ResumeBattle();
     }
 
     /// <summary>战报只是轻量面板：用轻点击音，不用 open/close（避免每次查看都像开新界面）。</summary>
     private void OnToggleStats()
     {
         AudioManager.PlayUISFX("ui_click");
-        _stats.Toggle();
+        StatsPanel.ToggleCurrent();
+    }
+
+    // ============ 设置 ============
+    private void OnOpenSettings()
+    {
+        AudioManager.PlayUISFX("ui_open");
+        _timer.Stop();
+        _advanceTimer.Stop();
+
+        SettingPanel.BindData(OnCloseSettings);
+        UIManager.ShowPanel<SettingPanel>();
+    }
+
+    private void OnCloseSettings()
+    {
+        ResumeBattle();
+    }
+
+    /// <summary>子界面关闭后恢复战斗：未结束则继续 tick，已结束则走结算倒计时。</summary>
+    private void ResumeBattle()
+    {
+        if (_engine != null && !_engine.IsOver) _timer.Start();
+        else if (_resultShown) _advanceTimer.Start();
     }
 
     private void ClearBattle()
@@ -384,8 +412,8 @@ public partial class BattlePanel : BasePanel
         }
         string lv = string.Join(" · ", lvParts);
         if (_TExp != null)
-            _TExp.Text = "银两 " + UiUtil.Fmt(_silver.Amount) + "（本世累计 " + UiUtil.Fmt(_silver.TotalGained) + "）"
-                       + "　修为累计 " + UiUtil.Fmt(_cult.TotalGained) + "　｜　" + lv;
+            _TExp.Text = "银两 " + BigNum.From(_silver.Amount).ToString(2) + "（本世累计 " + BigNum.From(_silver.TotalGained).ToString(2) + "）"
+                       + "　修为累计 " + BigNum.From(_cult.TotalGained).ToString(2) + "　｜　" + lv;
     }
 
     // ============ 事件订阅 ============
@@ -459,7 +487,7 @@ public partial class BattlePanel : BasePanel
         int matTier = MaterialCatalog.TierOf(layer);
         _materials.Add(matTier, MaterialConfig.MatMobDrop);
 
-        SpawnFloat(u, "修为+" + perHead.ToString("0.#") + " 银两+" + UiUtil.Fmt(sil)
+        SpawnFloat(u, "修为+" + perHead.ToString("0.#") + " 银两+" + BigNum.From(sil).ToString(2)
                       + " " + MaterialCatalog.NameOf(matTier) + "+" + MaterialConfig.MatMobDrop,
                    new Color(1f, 0.92f, 0.45f));
         RefreshHeader();
@@ -500,7 +528,7 @@ public partial class BattlePanel : BasePanel
         }
 
         double perHeadTotal = _roster.Count > 0 ? _cult.BattleGained / _roster.Count : 0;
-        string dropTag = "修为 +" + perHeadTotal.ToString("0.#") + "/人 · 银两 +" + UiUtil.Fmt(_silver.BattleGained);
+        string dropTag = "修为 +" + perHeadTotal.ToString("0.#") + "/人 · 银两 +" + BigNum.From(_silver.BattleGained).ToString(2);
 
         _run.Settle(_engine);   // 胜→层内进下一波 / 打穿收尾波→进层；负→退回上一层并转入挂机
 
@@ -576,30 +604,61 @@ public partial class BattlePanel : BasePanel
         _cards.Refresh(_engine);
         _stacks.Sync(_engine, _areaX);
         _floats.Update(TickSec);
-        _stats.Refresh();
+        StatsPanel.RefreshCurrent();   // 面板隐藏时内部直接返回
     }
 
-    // ============ CJK 字体 ============
-    private static FontFile TryLoadCjkFont()
+    // ============ UI 主题 ============
+    // 原来的 ApplyCjkFont 只挂了一个"仅含字体"的 Theme。现在字体与配色统一由
+    // UIThemeManager 提供（含标题/正文字体、按钮与面板样式），避免两套 Theme 互相覆盖。
+
+    /// <summary>
+    /// 把当前主题的环境色刷到那些"不归 Theme 管"的节点上：
+    /// ColorRect 没有主题样式（它是节点属性不是 StyleBox），所以背景必须由代码喂。
+    /// </summary>
+    private void ApplyThemeColors()
     {
-        string[] paths = { "C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/msyh.ttf", "C:/Windows/Fonts/simhei.ttf", "C:/Windows/Fonts/simsun.ttc" };
-        foreach (var p in paths)
-        {
-            if (!File.Exists(p)) continue;
-            var f = new FontFile();
-            if (f.LoadDynamicFont(p) == Error.Ok) return f;
-        }
-        return null;
+        if (_TBg != null)
+            EnsureBackdrop();
+
+        // 子界面各自刷自己的背景与重建（它们不一定存在，静态方法内部判空）
+        StagePanel.ApplyThemeCurrent();
+        SkillsPanel.ApplyThemeCurrent();
+        StatsPanel.ApplyThemeCurrent();
+        SettingPanel.ApplyThemeCurrent();
+
+        // 卡牌与堆叠卡的底色是在 Build 时写进 ColorRect 的，换主题必须重建节点。
+        // 只重建表现层（读现有 BattleUnit），不碰引擎状态与战斗进度。
+        if (_engine == null || _cards == null || _stacks == null)
+            return;
+
+        _cards.Clear();
+        _cards.Build(_engine.A, _engine.B, _areaX);
+        _cards.Refresh(_engine);
+
+        _stacks.Clear();
+        _stacks.Sync(_engine, _areaX);
     }
 
-    /// <summary>把中文字体应用到整棵子树（**内部可见**：客栈界面 InnPanel 增量重建后要复用同一份字体）。</summary>
-    internal static void ApplyCjkFont(Control root)
+    /// <summary>
+    /// 背景层懒创建：TBg 是纯色 ColorRect，作为底图未加载时的兜底；
+    /// 山水背景叠在它上面。只建一次，换主题时由 BackdropLayer 自己刷新。
+    /// </summary>
+    private void EnsureBackdrop()
     {
-        var font = TryLoadCjkFont();
-        if (font == null) return;
-        var theme = new Theme();
-        theme.DefaultFont = font;
-        root.Theme = theme;
+        if (_TBg == null)
+            return;
+
+        if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+            return;
+
+        _backdrop = new BackdropLayer();
+        _TBg.AddChild(_backdrop);
+    }
+
+    private void OnThemeChanged(int themeId)
+    {
+        UIThemeManager.ApplyTo(GameObject);
+        ApplyThemeColors();
     }
 
     string HeroName(int id)
