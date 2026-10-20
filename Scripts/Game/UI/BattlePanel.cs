@@ -56,6 +56,11 @@ public partial class BattlePanel : BasePanel
     // —— 材料库存（本世资产；重开本世时清空）——
     private readonly MaterialBag _materials = new();
 
+    // —— 装备（M2.5；同属本世资产，转世归零 —— GDD §3.3 账本）——
+    private readonly EquipBag _equips = new EquipBag();
+    private List<EquipConfig> _equipPool;   // 全部装备模板
+    private Random _rng;                    // 掉落随机源（与战斗随机分开，便于复现）
+
     // —— 武学装配（M2.4：每侠客 3 槽，玩家的构筑选择，不随重开本世清空）——
     private readonly SkillLoadout _loadout = new();
     private List<SkillConfig> _skillPool;   // 全部已实装武学（装配池）
@@ -125,6 +130,11 @@ public partial class BattlePanel : BasePanel
         // 敌方阵容：单位模板（EnemyConfig 表）+ 武学池（已实装全池；按 Id 定序 → 抽取可复现）
         _enemyTemplates = ConfigManager.GetAll<EnemyConfig>() ?? new List<EnemyConfig>();
         _enemyPool = EnemyFactory.BuildSkillPool(ConfigManager.GetAll<SkillConfig>());
+
+        // M2.5 装备：模板池 + 掉落随机源
+        _equipPool = ConfigManager.GetAll<EquipConfig>();
+        if (_equipPool == null) _equipPool = new List<EquipConfig>();
+        _rng = new Random();
         // 召唤物类型档位（SummonConfig 表）——必须在建队前灌入，否则召唤物走引擎兜底规格
         SummonCatalog.Init(ConfigManager.GetAll<SummonConfig>());
 
@@ -171,10 +181,24 @@ public partial class BattlePanel : BasePanel
     }
 
     private List<BattleUnit> BuildPlayerTeam()
-        => HeroBuilder.BuildTeam(ActiveRoster(), _lookup, id => _cult.LevelOf(id), includePending: false,
-                                 qualityOf: id => _inn?.QualityOf(id),
-                                 affixLookup: id => ConfigManager.GetOne<QualityConfig>(id),
-                                 skillIdsOf: _loadout.Get);
+    {
+        return HeroBuilder.BuildTeam(ActiveRoster(), _lookup, id => _cult.LevelOf(id), includePending: false,
+                                     qualityOf: id => _inn?.QualityOf(id),
+                                     affixLookup: id => ConfigManager.GetOne<QualityConfig>(id),
+                                     skillIdsOf: _loadout.Get,
+                                     equipOf: id => _equips.BonusOf(id, EquipById));
+    }
+
+    /// <summary>装备模板查表（M2.5）。建队时才调，不在每帧路径上。</summary>
+    private EquipConfig EquipById(int id)
+    {
+        if (_equipPool == null) return null;
+
+        for (int i = 0; i < _equipPool.Count; i++)
+            if (_equipPool[i].Id == id) return _equipPool[i];
+
+        return null;
+    }
 
     private List<BattleUnit> BuildEnemyWave(int layer, int wave, bool isFinisher)
         => EnemyFactory.BuildWave(layer, wave, isFinisher, _enemyTemplates, _enemyPool);
@@ -207,6 +231,7 @@ public partial class BattlePanel : BasePanel
         if (_TStatsBtn != null) _TStatsBtn.Pressed += OnToggleStats;
         if (_TStageBtn != null) _TStageBtn.Pressed += OnOpenStage;
         if (_TSkillBtn != null) _TSkillBtn.Pressed += OnOpenSkills;
+        if (_TEquipBtn != null) _TEquipBtn.Pressed += OnOpenEquips;
         if (_TSettingBtn != null) _TSettingBtn.Pressed += OnOpenSettings;
 
         _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
@@ -257,6 +282,7 @@ public partial class BattlePanel : BasePanel
         _cult.Reset();
         _silver.Reset();
         _materials.Reset();         // 材料也是"此生"资产
+        _equips.Reset();            // 装备同样归零（GDD §3.3：装备不跨世）
         StatsPanel.InvalidateCurrent();   // 重开本世 → 下次开战强制清零统计
         StartBattle();
     }
@@ -316,6 +342,22 @@ public partial class BattlePanel : BasePanel
 
     /// <summary>关武学面板：恢复战斗节奏。</summary>
     private void OnCloseSkills()
+    {
+        ResumeBattle();
+    }
+
+    // ============ 装备（M2.5）============
+    private void OnOpenEquips()
+    {
+        AudioManager.PlayUISFX("ui_open");
+        _timer.Stop();
+        _advanceTimer.Stop();
+
+        EquipPanel.BindData(_equips, _equipPool, ActiveRoster(), _silver, OnCloseEquips);
+        UIManager.ShowPanel<EquipPanel>();
+    }
+
+    private void OnCloseEquips()
     {
         ResumeBattle();
     }
@@ -487,6 +529,19 @@ public partial class BattlePanel : BasePanel
         int matTier = MaterialCatalog.TierOf(layer);
         _materials.Add(matTier, MaterialConfig.MatMobDrop);
 
+        // 装备：概率掉落。与材料刻意不同 —— 材料给"稳定感"（每杀必得），
+        // 装备给"惊喜"（偶发、且随层数变好），两种节奏并存才不会让掉落变成纯打卡。
+        if (EquipDropper.ShouldDrop(_rng))
+        {
+            EquipConfig drop = EquipDropper.Roll(layer, _rng, _equipPool);
+            if (drop != null)
+            {
+                _equips.Add(drop.Id);
+                SpawnFloat(u, "得 " + drop.Name + "（" + EquipRules.RarityName(drop.Rarity) + "）",
+                           UISignalColors.RarityOf(drop.Rarity));
+            }
+        }
+
         SpawnFloat(u, "修为+" + perHead.ToString("0.#") + " 银两+" + BigNum.From(sil).ToString(2)
                       + " " + MaterialCatalog.NameOf(matTier) + "+" + MaterialConfig.MatMobDrop,
                    new Color(1f, 0.92f, 0.45f));
@@ -625,6 +680,7 @@ public partial class BattlePanel : BasePanel
         SkillsPanel.ApplyThemeCurrent();
         StatsPanel.ApplyThemeCurrent();
         SettingPanel.ApplyThemeCurrent();
+        EquipPanel.ApplyThemeCurrent();
 
         // 卡牌与堆叠卡的底色是在 Build 时写进 ColorRect 的，换主题必须重建节点。
         // 只重建表现层（读现有 BattleUnit），不碰引擎状态与战斗进度。

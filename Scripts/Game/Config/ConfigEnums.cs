@@ -200,3 +200,16 @@ public enum EnemyKind
     Elite = 2,  // 精英
     Boss = 3,   // 层主
 }
+
+// 装备栏位（EquipConfig.Slot）。四栏刻意不同构：武器偏攻、护甲偏血、饰品均衡、靴子偏速。
+//   rationale：若四栏同构（都给一点攻血），配装就退化成"哪件数值大穿哪件"，没有决策。
+// 稀有度**复用 Rarity 五档**（1白/2绿/3蓝/4紫/5橙），不另立枚举 —— 档位数与语义层级一致，
+//   多一个同构枚举只会增加映射成本。
+public enum EquipSlot
+{
+    Weapon = 1,   // 武器
+    Armor = 2,    // 护甲
+    Trinket = 3,  // 饰品
+    Boots = 4,    // 靴子
+}
+

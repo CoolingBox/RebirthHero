@@ -1,0 +1,222 @@
+[
+  {
+    "Id": 1,
+    "Name": "\u94c1\u5251",
+    "Slot": 1,
+    "Rarity": 1,
+    "BaseATK": 4,
+    "BaseHP": 0,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 2,
+    "Name": "\u7cbe\u94a2\u5251",
+    "Slot": 1,
+    "Rarity": 2,
+    "BaseATK": 8,
+    "BaseHP": 0,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 3,
+    "Name": "\u5bd2\u950b\u5251",
+    "Slot": 1,
+    "Rarity": 3,
+    "BaseATK": 16,
+    "BaseHP": 0,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 4,
+    "Name": "\u7384\u94c1\u5251",
+    "Slot": 1,
+    "Rarity": 4,
+    "BaseATK": 32,
+    "BaseHP": 0,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 5,
+    "Name": "\u9f99\u6cc9\u5251",
+    "Slot": 1,
+    "Rarity": 5,
+    "BaseATK": 64,
+    "BaseHP": 0,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 6,
+    "Name": "\u5e03\u8863",
+    "Slot": 2,
+    "Rarity": 1,
+    "BaseATK": 0,
+    "BaseHP": 60,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 7,
+    "Name": "\u76ae\u7532",
+    "Slot": 2,
+    "Rarity": 2,
+    "BaseATK": 0,
+    "BaseHP": 120,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 8,
+    "Name": "\u9501\u5b50\u7532",
+    "Slot": 2,
+    "Rarity": 3,
+    "BaseATK": 0,
+    "BaseHP": 240,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 9,
+    "Name": "\u7384\u94c1\u7532",
+    "Slot": 2,
+    "Rarity": 4,
+    "BaseATK": 0,
+    "BaseHP": 480,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 10,
+    "Name": "\u91d1\u9cde\u7532",
+    "Slot": 2,
+    "Rarity": 5,
+    "BaseATK": 0,
+    "BaseHP": 960,
+    "BaseSPD": 0,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 11,
+    "Name": "\u6728\u724c",
+    "Slot": 3,
+    "Rarity": 1,
+    "BaseATK": 2,
+    "BaseHP": 30,
+    "BaseSPD": 1,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 12,
+    "Name": "\u94dc\u4f69",
+    "Slot": 3,
+    "Rarity": 2,
+    "BaseATK": 4,
+    "BaseHP": 60,
+    "BaseSPD": 2,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 13,
+    "Name": "\u7389\u5760",
+    "Slot": 3,
+    "Rarity": 3,
+    "BaseATK": 8,
+    "BaseHP": 120,
+    "BaseSPD": 4,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 14,
+    "Name": "\u7f8a\u8102\u7389",
+    "Slot": 3,
+    "Rarity": 4,
+    "BaseATK": 16,
+    "BaseHP": 240,
+    "BaseSPD": 8,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 15,
+    "Name": "\u9f99\u7eb9\u7389",
+    "Slot": 3,
+    "Rarity": 5,
+    "BaseATK": 32,
+    "BaseHP": 480,
+    "BaseSPD": 16,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 16,
+    "Name": "\u8349\u978b",
+    "Slot": 4,
+    "Rarity": 1,
+    "BaseATK": 0,
+    "BaseHP": 0,
+    "BaseSPD": 2,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 17,
+    "Name": "\u5e03\u9774",
+    "Slot": 4,
+    "Rarity": 2,
+    "BaseATK": 0,
+    "BaseHP": 0,
+    "BaseSPD": 4,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 18,
+    "Name": "\u76ae\u9774",
+    "Slot": 4,
+    "Rarity": 3,
+    "BaseATK": 0,
+    "BaseHP": 0,
+    "BaseSPD": 8,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 19,
+    "Name": "\u8e0f\u4e91\u9774",
+    "Slot": 4,
+    "Rarity": 4,
+    "BaseATK": 0,
+    "BaseHP": 0,
+    "BaseSPD": 14,
+    "SetId": 0,
+    "DropWeight": 100
+  },
+  {
+    "Id": 20,
+    "Name": "\u8ffd\u98ce\u9774",
+    "Slot": 4,
+    "Rarity": 5,
+    "BaseATK": 0,
+    "BaseHP": 0,
+    "BaseSPD": 24,
+    "SetId": 0,
+    "DropWeight": 100
+  }
+]
