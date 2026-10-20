@@ -35,6 +35,13 @@ public sealed class MaterialBag
         }
     }
 
+    /// <summary>读档：直接写入某档位持有量（非法档位/数量忽略）。</summary>
+    public void Restore(int tier, long count)
+    {
+        if (tier <= 0 || count <= 0) return;
+        _byTier[tier] = count;
+    }
+
     /// <summary>重开本世：清空。</summary>
     public void Reset()
     {

@@ -76,6 +76,21 @@ public sealed class SkillLoadout
         return true;
     }
 
+    /// <summary>读档：整槽恢复（不足 3 个补 0，非法 id 归空槽）。</summary>
+    public void Restore(int heroId, int[] ids)
+    {
+        if (heroId <= 0) return;
+
+        int[] arr = new int[Slots];
+        if (ids != null)
+        {
+            int n = ids.Length < Slots ? ids.Length : Slots;
+            for (int i = 0; i < n; i++) arr[i] = ids[i] > 0 ? ids[i] : Empty;
+        }
+
+        _byHero[heroId] = arr;
+    }
+
     /// <summary>该侠客是否已装某武学。</summary>
     public bool Has(int heroId, int skillId)
     {

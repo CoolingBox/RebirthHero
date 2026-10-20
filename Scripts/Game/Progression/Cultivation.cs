@@ -104,6 +104,25 @@ public sealed class Cultivation
         return ups;
     }
 
+    /// <summary>
+    /// 读档：直接写入某侠客的等级与级内修为池（**不结算升级** —— 存档保存的就是已结算状态）。
+    /// 非法值一律夹到合法区间，避免脏存档把等级写成 0 或负数。
+    /// </summary>
+    public void Restore(int heroId, int level, double pool)
+    {
+        if (heroId <= 0) return;
+
+        int lv = level;
+        if (lv < 1) lv = 1;
+        if (lv > CultivationConfig.MaxLevel) lv = CultivationConfig.MaxLevel;
+
+        double p = pool;
+        if (p < 0) p = 0;
+
+        _level[heroId] = lv;
+        _pool[heroId] = p;
+    }
+
     public void Reset()
     {
         _level.Clear();

@@ -155,6 +155,43 @@ public sealed class EquipBag
         return false;
     }
 
+    // ---------- 读档（M2.6）----------
+
+    /// <summary>读档：恢复一件装备实例。Uid 递增器跟着抬高，避免之后新掉落撞号。</summary>
+    public void RestoreItem(int uid, int configId, int level)
+    {
+        if (uid <= 0 || configId <= 0) return;
+
+        EquipItem item = new EquipItem();
+        item.Uid = uid;
+        item.ConfigId = configId;
+        item.Level = level > 0 ? level : 0;
+
+        _items.Add(item);
+        if (uid >= _nextUid) _nextUid = uid + 1;
+    }
+
+    /// <summary>读档：恢复某人四个栏位。指向不存在的 Uid 一律留空（脏档不至于让建队炸掉）。</summary>
+    public void RestoreWorn(int heroId, int[] uids)
+    {
+        if (heroId <= 0) return;
+
+        int[] slots = SlotsOf(heroId);
+        for (int i = 0; i < SlotCount; i++)
+        {
+            int uid = (uids != null && i < uids.Length) ? uids[i] : 0;
+            slots[i] = Find(uid) != null ? uid : 0;
+        }
+    }
+
+    /// <summary>有穿戴记录的侠客 Id（读档时要逐人遍历，故暴露窄接口）。</summary>
+    public List<int> WornHeroIds()
+    {
+        List<int> ids = new List<int>();
+        foreach (KeyValuePair<int, int[]> kv in _worn) ids.Add(kv.Key);
+        return ids;
+    }
+
     /// <summary>转世：全部归零（GDD §3.3 账本 —— 装备不跨世）。</summary>
     public void Reset()
     {
