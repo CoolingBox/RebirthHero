@@ -70,22 +70,25 @@ public partial class BackdropLayer : Control
 
     void BuildLayers()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        // 用 SetAnchorsAndOffsetsPreset 而不是 SetAnchorsPreset：
+        // 后者只改锚点、不重置 offset，刚 AddChild 时布局还没算 → size 停在 (0,0)，
+        // 整层画不出来（实测：tex 已加载但 size=(0,0)，背景一片空白）。
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
         _image = new TextureRect();
-        _image.SetAnchorsPreset(LayoutPreset.FullRect);
+        _image.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _image.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _image.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
         _image.MouseFilter = MouseFilterEnum.Ignore;
         AddChild(_image);
 
         _tint = new ColorRect();
-        _tint.SetAnchorsPreset(LayoutPreset.FullRect);
+        _tint.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _tint.MouseFilter = MouseFilterEnum.Ignore;
         AddChild(_tint);
 
         _vignette = new TextureRect();
-        _vignette.SetAnchorsPreset(LayoutPreset.FullRect);
+        _vignette.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _vignette.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _vignette.StretchMode = TextureRect.StretchModeEnum.Scale;
         _vignette.Texture = BuildVignetteTexture();

@@ -224,12 +224,12 @@ public partial class InnPanel : BasePanel
         star.AddThemeConstantOverride("separation", 8);
         var nameL = new Label();
         nameL.Text = nm;
-        nameL.AddThemeFontSizeOverride("font_size", 22);
+        nameL.AddThemeFontSizeOverride("font_size", 25);
         nameL.AddThemeColorOverride("font_color", Colors.White);
         star.AddChild(nameL);
         var starL = new Label();
         starL.Text = q.StarText;
-        starL.AddThemeFontSizeOverride("font_size", 18);
+        starL.AddThemeFontSizeOverride("font_size", 21);
         starL.AddThemeColorOverride("font_color", Gold);
         star.AddChild(starL);
         vb.AddChild(star);
@@ -290,7 +290,7 @@ public partial class InnPanel : BasePanel
         badge.CustomMinimumSize = new Vector2(140, 64);
         string badgeFront = isFront ? "前排·吸仇恨" : "后排";
         badge.Text = SlotTag(slot) + " " + slot + "号位\n" + badgeFront;
-        badge.AddThemeFontSizeOverride("font_size", 15);
+        badge.AddThemeFontSizeOverride("font_size", 18);
         badge.AddThemeColorOverride("font_color", isFront ? Gold : Dim);
         row.AddChild(badge);
 
@@ -311,7 +311,7 @@ public partial class InnPanel : BasePanel
             else nameText = nm + "　" + q.StarText;
             var nameL = new Label();
             nameL.Text = nameText;
-            nameL.AddThemeFontSizeOverride("font_size", 18);
+            nameL.AddThemeFontSizeOverride("font_size", 21);
             nameL.AddThemeColorOverride("font_color", Colors.White);
             info.AddChild(nameL);
 
@@ -336,7 +336,7 @@ public partial class InnPanel : BasePanel
         {
             var empty = new Label();
             empty.Text = "— 空位（从候补上阵）—";
-            empty.AddThemeFontSizeOverride("font_size", 17);
+            empty.AddThemeFontSizeOverride("font_size", 20);
             empty.AddThemeColorOverride("font_color", Dim);
             info.AddChild(empty);
         }

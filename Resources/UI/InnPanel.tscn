@@ -31,7 +31,7 @@ offset_left = 60.0
 offset_top = 30.0
 offset_right = 500.0
 offset_bottom = 64.0
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 theme_type_variation = &"TitleLabel"
 
 [node name="TSilver" type="Label" parent="."]
@@ -45,7 +45,7 @@ offset_left = 500.0
 offset_top = 38.0
 offset_right = 860.0
 offset_bottom = 64.0
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 theme_type_variation = &"AccentLabel"
 
 [node name="THint" type="Label" parent="."]
@@ -59,7 +59,7 @@ offset_left = 60.0
 offset_top = 78.0
 offset_right = 1860.0
 offset_bottom = 100.0
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 16
 theme_type_variation = &"HintLabel"
 
 [node name="TRefreshBtn" type="Button" parent="."]
@@ -124,5 +124,5 @@ offset_left = 60.0
 offset_top = 1026.0
 offset_right = 1860.0
 offset_bottom = 1050.0
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 17
 theme_type_variation = &"HintLabel"

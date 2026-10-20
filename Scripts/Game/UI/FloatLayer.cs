@@ -31,7 +31,7 @@ public partial class FloatLayer : Control
     {
         if (_items.Count >= MaxFloats) { var old = _items[0]; old.Lbl.QueueFree(); _items.RemoveAt(0); }
         var lbl = new Label { Text = text, HorizontalAlignment = HorizontalAlignment.Center };
-        lbl.AddThemeFontSizeOverride("font_size", 17);
+        lbl.AddThemeFontSizeOverride("font_size", 21);
         lbl.AddThemeColorOverride("font_color", color);
         lbl.Position = pos;
         AddChild(lbl);

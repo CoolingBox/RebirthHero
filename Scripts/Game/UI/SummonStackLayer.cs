@@ -9,8 +9,14 @@ using Godot;
 
 public partial class SummonStackLayer : Control
 {
-    private const float StackW = 210f, StackH = 54f, StackGap = 8f, StackMargin = 14f;
-    private const float TopY = 140f, SideX = 120f, CardW = 460f;
+    // 布局常量统一由 BattleLayout 提供：堆叠卡要贴着侠客卡右缘，必须和它共用 CardW
+    private const float StackW = BattleLayout.StackW;
+    private const float StackH = BattleLayout.StackH;
+    private const float StackGap = BattleLayout.StackGap;
+    private const float StackMargin = BattleLayout.StackMargin;
+    private const float TopY = BattleLayout.TopY;
+    private const float SideX = BattleLayout.SideX;
+    private const float CardW = BattleLayout.CardW;
 
     private sealed class StackCard
     {
@@ -86,17 +92,17 @@ public partial class SummonStackLayer : Control
         };
         root.AddChild(bg);
 
-        var title = new Label { Position = new Vector2(6, 2), Size = new Vector2(StackW - 12, 18), Text = name };
-        title.AddThemeFontSizeOverride("font_size", 13);
+        var title = new Label { Position = new Vector2(6, 4), Size = new Vector2(StackW - 12, 22), Text = name };
+        title.AddThemeFontSizeOverride("font_size", 15);
         title.AddThemeColorOverride("font_color", new Color(0.72f, 0.88f, 1.0f));
         root.AddChild(title);
 
-        var hpbg = new ColorRect { Color = new Color(0.30f, 0.10f, 0.10f), Position = new Vector2(6, 26), Size = new Vector2(StackW - 12, 16) };
-        var hpfill = new ColorRect { Color = new Color(0.25f, 0.85f, 0.35f), Position = hpbg.Position, Size = hpbg.Size };
+        var hpbg = new ColorRect { Color = UISignalColors.HpBack, Position = new Vector2(6, 30), Size = new Vector2(StackW - 12, 20) };
+        var hpfill = new ColorRect { Color = UISignalColors.HpGood, Position = hpbg.Position, Size = hpbg.Size };
         root.AddChild(hpbg); root.AddChild(hpfill);
 
         var hptext = new Label { Position = hpbg.Position, Size = hpbg.Size, HorizontalAlignment = HorizontalAlignment.Center };
-        hptext.AddThemeFontSizeOverride("font_size", 12);
+        hptext.AddThemeFontSizeOverride("font_size", 13);
         root.AddChild(hptext);
 
         AddChild(root);
