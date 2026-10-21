@@ -16,13 +16,16 @@ public static class HeroBuilder
     ///   资质必须在**技能装配之前**应用 —— 因为"气血上限%"类武学的数值是按 BaseHp 折算成绝对量的。
     /// includePending=false 时跳过 Status=待实装 的卡（引擎尚未实现其机制）。
     /// equipOf：该侠客四栏装备的属性合计（M2.5）。**基础数值加算**到成长结果上，
-    ///   与 GDD §4.2「③装备乘区」的基础层一致 —— 套装/词条的百分比乘算属 P1，不在此处。
+    ///   与 GDD §4.2「③装备乘区」的基础层一致。
+    /// tuningOf：该侠客的**套装 + 随机词条**修正（P1）。属性% 在资质之后、召唤代价之前应用；
+    ///   武学参数在技能装配完成之后应用（见 <see cref="EquipSets"/>）。
     /// </summary>
     public static BattleUnit Build(HeroConfig hero, int slot, Func<int, SkillConfig> skillLookup, int level = 1,
                                    bool includePending = false,
                                    HeroQuality quality = null, Func<int, QualityConfig> affixLookup = null,
                                    Func<int, int[]> skillIdsOf = null,
-                                   Func<int, EquipBonus> equipOf = null)
+                                   Func<int, EquipBonus> equipOf = null,
+                                   Func<int, EquipTuning> tuningOf = null)
     {
         if (hero == null) return null;
 
@@ -60,6 +63,11 @@ public static class HeroBuilder
         // —— 当世资质（M2.3 客栈）：星级 / 成长率 / 词条 —— 必须在技能装配前应用
         quality?.ApplyTo(u, affixLookup);
 
+        // —— P1 装备：套装 + 随机词条 ——
+        // 属性% 必须早于下面的"召唤武学代价"：代价按最终最大生命算，否则血条与锁死段对不上
+        EquipTuning tune = tuningOf != null ? tuningOf(hero.Id) : null;
+        if (tune != null) EquipSets.ApplyStats(tune, u);
+
         // —— 召唤武学代价（2026-10-17 用户）：每携带 1 个召唤类武学，最大生命 −15%（叠加）——
         // 锁死部分记入 LockedHp，由血条 UI 以银灰色显示；惩罚基于"已算好的最终最大生命"（含 1 号位加成与资质）。
         int nSummon = CountSummonSkills(ids, skillLookup, includePending);
@@ -85,6 +93,10 @@ public static class HeroBuilder
                 BattleSkill sk = SkillConfigMapper.ToBattleSkill(cfg, u.BaseHp);
                 if (sk != null) { ApplyQualityToSkill(sk, cfg, quality); u.Skills.Add(sk); }
             }
+
+        // —— P1 装备：武学参数修正（必须等技能全都建好；召唤存在时间等改动只作用于本单位）——
+        if (tune != null) EquipSets.ApplySkills(tune, u.Skills);
+
         return u;
     }
 
@@ -133,13 +145,14 @@ public static class HeroBuilder
                                              int level = 1, bool includePending = false,
                                              Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
                                              Func<int, int[]> skillIdsOf = null,
-                                             Func<int, EquipBonus> equipOf = null)
+                                             Func<int, EquipBonus> equipOf = null,
+                                             Func<int, EquipTuning> tuningOf = null)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
-            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf);
+            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf, tuningOf);
             if (u != null) { list.Add(u); slot++; }
         }
         return list;
@@ -150,14 +163,15 @@ public static class HeroBuilder
                                              Func<int, int> levelOf, bool includePending = false,
                                              Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
                                              Func<int, int[]> skillIdsOf = null,
-                                             Func<int, EquipBonus> equipOf = null)
+                                             Func<int, EquipBonus> equipOf = null,
+                                             Func<int, EquipTuning> tuningOf = null)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
             int lv = levelOf?.Invoke(h.Id) ?? 1;
-            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf);
+            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf, tuningOf);
             if (u != null) { list.Add(u); slot++; }
         }
         return list;

@@ -85,6 +85,9 @@ public sealed class EquipItemSave
     public int Uid;
     public int ConfigId;
     public int Level;
+
+    /// <summary>随机词条（P1）。**旧档里没有这个键 = 空列表 = 无词条**，属于兼容的新增字段，故不升 Version。</summary>
+    public List<int> AffixIds = new List<int>();
 }
 
 /// <summary>某侠客四栏穿的是哪几件（Uid，0 = 空栏）。</summary>

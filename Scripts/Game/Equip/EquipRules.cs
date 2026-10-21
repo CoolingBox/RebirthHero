@@ -107,4 +107,41 @@ public static class EquipRules
             default: return "?";
         }
     }
+
+    // ================= 回收（2026-10-21）=================
+    // 定位：**清理行囊的补偿，不是收入来源**。银两的主 sink 是客栈招募 / 强化 / 洗炼，
+    // 若回收能刷钱，玩家会把"打怪"换成"刷装→回收"，核心循环就歪了。
+    // 因此回收价刻意压得很低：约为同层 1~2 次击杀收益的量级，且强化投入只返还一部分。
+
+    /// <summary>白装回收价。[PLACEHOLDER] 每档 ×3 → 20/60/180/540/1620。</summary>
+    public const long RecycleBase = 20;
+
+    /// <summary>稀有度递增倍率。[PLACEHOLDER] 与掉落权重（100:35:28:10:2）反向对齐：越稀有越值钱。</summary>
+    public const int RecycleStep = 3;
+
+    /// <summary>强化投入的返还比例。[PLACEHOLDER] 30% —— 必须 &lt; 100%，否则"强化→回收"可以套利。</summary>
+    public const double EnhanceRefundRate = 0.30;
+
+    /// <summary>某件装备的回收价（银两）。cfg 为模板，item 提供强化等级。</summary>
+    public static long RecycleValue(EquipItem item, EquipConfig cfg)
+    {
+        if (cfg == null) return 0;
+
+        int r = (int)cfg.Rarity;
+        if (r < 1) r = 1;
+        if (r > 5) r = 5;
+
+        long baseValue = RecycleBase;
+        for (int i = 1; i < r; i++) baseValue *= RecycleStep;
+
+        long spent = 0;
+        int lv = item != null ? item.Level : 0;
+        for (int i = 0; i < lv; i++)
+        {
+            long c = EnhanceCost(i);
+            if (c > 0) spent += c;
+        }
+
+        return baseValue + (long)(spent * EnhanceRefundRate);
+    }
 }
