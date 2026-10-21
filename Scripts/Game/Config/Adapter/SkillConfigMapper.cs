@@ -15,13 +15,15 @@ public static class SkillConfigMapper
     public static BattleSkill ToBattleSkill(SkillConfig cfg, double ownerBaseHp)
     {
         if (cfg == null) return null;
-        if ((int)cfg.EffectType > 14) return null;
+
+        SkillEff eff;
+        if (!ToEff(cfg.EffectType, out eff)) return null;
 
         var s = new BattleSkill
         {
             Name = cfg.Name,
             Src = ToSrc(cfg.TriggerTime),
-            Eff = (SkillEff)((int)cfg.EffectType - 1),   // 与 BattleEnums.SkillEff 同序（值-1）
+            Eff = eff,
             Tgt = ToTgt(cfg.TargetType),
             CannotAttack = cfg.CannotAttack,
             Vamp = cfg.Vamp,
@@ -68,6 +70,31 @@ public static class SkillConfigMapper
             _ => false,
         };
         return s;
+    }
+
+    /// <summary>
+    /// 配置 SkillEffect → 引擎 SkillEff。
+    /// <para>
+    /// 1~14 与 <see cref="SkillEff"/> 同序（值 −1）；**15 之后不再同序**，必须逐条显式列出 ——
+    /// 2026-10-21 加 ShieldKeep 时踩过这个坑：若继续用"值 −1"算索引，
+    /// 待实装的 Copy=15 会算到 14，正好撞上新追加的 ShieldKeep。
+    /// </para>
+    /// 返回 false = 引擎未实装该效果词（复制/污染/光环/蓄力）。
+    /// </summary>
+    static bool ToEff(SkillEffect e, out SkillEff s)
+    {
+        int v = (int)e;
+        if (v >= 1 && v <= 14)
+        {
+            s = (SkillEff)(v - 1);
+            return true;
+        }
+
+        switch (e)
+        {
+            case SkillEffect.ShieldKeep: s = SkillEff.ShieldKeep; return true;
+            default: s = SkillEff.Dmg; return false;
+        }
     }
 
     static SkillSrc ToSrc(TriggerType t) => t switch
@@ -118,6 +145,7 @@ public static class SkillConfigMapper
             SkillEffect.AtkMod => c.CalcValue / 100.0,  // ±%
             SkillEffect.Burn => c.CalcValue / 100.0,    // 每秒倍率
             SkillEffect.ReflectAccum => c.CalcValue / 100.0,
+            SkillEffect.ShieldKeep => c.CalcValue / 100.0,   // 百分点 → 小数（15 → 0.15），加在 ShieldKeep 属性上
             SkillEffect.Shield2Dmg => 1.0,
             _ => 0,                                     // Poison/Silence/Growth/Dodge/Summon 用引擎默认
         };

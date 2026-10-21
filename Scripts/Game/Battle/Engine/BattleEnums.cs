@@ -27,6 +27,7 @@ public enum SkillEff
     Shield2Dmg,  // 护盾转伤害
     Dodge,       // 闪避（结算前判定，不触发后续）
     ReflectAccum,// 累计伤害反伤
+    ShieldKeep,  // 护盾保持率修正（友方）：+Mult 个百分点，本场累计，上限由 Act() 统一兜
 }
 
 /// <summary>伤害类型（三种减免口径；公式见数值框架 §2）</summary>

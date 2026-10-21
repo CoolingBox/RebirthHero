@@ -48,6 +48,28 @@ public sealed class BattleUnit
     /// </summary>
     public double DmgTakenMul = 1.0;
 
+    /// <summary>DoT（叠毒/灼烧）伤害系数（P1 装备"百淬 2 件"）。1.0 = 无修正。</summary>
+    public double DotMul = 1.0;
+
+    /// <summary>
+    /// **护盾保持率**（2026-10-21 用户设定）：自身开始行动时，护盾乘以本值。
+    /// <para>
+    /// 0.5 = 减半（基准口径，即"护盾只撑得过一个行动周期"）；1.0 = 完全不衰减（实际上限见
+    /// <see cref="BattleConfig.ShieldKeepCap"/>，永远堆不到 1）。
+    /// </para>
+    /// <para>
+    /// 这是**侠客属性**，不是规则常量：装配期由三处改写 ——
+    /// 资质词条（<c>AffixEffect.ShieldKeepPct</c>）、装备套装/词条（<c>EquipTuning.ShieldKeepPct</c>）、
+    /// 武学（<c>SkillEff.ShieldKeep</c>，当局临时加）。
+    /// 引擎在 <c>Act()</c> 开头统一消费并 clamp，任何来源都突破不了上限。
+    /// 装配期属性 → <c>Clone()</c> 必须带上。
+    /// </para>
+    /// </summary>
+    public double ShieldKeep = 0.5;
+
+    /// <summary>叠毒层数上限加成（P1 装备"百淬 4 件"）。引擎按 PoisonMaxStack + 本值封顶。</summary>
+    public int DotStackBonus;
+
     public List<BattleSkill> Skills = new();
 
     /// <summary>
@@ -60,6 +82,17 @@ public sealed class BattleUnit
     // —— 运行时状态 ——
     public double Gauge;               // 行动条 0..GaugeMax
     public int Actions, Hits;
+
+    /// <summary>
+    /// 最近一次"计入受击次数"的**行动序号**（由引擎 <c>Act()</c> 自增，-1 = 还没被算过）。
+    /// <para>
+    /// 口径（2026-10-21 用户定）：**敌方一次行动，最多只给目标加 1 次受击**。
+    /// 在此之前 <see cref="Hits"/> 是"每段伤害 +1"，于是一次行动里的普攻 + 多段/重放武学
+    /// 能把计数推 3~4 格，受击类武学的条件（每 N 次受击）自然被高频喂满。
+    /// 现在一次行动只认**第一段**：其余段照常结算伤害、照常承伤，但不推计数、不重复判定受击武学。
+    /// </para>
+    /// </summary>
+    public long HitActionId = -1;
     public double AtkMult = 1.0;
     public double PoisonStacks;
     public BattleUnit PoisonFrom;

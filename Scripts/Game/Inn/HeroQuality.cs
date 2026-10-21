@@ -198,6 +198,9 @@ public sealed class HeroQuality
             case AffixEffect.DmgTakenPct:
                 u.DmgTakenMul *= 1 + v / 100.0;   // 引擎 DealDamage
                 break;
+            case AffixEffect.ShieldKeepPct:
+                u.ShieldKeep += v / 100.0;        // 百分点加在 0.5 基准上；clamp 在引擎 Act()
+                break;
             default:
                 break;
         }

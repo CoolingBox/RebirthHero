@@ -34,6 +34,13 @@ public sealed class BattleEngine
     public int Result { get; private set; }   // 0 平局/超时，1 A 胜，2 B 胜
 
     private bool _over;
+
+    /// <summary>
+    /// 行动序号：每次 <c>Act()</c> 自增一次。受击计数按它去重 —— 同一序号内，
+    /// 一个目标最多只加 1 次 <see cref="BattleUnit.Hits"/>（见 <see cref="BattleUnit.HitActionId"/>）。
+    /// 号令齐射（<see cref="OrderSummons"/>）刻意不走 Act，所以整轮齐射算同一次行动。
+    /// </summary>
+    private long _actSeq;
     private readonly HashSet<BattleUnit> _deadNotified = new();
     private readonly List<BattleUnit> _pendingRemove = new();   // 待移除的召唤物"尸体"（延迟到安全点）
     private readonly Dictionary<BattleSkill, double> _hpThresh = new();
@@ -44,6 +51,7 @@ public sealed class BattleEngine
         A = a.Select(u => Clone(u)).ToList();
         B = b.Select(u => Clone(u)).ToList();
         T = 0; LastActor = null; ChainDepth = 0; _over = false; Result = 0;
+        _actSeq = 0;                 // 行动序号从 0 起（每次 Act 自增，单位侧 -1 = 未计）
         St = new BattleStats();
         _deadNotified.Clear();
         _hpThresh.Clear();
@@ -57,6 +65,8 @@ public sealed class BattleEngine
             BaseDef = u.BaseDef, BaseW = u.BaseW, IsSummon = u.IsSummon, Ttl = u.Ttl,
             DmgPerHit = u.DmgPerHit,
             SummonHpMul = u.SummonHpMul, DmgTakenMul = u.DmgTakenMul,   // 装配期属性，跨波延续时要带上
+            DotMul = u.DotMul, DotStackBonus = u.DotStackBonus,         // 百淬套：装配期写入，不带上就等于套装没生效
+            ShieldKeep = u.ShieldKeep,                                   // 护盾保持率：资质/装备装配期写入
             LockedHp = u.LockedHp,                                       // 召唤惩罚锁死的生命，跨波延续（不变）
         };
         // 起手气血：默认满血；StartHp ≥ 0 时按该值起手（推图波间延续血量；0 = 已阵亡）
@@ -162,10 +172,11 @@ public sealed class BattleEngine
             u.Ttl -= dt;
             if (u.Ttl <= 0) { u.Hp = 0; EmitDeathIfNeeded(u); return; }
         }
+        // DoT 系数取**施毒者**的 DotMul（百淬套穿在放毒的人身上，放大的是他造成的伤害）
         while (u.PoisonStacks > 0 && u.NextPoisonTick > 0 && u.NextPoisonTick <= T && u.Alive)
-        { DotDamage(u, u.PoisonStacks * BattleConfig.PoisonPerStack * u.PoisonFrom!.EffAtk(T)); u.NextPoisonTick += BattleConfig.PoisonTick; }
+        { DotDamage(u, u.PoisonStacks * BattleConfig.PoisonPerStack * u.PoisonFrom!.EffAtk(T) * u.PoisonFrom!.DotMul); u.NextPoisonTick += BattleConfig.PoisonTick; }
         while (u.BurnUntil > T - 1e-9 && u.NextBurnTick > 0 && u.NextBurnTick <= T && u.Alive)
-        { DotDamage(u, BattleConfig.BurnRate * u.BurnFrom!.EffAtk(T)); u.NextBurnTick += BattleConfig.BurnTick; }
+        { DotDamage(u, BattleConfig.BurnRate * u.BurnFrom!.EffAtk(T) * u.BurnFrom!.DotMul); u.NextBurnTick += BattleConfig.BurnTick; }
     }
 
     void DotDamage(BattleUnit u, double amount)
@@ -177,6 +188,24 @@ public sealed class BattleEngine
 
     void Act(BattleUnit u)
     {
+        _actSeq++;                   // 新的一次行动：本次行动内目标最多被计 1 次受击
+
+        // 护盾衰减（2026-10-21 用户设定）：**自身开始行动时，护盾 × 护盾保持率**。
+        // 保持率是侠客属性（BattleUnit.ShieldKeep，默认 0.5 = 减半），资质/装备/武学都能改写；
+        // 这里做唯一的 clamp 点，任何来源都突破不了上限（BattleConfig.ShieldKeepCap）。
+        // 位置在行动**开始**、武学结算**之前** —— 本次行动里新获得的护盾是满值，
+        // 要留到下一次自身行动才衰减（行动盾只看得到一轮的收益，这是刻意的）。
+        // 不足 1 点直接归零：护盾是 double，无限衰减会留下 0.5 这种既显示不出来、
+        // 又让血条一直留着金色蒙层的残余。
+        if (u.Shield > 0)
+        {
+            double keep = u.ShieldKeep;
+            if (keep < 0) keep = 0;
+            if (keep > BattleConfig.ShieldKeepCap) keep = BattleConfig.ShieldKeepCap;
+            u.Shield *= keep;
+            if (u.Shield < 1) u.Shield = 0;
+        }
+
         u.Actions++;
         bool comboNow = LastActor != null && Allies(u).Contains(LastActor);
         if (u.Skills.Any(s => s.Cond == "combo")) { St.ComboOps++; if (comboNow) St.ComboHits++; }
@@ -248,10 +277,16 @@ public sealed class BattleEngine
         //   负的 StartHp 会被误读成"未设置"→ 满血起手 → **阵亡者在下一波复活**。
         tgt.Hp = Math.Max(0, rem <= 0 ? tgt.Hp : tgt.Hp - rem);
         tgt.AccumDmg += amount;
-        tgt.Hits++;
+
+        // 受击计数（2026-10-21 用户口径「一次行动只加一次受击」）：
+        //   同一次行动内只有**第一段伤害**推 Hits，其余段只结算伤害与承伤。
+        //   同时，受击武学也只在这第一段判定一次 —— 否则 Hits 停在 6、CondN=3 时，
+        //   后续每一段都满足 6%3==0，反而会在一次行动里连放 N 次。
+        bool countedHit = tgt.HitActionId != _actSeq;
+        if (countedHit) { tgt.HitActionId = _actSeq; tgt.Hits++; }
         if (tgt.Slot is >= 1 and <= 4) St.DamageTaken[tgt.Slot] += amount;
 
-        if (tgt.Alive && ChainDepth < BattleConfig.ChainMax)
+        if (countedHit && tgt.Alive && ChainDepth < BattleConfig.ChainMax)
         {
             ChainDepth++;
             if (!tgt.Silenced(T))
@@ -346,7 +381,8 @@ public sealed class BattleEngine
                 foreach (var t in PickTargets(u, s))
                     if (t.Alive)
                     {
-                        t.PoisonStacks = Math.Min(BattleConfig.PoisonMaxStack, t.PoisonStacks + 1);
+                        // 层数上限取**施毒者**的加成（百淬 4 件）
+                        t.PoisonStacks = Math.Min(BattleConfig.PoisonMaxStack + u.DotStackBonus, t.PoisonStacks + 1);
                         t.PoisonFrom = u;
                         if (t.NextPoisonTick < 0) t.NextPoisonTick = T + BattleConfig.PoisonTick;
                     }
@@ -373,6 +409,13 @@ public sealed class BattleEngine
                 double rd = u.AccumDmg * s.Mult; u.AccumDmg = 0;
                 var foes = AliveOf(Foes(u)).ToList();
                 if (rd > 0 && foes.Count > 0) DealDamage(u, WeightedPick(foes), rd, DamageKind.Internal);
+                break;
+            }
+            case SkillEff.ShieldKeep:
+            {
+                // 护盾保持率修正：Mult 已是小数（装配期把"百分点"除 100）。
+                // 只加不清零 —— 想表达"变差"就配负数，clamp 由 Act() 统一做。
+                foreach (var t in PickAlly(u, s)) if (t.Alive) t.ShieldKeep += s.Mult;
                 break;
             }
             case SkillEff.Dodge:

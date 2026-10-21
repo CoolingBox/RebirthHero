@@ -89,6 +89,14 @@ public static class BattleConfig
     public static double StdDef = 7.5, StdDefGrowth = 0.5;   // 标准轴：DEF 基准 7.5（= 原口径 30 × 0.25 折表），每级 +0.5
     public static double StdSpd = 50;                        // 标准轴：SPD 50（速度占模的基准，见生成器）
 
+    // —— 护盾衰减（2026-10-21 用户设定："护盾会在自身开始行动时减半"）——
+    // 基准值不在这里：它是**侠客属性** BattleUnit.ShieldKeep 的字段默认值（0.5），
+    // 由资质/装备/武学在装配期改写。本文件只放规则上限。
+    // 上限 0.85 的 rationale：无论怎么堆，行动时至少要泄漏 15% —— 护盾的定位是"撑过一个
+    // 行动周期的临时缓冲"，不是第二血条；若允许到 1.0，铁布衫（每 2 次受击 8% 气血）
+    // 会重新变成永久墙，前面那条衰减规则就白定了。
+    public static double ShieldKeepCap = 0.85;
+
     // —— 召唤物上限 ——
     // 携带召唤类武学的代价：每带 1 个，所属侠客最大生命 −本值（叠加；N 个 = N×本值）。
     // 锁死部分记入 BattleUnit.LockedHp，在血条 UI 上以银灰色显示。

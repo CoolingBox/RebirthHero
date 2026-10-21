@@ -51,6 +51,28 @@ public sealed class SummonSpec
 
     public double Speed(double ownerSpd) => Math.Max(SpdFloor, ownerSpd * SpdRatio);
 
+    /// <summary>
+    /// 复制一份并改写存在时间（P1 装备"千机 2 件"）。
+    /// **为什么要复制**：<c>BattleSkill.Summon</c> 指向的是 <c>SummonCatalog</c> 里的**共享规格对象**，
+    /// 直接改 <c>Ttl</c> 会让所有召唤同一类型的侠客一起变长 —— 那是"全局改表"不是"装备加成"。
+    /// </summary>
+    public SummonSpec WithTtl(double ttl)
+    {
+        SummonSpec c = new SummonSpec();
+        c.Kind = Kind;
+        c.Name = Name;
+        c.HpRatio = HpRatio;
+        c.FixedHp = FixedHp;
+        c.DmgPerHit = DmgPerHit;
+        c.AtkRatio = AtkRatio;
+        c.SpdFloor = SpdFloor;
+        c.SpdRatio = SpdRatio;
+        c.Weight = Weight;
+        c.Max = Max;
+        c.Ttl = ttl;
+        return c;
+    }
+
     /// <summary>表缺失或类型未登记时的兜底（= 2026-10-16 之前的引擎硬编码值，Max=0 即"不限"）。</summary>
     public static SummonSpec Fallback(string kind) => new()
     {
