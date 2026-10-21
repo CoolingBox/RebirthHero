@@ -88,8 +88,14 @@ public static class EquipSets
     public const double CapShieldKeepPct = 20;
     /// <summary>开战计数上限 +2（与破军 2 件同量级，再高就等于直接触发一次）。</summary>
     public const int CapCounterUp = 2;
-    /// <summary>需求次数最多减 2（引擎侧还有 floor 1 兜底）。</summary>
+    /// <summary>需求次数最多减 2（引擎侧还有 floor 3 兜底，见 <see cref="CondDownFloor"/>）。</summary>
     public const int CapCondDown = 2;
+
+    /// <summary>
+    /// "减需求次数"的门槛与地板（2026-10-21 用户口径：**要求大于 3 次才能生效**）。
+    /// 原始需求 ≤ 3 次的武学完全不吃减次数；减完也不低于 3，避免多件叠加穿透。
+    /// </summary>
+    public const int CondDownFloor = 3;
 
     /// <summary>
     /// 解析某侠客的装备加成。cfg/affix/set 三个 lookup 允许为 null（缺表时退化为无加成）。
@@ -246,7 +252,11 @@ public static class EquipSets
         if (sk == null) return;
 
         // ① 需求次数（只对"条件=次数"的武学有意义）
-        if (sk.Cond == "count" && sk.CondN > 0)
+        //    2026-10-21 用户口径：**只有原始需求 > 3 次的武学才吃"减次数"，且减后不低于 3**。
+        //    rationale：减次数是乘性收益（3→2 = 触发次数 ×1.5），一旦允许把 3 次压到 2 次，
+        //    低次数的卡（铁布衫 3 次）反而最吃亏，受击流的节奏会整体塌到同一档。
+        //    floor 与门槛是同一个数：3 次是"能减"的下限，也是"减完不许更低"的地板。
+        if (sk.Cond == "count" && sk.CondN > CondDownFloor)
         {
             int down = 0;
             if (sk.Src == SkillSrc.OnAction) down = t.CondDownAction;
@@ -256,7 +266,8 @@ public static class EquipSets
             if (down > 0)
             {
                 int n = sk.CondN - down;
-                sk.CondN = n < 1 ? 1 : n;          // 下限 1：0 会让 "Counter % 0" 直接崩
+                if (n < CondDownFloor) n = CondDownFloor;
+                sk.CondN = n;
             }
         }
 
