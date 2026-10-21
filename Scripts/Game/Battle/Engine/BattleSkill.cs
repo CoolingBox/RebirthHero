@@ -47,6 +47,16 @@ public sealed class BattleSkill
     public double ReplayP = 0.01;      // 重放概率（全局保底 1%）
     public int ReplayC = 2;            // 重放上限（总命中次数）
     public bool ReplayLocked = true;   // 重放锁定目标（降龙十八掌：单点）
+
+    /// <summary>
+    /// 每场释放次数上限（配置 <c>SkillConfig.Limit</c> / <c>AltLimit</c>；0 = 不限）。
+    /// 2026-10-21 实装：金刚不坏的"受击 9 次 24%（每场 1 次）"需要它，否则那档会反复触发。
+    /// </summary>
+    public int MaxFires;
+
+    /// <summary>本场已释放次数。<c>SetTeams</c> 克隆时归零（运行时状态，不随 Clone 带过去）。</summary>
+    public int Fires;
+
     public string SummonKind;         // 召唤物类型 tank|dps|sub|sword
 
     /// <summary>召唤物【类型规格】（血攻/速度/权重/存在时间/同时上限）。由配置接入层按 <see cref="SummonKind"/> 装配。</summary>
@@ -90,5 +100,6 @@ public sealed class BattleSkill
         ReplayP = ReplayP, ReplayC = ReplayC, ReplayLocked = ReplayLocked, SummonKind = SummonKind,
         Summon = Summon, SummonMax = SummonMax, SummonOrder = SummonOrder, SummonCount = SummonCount,
         CounterOffset = CounterOffset,
+        MaxFires = MaxFires,          // 每场上限要跨波保留；Fires 是运行时计数，新实例即 0
     };
 }

@@ -27,7 +27,7 @@ public class SkillConfig : BaseConfig
 	/// <summary> 数值基准 </summary>
 	public CalcBase CalcBase;
 	/// <summary> 数值:倍数×100/百分比/固定值(权重类为权重增量,10基准) </summary>
-	public int CalcValue;
+	public double CalcValue;
 	/// <summary> 索敌规则 </summary>
 	public SkillTarget TargetType;
 	/// <summary> 不能普攻(替换该次普攻) </summary>
@@ -56,4 +56,14 @@ public class SkillConfig : BaseConfig
 	public SkillStatus Status;
 	/// <summary> 武学品阶(1入门/2精良/3上乘/4绝学;敌方按层限制可用上限 TierCap=1+(层-1)/10,最高4=不限制) </summary>
 	public int Tier;
+	/// <summary> 副效果词(0/缺省=无)。一张卡的第二档，触发时机与 CondType 沿用主行 </summary>
+	public SkillEffect AltEffect;
+	/// <summary> 副效果数值基准 </summary>
+	public CalcBase AltCalcBase;
+	/// <summary> 副效果数值(与 CalcValue 同口径) </summary>
+	public double AltCalcValue;
+	/// <summary> 副效果需求次数(条件=1次数) </summary>
+	public int AltCondN;
+	/// <summary> 副效果每场释放次数上限(0=不限) </summary>
+	public int AltLimit;
 }
