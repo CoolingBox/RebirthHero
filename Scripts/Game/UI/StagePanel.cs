@@ -149,7 +149,7 @@ public partial class StagePanel : BasePanel
         Label tag = new Label();
         tag.CustomMinimumSize = new Vector2(300, 40);
         tag.Text = tier + " 档 · " + MaterialCatalog.NameOf(tier) + "（" + lo + "~" + hi + " 层）";
-        tag.AddThemeFontSizeOverride("font_size", 18);
+        tag.AddThemeFontSizeOverride("font_size", 23);
         tag.AddThemeColorOverride("font_color", UIThemeManager.Accent);
         row.AddChild(tag);
 

@@ -26,6 +26,17 @@ public static class UISignalColors
     public static readonly Color Win = new Color(0.40f, 1.00f, 0.50f);
     public static readonly Color Lose = new Color(1.00f, 0.45f, 0.35f);
 
+    // —— 血条"先变色后加减"的拖尾色（2026-10-21）——
+    // 掉血拖尾偏橙红（比 Damage 亮，压在血条上要能看清）、回血拖尾偏绿松石。
+    public static readonly Color HpTrailDamage = new Color(1.00f, 0.45f, 0.25f, 0.90f);
+    public static readonly Color HpTrailHeal = new Color(0.45f, 1.00f, 0.55f, 0.90f);
+
+    // —— 护盾在血条上的金色蒙层与文字（用户口径：护盾要金色，不用蓝）——
+    // 保留蓝色的 Shield 给"护盾数值/飘字"（盾=蓝是跨游戏共识），血条上的**占比**用金色，
+    // 两者不冲突：蓝色说"有多少盾"，金色说"盾占血条多少"。
+    public static readonly Color ShieldGoldFill = new Color(1.00f, 0.82f, 0.30f, 0.55f);
+    public static readonly Color ShieldGoldText = new Color(1.00f, 0.88f, 0.45f);
+
     // 装备稀有度（白/绿/蓝/紫/橙）—— 玩家对这套配色有跨游戏的共识，
     // 换主题也不该动：玩家是靠颜色而不是文字在扫"出没出好货"。
     public static readonly Color RarityCommon = new Color(0.85f, 0.85f, 0.85f);

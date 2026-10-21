@@ -92,17 +92,17 @@ public partial class SummonStackLayer : Control
         };
         root.AddChild(bg);
 
-        var title = new Label { Position = new Vector2(6, 4), Size = new Vector2(StackW - 12, 22), Text = name };
-        title.AddThemeFontSizeOverride("font_size", 15);
+        var title = new Label { Position = new Vector2(6, 2), Size = new Vector2(StackW - 12, 26), Text = name };
+        title.AddThemeFontSizeOverride("font_size", 19);
         title.AddThemeColorOverride("font_color", new Color(0.72f, 0.88f, 1.0f));
         root.AddChild(title);
 
-        var hpbg = new ColorRect { Color = UISignalColors.HpBack, Position = new Vector2(6, 30), Size = new Vector2(StackW - 12, 20) };
+        var hpbg = new ColorRect { Color = UISignalColors.HpBack, Position = new Vector2(6, 30), Size = new Vector2(StackW - 12, 24) };
         var hpfill = new ColorRect { Color = UISignalColors.HpGood, Position = hpbg.Position, Size = hpbg.Size };
         root.AddChild(hpbg); root.AddChild(hpfill);
 
         var hptext = new Label { Position = hpbg.Position, Size = hpbg.Size, HorizontalAlignment = HorizontalAlignment.Center };
-        hptext.AddThemeFontSizeOverride("font_size", 13);
+        hptext.AddThemeFontSizeOverride("font_size", 17);
         root.AddChild(hptext);
 
         AddChild(root);
@@ -142,7 +142,7 @@ public partial class SummonStackLayer : Control
             if (u.Ttl < ttl) ttl = u.Ttl;
         }
         double frac = max > 0 ? System.Math.Clamp(hp / max, 0, 1) : 0;
-        st.HpFill.Size = new Vector2((float)((StackW - 12) * frac), 16);
+        st.HpFill.Size = new Vector2((float)((StackW - 12) * frac), 20);
         st.HpFill.Color = frac > 0.5 ? new Color(0.25f, 0.85f, 0.35f)
             : frac > 0.25 ? new Color(0.95f, 0.85f, 0.2f) : new Color(0.9f, 0.25f, 0.2f);
         st.HpText.Text = hp.ToString("0") + "/" + max.ToString("0");

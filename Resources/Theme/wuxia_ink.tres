@@ -222,7 +222,7 @@ bg_color = Color(0.95686275, 0.9254902, 0.8627451, 1.0)
 
 [resource]
 default_font = ExtResource("2_ipvn6")
-default_font_size = 17
+default_font_size = 19
 BgFull/base_type = &"Panel"
 BgFull/styles/panel = SubResource("StyleBoxFlat_bgfull")
 BgPanel/base_type = &"Panel"

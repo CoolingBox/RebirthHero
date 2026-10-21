@@ -61,6 +61,8 @@ public partial class BattlePanel : BasePanel
     // —— 装备（M2.5；同属本世资产，转世归零 —— GDD §3.3 账本）——
     private readonly EquipBag _equips = new EquipBag();
     private List<EquipConfig> _equipPool;   // 全部装备模板
+    private List<EquipSetConfig> _equipSetPool;      // 6 套装（P1）
+    private List<EquipAffixConfig> _equipAffixPool;  // 随机词条池（P1）
     private Random _rng;                    // 掉落随机源（与战斗随机分开，便于复现）
 
     // —— 武学装配（M2.4：每侠客 3 槽，玩家的构筑选择，不随重开本世清空）——
@@ -137,6 +139,11 @@ public partial class BattlePanel : BasePanel
         // M2.5 装备：模板池 + 掉落随机源
         _equipPool = ConfigManager.GetAll<EquipConfig>();
         if (_equipPool == null) _equipPool = new List<EquipConfig>();
+        // P1 套装与随机词条
+        _equipSetPool = ConfigManager.GetAll<EquipSetConfig>();
+        if (_equipSetPool == null) _equipSetPool = new List<EquipSetConfig>();
+        _equipAffixPool = ConfigManager.GetAll<EquipAffixConfig>();
+        if (_equipAffixPool == null) _equipAffixPool = new List<EquipAffixConfig>();
         _rng = new Random();
         // 召唤物类型档位（SummonConfig 表）——必须在建队前灌入，否则召唤物走引擎兜底规格
         SummonCatalog.Init(ConfigManager.GetAll<SummonConfig>());
@@ -272,7 +279,8 @@ public partial class BattlePanel : BasePanel
                                      qualityOf: id => _inn?.QualityOf(id),
                                      affixLookup: id => ConfigManager.GetOne<QualityConfig>(id),
                                      skillIdsOf: _loadout.Get,
-                                     equipOf: id => _equips.BonusOf(id, EquipById));
+                                     equipOf: id => _equips.BonusOf(id, EquipById),
+                                     tuningOf: TuningOf);
     }
 
     /// <summary>装备模板查表（M2.5）。建队时才调，不在每帧路径上。</summary>
@@ -284,6 +292,34 @@ public partial class BattlePanel : BasePanel
             if (_equipPool[i].Id == id) return _equipPool[i];
 
         return null;
+    }
+
+    /// <summary>套装表查表（P1）。</summary>
+    private EquipSetConfig SetById(int id)
+    {
+        if (_equipSetPool == null) return null;
+
+        for (int i = 0; i < _equipSetPool.Count; i++)
+            if (_equipSetPool[i].Id == id) return _equipSetPool[i];
+
+        return null;
+    }
+
+    /// <summary>装备词条表查表（P1）。</summary>
+    private EquipAffixConfig AffixById(int id)
+    {
+        if (_equipAffixPool == null) return null;
+
+        for (int i = 0; i < _equipAffixPool.Count; i++)
+            if (_equipAffixPool[i].Id == id) return _equipAffixPool[i];
+
+        return null;
+    }
+
+    /// <summary>该侠客的套装 + 词条修正（建队时解析一次）。</summary>
+    private EquipTuning TuningOf(int heroId)
+    {
+        return EquipSets.Resolve(_equips, heroId, EquipById, AffixById, SetById);
     }
 
     private List<BattleUnit> BuildEnemyWave(int layer, int wave, bool isFinisher)
@@ -449,7 +485,7 @@ public partial class BattlePanel : BasePanel
         _timer.Stop();
         _advanceTimer.Stop();
 
-        EquipPanel.BindData(_equips, _equipPool, ActiveRoster(), _silver, OnCloseEquips);
+        EquipPanel.BindData(_equips, _equipPool, ActiveRoster(), _silver, _equipSetPool, _equipAffixPool, OnCloseEquips);
         UIManager.ShowPanel<EquipPanel>();
     }
 
@@ -637,8 +673,18 @@ public partial class BattlePanel : BasePanel
             EquipConfig drop = EquipDropper.Roll(layer, _rng, _equipPool);
             if (drop != null)
             {
-                _equips.Add(drop.Id);
-                SpawnFloat(u, "得 " + drop.Name + "（" + EquipRules.RarityName(drop.Rarity) + "）",
+                // P1：掉落时按稀有度掷 1~3 条随机词条（同件不出同类效果）
+                List<int> affixes = EquipDropper.RollAffixes(drop.Rarity, _rng, _equipAffixPool);
+                _equips.Add(drop.Id, affixes);
+
+                string setTag = "";
+                if (drop.SetId > 0)
+                {
+                    EquipSetConfig sc = SetById(drop.SetId);
+                    if (sc != null) setTag = "〔" + sc.Name + "〕";
+                }
+
+                SpawnFloat(u, "得 " + setTag + drop.Name + "（" + EquipRules.RarityName(drop.Rarity) + "）",
                            UISignalColors.RarityOf(drop.Rarity));
             }
         }

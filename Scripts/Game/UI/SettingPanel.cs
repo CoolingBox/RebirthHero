@@ -158,7 +158,7 @@ public partial class SettingPanel : BasePanel
 
             Label desc = new Label();
             desc.Text = UIThemeManager.DescOf(i);
-            desc.AddThemeFontSizeOverride("font_size", 15);
+            desc.AddThemeFontSizeOverride("font_size", 20);
             desc.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);
             col.AddChild(desc);
 
@@ -219,7 +219,7 @@ public partial class SettingPanel : BasePanel
     {
         Label label = new Label();
         label.Text = text;
-        label.AddThemeFontSizeOverride("font_size", 18);
+        label.AddThemeFontSizeOverride("font_size", 23);
         label.AddThemeColorOverride("font_color", UIThemeManager.Accent);
         return label;
     }

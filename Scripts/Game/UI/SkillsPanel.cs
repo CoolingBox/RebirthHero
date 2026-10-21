@@ -168,7 +168,7 @@ public partial class SkillsPanel : BasePanel
             Label nameL = new Label();
             nameL.CustomMinimumSize = new Vector2(180, 44);
             nameL.Text = h.Name;
-            nameL.AddThemeFontSizeOverride("font_size", 19);
+            nameL.AddThemeFontSizeOverride("font_size", 25);
             nameL.AddThemeColorOverride("font_color", Gold);
             row.AddChild(nameL);
 

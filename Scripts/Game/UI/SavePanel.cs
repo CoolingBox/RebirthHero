@@ -292,7 +292,7 @@ public partial class SavePanel : BasePanel
         {
             Label empty = new Label();
             empty.Text = "（还没有存档）";
-            empty.AddThemeFontSizeOverride("font_size", 17);
+            empty.AddThemeFontSizeOverride("font_size", 22);
             empty.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);
             _TList.AddChild(empty);
             return;
@@ -309,22 +309,22 @@ public partial class SavePanel : BasePanel
 
         Label name = new Label();
         name.Text = entry.DisplayName;
-        name.CustomMinimumSize = new Vector2(340, 38);
-        name.AddThemeFontSizeOverride("font_size", 18);
+        name.CustomMinimumSize = new Vector2(400, 44);
+        name.AddThemeFontSizeOverride("font_size", 23);
         if (entry.IsMain) name.AddThemeColorOverride("font_color", UIThemeManager.Accent);
         row.AddChild(name);
 
         Label meta = new Label();
         meta.Text = "第 " + entry.Layer + " 层（最高 " + entry.BestLayer + "） · 银两 "
                     + BigNum.From(entry.Silver).ToString(2) + " · " + entry.TimeText;
-        meta.CustomMinimumSize = new Vector2(520, 38);
-        meta.AddThemeFontSizeOverride("font_size", 16);
+        meta.CustomMinimumSize = new Vector2(700, 44);
+        meta.AddThemeFontSizeOverride("font_size", 21);
         meta.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);
         row.AddChild(meta);
 
         Button loadBtn = new Button();
         loadBtn.Text = "载入";
-        loadBtn.CustomMinimumSize = new Vector2(110, 38);
+        loadBtn.CustomMinimumSize = new Vector2(130, 44);
         loadBtn.Pressed += () => OnLoadEntry(entry);
         row.AddChild(loadBtn);
 
@@ -332,7 +332,7 @@ public partial class SavePanel : BasePanel
         {
             Button delBtn = new Button();
             delBtn.Text = "删除";
-            delBtn.CustomMinimumSize = new Vector2(100, 38);
+            delBtn.CustomMinimumSize = new Vector2(120, 44);
             delBtn.Pressed += () => OnDeleteEntry(entry);
             row.AddChild(delBtn);
         }
