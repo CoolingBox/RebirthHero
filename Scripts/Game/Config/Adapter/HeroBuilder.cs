@@ -90,8 +90,13 @@ public static class HeroBuilder
                 SkillConfig cfg = skillLookup?.Invoke(id);
                 if (cfg == null) continue;
                 if (!includePending && cfg.Status == SkillStatus.Pending) continue;
-                BattleSkill sk = SkillConfigMapper.ToBattleSkill(cfg, u.BaseHp);
-                if (sk != null) { ApplyQualityToSkill(sk, cfg, quality); u.Skills.Add(sk); }
+                // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果，见金刚不坏）
+                List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
+                for (int k = 0; k < built.Count; k++)
+                {
+                    ApplyQualityToSkill(built[k], cfg, quality);
+                    u.Skills.Add(built[k]);
+                }
             }
 
         // —— P1 装备：武学参数修正（必须等技能全都建好；召唤存在时间等改动只作用于本单位）——

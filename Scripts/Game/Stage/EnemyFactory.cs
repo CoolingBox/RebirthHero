@@ -159,8 +159,9 @@ public static class EnemyFactory
 
         foreach (SkillConfig cfg in configs)
         {
-            BattleSkill sk = SkillConfigMapper.ToBattleSkill(cfg, u.BaseHp);
-            if (sk != null) u.Skills.Add(sk);
+            // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果）
+            List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
+            for (int k = 0; k < built.Count; k++) u.Skills.Add(built[k]);
         }
         return u;
     }

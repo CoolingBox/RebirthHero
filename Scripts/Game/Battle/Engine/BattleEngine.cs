@@ -305,6 +305,10 @@ public sealed class BattleEngine
 
     public void Fire(BattleUnit u, BattleSkill s)
     {
+        // 每场次数上限（SkillConfig.Limit / AltLimit）：到顶就不放，连重放一起挡掉
+        if (s.MaxFires > 0 && s.Fires >= s.MaxFires) return;
+        s.Fires++;
+
         Bus.RaiseSkill(u, s.Name);
         List<BattleUnit> locked = null;
         Apply(u, s, ref locked);
