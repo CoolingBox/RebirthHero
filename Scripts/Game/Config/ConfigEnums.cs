@@ -129,6 +129,7 @@ public enum SkillEffect
     Corrupt = 16,      // 污染      [待实装]
     Aura = 17,         // 光环      [待实装]
     Charge = 18,       // 蓄力      [待实装]
+    ShieldKeep = 19,   // 护盾保持率 +CalcValue 个百分点（友方，本场累计）—— 2026-10-21 新增
 }
 
 public enum CalcBase
@@ -168,6 +169,7 @@ public enum AffixEffect
     HealPct = 6,       // 治疗量 +Value1%（装配期乘进治疗类武学）
     SummonHpPct = 7,   // 召唤物气血 +Value1%（比例血型召唤物；计数体飞剑不吃）
     DmgTakenPct = 8,   // 受击伤害 +Value1%（代价面：>0 = 更脆，用更脆换更痛）
+    ShieldKeepPct = 9, // 护盾保持率 +Value1 个百分点（行动时护盾衰减得更少）
 }
 
 // 成长原型 = 随机曲线的【事后归类标签】（判定规则见数值框架 §11）。
@@ -211,5 +213,51 @@ public enum EquipSlot
     Armor = 2,    // 护甲
     Trinket = 3,  // 饰品
     Boots = 4,    // 靴子
+}
+
+// ================= 套装与装备词条（P1，2026-10-20） =================
+
+/// <summary>
+/// 套装效果类型（EquipSetConfig.Effect2 / Effect4）。
+/// **纪律：只做参数修正**（改武学既有参数或既有结算系数），不新开乘区。
+/// 依据《装备与套装 v0.2》§二 + 数值框架 §9。
+/// </summary>
+public enum SetEffect
+{
+    None = 0,
+    ActionCondDown = 1,   // 行动类武学需求次数 −Value（下限 1）
+    ActionProcUp = 2,     // 行动类武学触发概率 +Value 个百分点
+    ReplayUp = 3,         // 重放概率 +Value 个百分点
+    CounterUp = 4,        // 开战时武学当前计数 +Value（引擎 CounterOffset）
+    CannotAtkMult = 5,    // "不能普攻"武学倍率 +Value%（走武学倍率，不开新乘区）
+    HitCondDown = 6,      // 受击类武学需求次数 −Value（下限 1）
+    ShieldUp = 7,         // 护盾效果 +Value%
+    SummonTtl = 8,        // 召唤物存在时间 +Value 秒
+    SummonCondDown = 9,   // 召唤类武学需求次数 −Value（下限 1）
+    DotUp = 10,           // DoT（叠毒/灼烧）伤害 +Value%
+    DotStackUp = 11,      // 叠毒层数上限 +Value
+    ShieldKeepUp = 12,    // 护盾保持率 +Value 个百分点（行动时护盾衰减得更少）
+}
+
+/// <summary>
+/// 装备随机词条效果类型（EquipAffixConfig.Effect）。
+/// 与资质词条（<see cref="AffixEffect"/>）分开：那套作用于"人"，这套只作用于"装备带来的修正"，
+/// 数值预算与封顶规则完全不同（见 EquipTuning）。
+/// </summary>
+public enum EquipAffixEffect
+{
+    None = 0,
+    AtkPct = 1,           // 攻击 +Value%
+    HpPct = 2,            // 气血 +Value%
+    SpdPct = 3,           // 速度 +Value%
+    ProcAction = 4,       // 行动类武学触发概率 +Value 个百分点
+    ProcHit = 5,          // 受击类武学触发概率 +Value 个百分点
+    CondDownAction = 6,   // 行动类武学需求次数 −Value（下限 1）
+    ReplayPct = 7,        // 重放概率 +Value 个百分点（同类合计封顶 +10）
+    ReplayLimit = 8,      // 重放上限 +Value（同类合计封顶 +4）
+    ShieldPct = 9,        // 护盾效果 +Value%
+    WeightDelta = 10,     // 受击权重 +Value（10 基准的绝对值增量，可负）
+    CounterUp = 11,       // 开战时武学当前计数 +Value
+    ShieldKeepPct = 12,   // 护盾保持率 +Value 个百分点（同类合计封顶 +20）
 }
 

@@ -12,6 +12,13 @@ public sealed class BattleSkill
     public string Cond = "chance";     // count | chance | combo
     public int CondN;                  // count 模式：每 N 次行动/受击
     public double CondP;               // chance 模式概率 / combo 模式概率 / OnHpBelow 阈值(百分比)
+
+    /// <summary>
+    /// 开战计数偏移（P1 装备"破军 2 件 / 先手词条"）：条件=次数的武学按
+    /// <c>(实计次数 + CounterOffset) % CondN</c> 判定。
+    /// **不是"额外行动"** —— 不增加 Actions/Hits、不触发其它武学，只把"第几次能放"往前挪。
+    /// </summary>
+    public int CounterOffset;
     public SkillEff Eff;
 
     /// <summary>
@@ -68,7 +75,7 @@ public sealed class BattleSkill
 
     public bool CondMet(BattleUnit u, Random rng, bool comboNow) => Cond switch
     {
-        "count" => u.Counter(Src) % CondN == 0,
+        "count" => (u.Counter(Src) + CounterOffset) % CondN == 0,
         "chance" => rng.NextDouble() < CondP,
         "combo" => comboNow && rng.NextDouble() < CondP,
         _ => false,
@@ -82,5 +89,6 @@ public sealed class BattleSkill
         Tgt = Tgt, CannotAttack = CannotAttack, Vamp = Vamp, SilenceAlso = SilenceAlso,
         ReplayP = ReplayP, ReplayC = ReplayC, ReplayLocked = ReplayLocked, SummonKind = SummonKind,
         Summon = Summon, SummonMax = SummonMax, SummonOrder = SummonOrder, SummonCount = SummonCount,
+        CounterOffset = CounterOffset,
     };
 }
