@@ -27,7 +27,9 @@ public static class BattleLayout
 
     // —— 卡内件（HeroCardLayer 的 BuildOne 与 Refresh 必须用同一组，否则血条与文字错位）——
     public const float CardPadX = 8f;
-    public const float HpBarH = 20f;
+
+    /// <summary>血条高度 20 → 24（2026-10-21：卡内字号放大后，17px 的血条文字塞不进 20 高的条）。</summary>
+    public const float HpBarH = 24f;
     public const float GaugeH = 12f;
 
     // —— 召唤物堆叠卡（贴在侠客卡内侧）——
