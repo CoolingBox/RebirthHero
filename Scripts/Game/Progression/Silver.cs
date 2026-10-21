@@ -39,6 +39,17 @@ public sealed class Silver
         return true;
     }
 
+    /// <summary>
+    /// 直接进账（**非击杀来源**：装备回收等）。
+    /// 不计入 BattleGained —— 那个字段表示"本场战斗掉落"，回收不是战斗产出。
+    /// </summary>
+    public void Add(double amount)
+    {
+        if (amount <= 0) return;
+        Amount += amount;
+        TotalGained += amount;
+    }
+
     /// <summary>读档：写回余额与本世累计（累计只用于展示，负数会夹成 0）。</summary>
     public void Restore(double amount, double total)
     {

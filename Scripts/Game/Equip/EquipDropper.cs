@@ -110,4 +110,60 @@ public static class EquipDropper
         if (rng == null) rng = new Random();
         return rng.NextDouble() < DropChance;
     }
+
+    /// <summary>
+    /// 稀有度 → 随机词条条数（下标 = Rarity）。[PLACEHOLDER]
+    /// 白装 0 条（纯过渡），绿 1 / 蓝 2 / 紫 3 / 橙 3。
+    /// rationale：橙装与紫装同为 3 条，差别落在**基础数值**（64 vs 32）而不是词条数量 ——
+    /// 让"刷橙"是数值提升，而不是把词条上限再抬一档（否则紫装直接被淘汰）。
+    /// </summary>
+    static readonly int[] AffixCountByRarity = { 0, 0, 1, 2, 3, 3 };
+
+    /// <summary>
+    /// 掷一件装备的随机词条（P1）。同一件不出现**同类效果**（避免两条"锋利"叠满上限），
+    /// 但不同类可以共存（例：锋利 + 连绵）。
+    /// </summary>
+    public static List<int> RollAffixes(Rarity rarity, Random rng, List<EquipAffixConfig> pool)
+    {
+        List<int> ids = new List<int>();
+        if (pool == null || pool.Count == 0) return ids;
+        if (rng == null) rng = new Random();
+
+        int idx = (int)rarity;
+        if (idx < 0) idx = 0;
+        if (idx >= AffixCountByRarity.Length) idx = AffixCountByRarity.Length - 1;
+        int want = AffixCountByRarity[idx];
+
+        List<EquipAffixConfig> cand = new List<EquipAffixConfig>();
+        for (int i = 0; i < pool.Count; i++)
+        {
+            EquipAffixConfig c = pool[i];
+            if (c != null && c.Weight > 0) cand.Add(c);
+        }
+
+        for (int n = 0; n < want && cand.Count > 0; n++)
+        {
+            int total = 0;
+            for (int i = 0; i < cand.Count; i++) total += cand[i].Weight;
+            if (total <= 0) break;
+
+            int roll = rng.Next(total);
+            int acc = 0;
+            int pick = 0;
+            for (int i = 0; i < cand.Count; i++)
+            {
+                acc += cand[i].Weight;
+                if (roll < acc) { pick = i; break; }
+            }
+
+            EquipAffixEffect picked = cand[pick].Effect;
+            ids.Add(cand[pick].Id);
+
+            // 同类效果出过就整体移除，下一跳换类别
+            for (int i = cand.Count - 1; i >= 0; i--)
+                if (cand[i].Effect == picked) cand.RemoveAt(i);
+        }
+
+        return ids;
+    }
 }

@@ -1,0 +1,79 @@
+[
+  {
+    "Id": 1,
+    "Name": "\u950b\u5229",
+    "Effect": 1,
+    "Value": 2,
+    "Weight": 100
+  },
+  {
+    "Id": 2,
+    "Name": "\u6d51\u539a",
+    "Effect": 2,
+    "Value": 3,
+    "Weight": 100
+  },
+  {
+    "Id": 3,
+    "Name": "\u8f7b\u6377",
+    "Effect": 3,
+    "Value": 2,
+    "Weight": 100
+  },
+  {
+    "Id": 4,
+    "Name": "\u62db\u5f0f\u7cbe\u719f",
+    "Effect": 4,
+    "Value": 2,
+    "Weight": 80
+  },
+  {
+    "Id": 5,
+    "Name": "\u62a4\u4f53",
+    "Effect": 5,
+    "Value": 2,
+    "Weight": 80
+  },
+  {
+    "Id": 6,
+    "Name": "\u719f\u6781\u800c\u6d41",
+    "Effect": 6,
+    "Value": 1,
+    "Weight": 30
+  },
+  {
+    "Id": 7,
+    "Name": "\u8fde\u7ef5",
+    "Effect": 7,
+    "Value": 3,
+    "Weight": 50
+  },
+  {
+    "Id": 8,
+    "Name": "\u4f59\u97f5",
+    "Effect": 8,
+    "Value": 2,
+    "Weight": 50
+  },
+  {
+    "Id": 9,
+    "Name": "\u56fa\u5b88",
+    "Effect": 9,
+    "Value": 10,
+    "Weight": 60
+  },
+  {
+    "Id": 10,
+    "Name": "\u85cf\u950b",
+    "Effect": 10,
+    "Value": -0.2,
+    "Weight": 60
+  },
+  {
+    "Id": 11,
+    "Name": "\u5148\u624b",
+    "Effect": 11,
+    "Value": 1,
+    "Weight": 40
+  }
+]

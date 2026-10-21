@@ -70,6 +70,7 @@ public static class GameProgress
                 s.Uid = item.Uid;
                 s.ConfigId = item.ConfigId;
                 s.Level = item.Level;
+                foreach (int affixId in item.AffixIds) s.AffixIds.Add(affixId);
                 save.Equips.Add(s);
             }
 
@@ -161,7 +162,7 @@ public static class GameProgress
         if (equips != null)
         {
             foreach (EquipItemSave s in save.Equips)
-                equips.RestoreItem(s.Uid, s.ConfigId, s.Level);
+                equips.RestoreItem(s.Uid, s.ConfigId, s.Level, s.AffixIds);
 
             // 穿戴必须在实例全部恢复之后 —— RestoreWorn 会校验 Uid 是否存在
             foreach (WornSave w in save.Worn)

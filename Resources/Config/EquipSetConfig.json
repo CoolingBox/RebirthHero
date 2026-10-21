@@ -1,0 +1,56 @@
+[
+  {
+    "Id": 1,
+    "Name": "\u75be\u98ce",
+    "Desc": "\u901f\u5ea6\u6d41\uff1a\u9760\u66f4\u591a\u6b21\u884c\u52a8\u628a\u6b66\u5b66\u538b\u51fa\u6765",
+    "Effect2": 1,
+    "Value2": 1,
+    "Effect4": 2,
+    "Value4": 5
+  },
+  {
+    "Id": 2,
+    "Name": "\u7384\u6b66",
+    "Desc": "\u62a4\u76fe\u6d41\uff1a\u53d7\u51fb\u89e6\u53d1\u66f4\u52e4\u3001\u62a4\u76fe\u8870\u5f97\u66f4\u6162",
+    "Effect2": 6,
+    "Value2": 1,
+    "Effect4": 12,
+    "Value4": 15
+  },
+  {
+    "Id": 3,
+    "Name": "\u7834\u519b",
+    "Desc": "\u6280\u80fd\u6d41\uff1a\u8fdb\u95e8\u5c31\u5148\u624b\uff0c\u91cd\u62db\u66f4\u72e0",
+    "Effect2": 4,
+    "Value2": 2,
+    "Effect4": 5,
+    "Value4": 15
+  },
+  {
+    "Id": 4,
+    "Name": "\u5343\u673a",
+    "Desc": "\u53ec\u5524\u6d41\uff1a\u53ec\u5524\u7269\u6d3b\u66f4\u4e45\u3001\u53ec\u5f97\u66f4\u52e4",
+    "Effect2": 8,
+    "Value2": 5,
+    "Effect4": 9,
+    "Value4": 1
+  },
+  {
+    "Id": 5,
+    "Name": "\u964d\u9f99",
+    "Desc": "\u91cd\u653e\u6d41\uff1a\u628a\u5341\u516b\u8fde\u4ece\u5e7b\u60f3\u63a8\u5230 p70 \u6863",
+    "Effect2": 3,
+    "Value2": 10,
+    "Effect4": 3,
+    "Value4": 10
+  },
+  {
+    "Id": 6,
+    "Name": "\u767e\u6dec",
+    "Desc": "DoT \u6d41\uff1a\u53e0\u6bd2/\u707c\u70e7\u7684\u4f24\u5bb3\u4e0e\u5c42\u6570\u4e0a\u9650",
+    "Effect2": 10,
+    "Value2": 25,
+    "Effect4": 11,
+    "Value4": 2
+  }
+]

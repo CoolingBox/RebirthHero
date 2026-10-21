@@ -24,6 +24,9 @@ public sealed class EquipItem
     public int Uid;        // 唯一实例 id（同一模板可有多件）
     public int ConfigId;   // EquipConfig.Id
     public int Level;      // 强化等级（0 = 未强化）
+
+    /// <summary>随机词条（EquipAffixConfig.Id，P1）。掉落时掷定，之后不再变 —— 不做重铸（M4 再议）。</summary>
+    public readonly List<int> AffixIds = new List<int>();
 }
 
 /// <summary>四栏装备给出的属性合计（加算到英雄基础属性）。</summary>
@@ -50,10 +53,19 @@ public sealed class EquipBag
     /// <summary>掉落获得一件装备（返回实例，便于界面高亮"刚掉的那件"）。</summary>
     public EquipItem Add(int configId)
     {
+        return Add(configId, null);
+    }
+
+    /// <summary>掉落获得一件装备，并带上骰好的随机词条（P1）。</summary>
+    public EquipItem Add(int configId, List<int> affixIds)
+    {
         EquipItem item = new EquipItem();
         item.Uid = _nextUid;
         item.ConfigId = configId;
         item.Level = 0;
+        if (affixIds != null)
+            foreach (int id in affixIds)
+                if (id > 0) item.AffixIds.Add(id);
         _nextUid++;
 
         _items.Add(item);
@@ -157,8 +169,8 @@ public sealed class EquipBag
 
     // ---------- 读档（M2.6）----------
 
-    /// <summary>读档：恢复一件装备实例。Uid 递增器跟着抬高，避免之后新掉落撞号。</summary>
-    public void RestoreItem(int uid, int configId, int level)
+    /// <summary>读档：恢复一件装备实例（含随机词条）。Uid 递增器跟着抬高，避免之后新掉落撞号。</summary>
+    public void RestoreItem(int uid, int configId, int level, List<int> affixIds = null)
     {
         if (uid <= 0 || configId <= 0) return;
 
@@ -166,6 +178,9 @@ public sealed class EquipBag
         item.Uid = uid;
         item.ConfigId = configId;
         item.Level = level > 0 ? level : 0;
+        if (affixIds != null)
+            foreach (int id in affixIds)
+                if (id > 0) item.AffixIds.Add(id);
 
         _items.Add(item);
         if (uid >= _nextUid) _nextUid = uid + 1;
@@ -190,6 +205,34 @@ public sealed class EquipBag
         List<int> ids = new List<int>();
         foreach (KeyValuePair<int, int[]> kv in _worn) ids.Add(kv.Key);
         return ids;
+    }
+
+    /// <summary>该 Uid 是否被某人穿着（0 = 没穿）。</summary>
+    public int WornBy(int uid)
+    {
+        if (uid == 0) return 0;
+
+        foreach (KeyValuePair<int, int[]> kv in _worn)
+            for (int i = 0; i < SlotCount; i++)
+                if (kv.Value[i] == uid) return kv.Key;
+
+        return 0;
+    }
+
+    /// <summary>
+    /// 回收/移除一件装备。**穿着中的不给删** —— 否则玩家一键批量后战力断崖，
+    /// 而且四栏里会留下指向不存在 Uid 的空洞。
+    /// </summary>
+    public bool Remove(int uid)
+    {
+        if (uid == 0) return false;
+        if (WornBy(uid) != 0) return false;
+
+        EquipItem item = Find(uid);
+        if (item == null) return false;
+
+        _items.Remove(item);
+        return true;
     }
 
     /// <summary>转世：全部归零（GDD §3.3 账本 —— 装备不跨世）。</summary>
