@@ -8,6 +8,7 @@ public enum SkillSrc
     OnAction,    // 行动时（默认与普攻同放）
     OnHit,       // 受击时
     OnHpBelow,   // 血量低于阈值时（一次性）
+    OnStart,     // 开局：开战触发一次，效果持续整场（光环 / 机制型被动）
 }
 
 /// <summary>武学效果词</summary>
@@ -28,6 +29,8 @@ public enum SkillEff
     Dodge,       // 闪避（结算前判定，不触发后续）
     ReflectAccum,// 累计伤害反伤
     ShieldKeep,  // 护盾保持率修正（友方）：+Mult 个百分点，本场累计，上限由 Act() 统一兜
+    Hot,         // 持续治疗（HoT）：每 2s 一跳，可叠加、刷新时长
+    CounterUp,   // 开局充能：给己方次数型武学的当前计数 +Mult（不是额外行动）
 }
 
 /// <summary>伤害类型（三种减免口径；公式见数值框架 §2）</summary>
@@ -51,4 +54,5 @@ public enum SkillTgt
     HighestW,      // 受击权重最高敌方
     All,           // 全体敌方
     Self,          // 自身
+    Attacker,      // 「刚才打我的人」—— 只对受击链路有意义，见 BattleEngine._attacker
 }

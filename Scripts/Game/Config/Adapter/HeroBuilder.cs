@@ -68,6 +68,18 @@ public static class HeroBuilder
         EquipTuning tune = tuningOf != null ? tuningOf(hero.Id) : null;
         if (tune != null) EquipSets.ApplyStats(tune, u);
 
+        // —— 被动·属性型（2026-10-22）：与装备属性同一层，必须早于"召唤武学代价" ——
+        // 否则最大生命 −15% 会按旧基数算，血条与锁死段对不上。
+        if (ids != null)
+            foreach (int id in ids)
+            {
+                if (id <= 0) continue;
+                SkillConfig pc = skillLookup?.Invoke(id);
+                if (pc == null) continue;
+                if (!includePending && pc.Status == SkillStatus.Pending) continue;
+                if (SkillConfigMapper.IsPassiveAttribute(pc)) SkillConfigMapper.ApplyPassive(pc, u);
+            }
+
         // —— 召唤武学代价（2026-10-17 用户）：每携带 1 个召唤类武学，最大生命 −15%（叠加）——
         // 锁死部分记入 LockedHp，由血条 UI 以银灰色显示；惩罚基于"已算好的最终最大生命"（含 1 号位加成与资质）。
         int nSummon = CountSummonSkills(ids, skillLookup, includePending);
@@ -90,6 +102,8 @@ public static class HeroBuilder
                 SkillConfig cfg = skillLookup?.Invoke(id);
                 if (cfg == null) continue;
                 if (!includePending && cfg.Status == SkillStatus.Pending) continue;
+                // 属性型被动已在上面按"装备属性"那一层应用过，这里不再生成战斗技能
+                if (SkillConfigMapper.IsPassiveAttribute(cfg)) continue;
                 // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果，见金刚不坏）
                 List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
                 for (int k = 0; k < built.Count; k++)

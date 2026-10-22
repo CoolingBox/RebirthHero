@@ -157,8 +157,14 @@ public static class EnemyFactory
             ? IdsToConfigs(t.Skills, fullPool)
             : PickFromPool(pool, SkillCountOf(t, layer), layer, slot);
 
+        // 被动·属性型：与玩家同一层处理，必须在生成战斗技能之前
+        foreach (SkillConfig pc in configs)
+            if (SkillConfigMapper.IsPassiveAttribute(pc)) SkillConfigMapper.ApplyPassive(pc, u);
+
         foreach (SkillConfig cfg in configs)
         {
+            // 属性型被动已在上面应用过，不再生成战斗技能
+            if (SkillConfigMapper.IsPassiveAttribute(cfg)) continue;
             // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果）
             List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
             for (int k = 0; k < built.Count; k++) u.Skills.Add(built[k]);

@@ -45,6 +45,18 @@ public sealed class BattleEngine
     private readonly List<BattleUnit> _pendingRemove = new();   // 待移除的召唤物"尸体"（延迟到安全点）
     private readonly Dictionary<BattleSkill, double> _hpThresh = new();
 
+    /// <summary>
+    /// 「刚刚造成这次伤害的人」——只在本轮结算内部有效（受击/阈值武学触发期间），
+    /// 供 <see cref="SkillTgt.Attacker"/> 索敌（反伤/给攻击者上毒/给攻击者减速）。
+    /// <para>
+    /// 生命周期严格包在 <see cref="DealDamage"/> 的触发块里：进块前保存、出块后还原，
+    /// 所以嵌套（A 打 B → B 反伤 A → A 的受击武学）也能逐层回溯，不会串味。
+    /// 行动链路（<see cref="Act"/>）与 DoT 跳伤（<see cref="TickUnit"/>）里它是 null ——
+    /// 那些场景确实"没有攻击者"，配成 Attacker 的卡会退化回随机索敌，不会崩。
+    /// </para>
+    /// </summary>
+    private BattleUnit _attacker;
+
     public void SetTeams(IEnumerable<BattleUnit> a, IEnumerable<BattleUnit> b, int seed)
     {
         Rng = new Random(seed);
@@ -52,9 +64,40 @@ public sealed class BattleEngine
         B = b.Select(u => Clone(u)).ToList();
         T = 0; LastActor = null; ChainDepth = 0; _over = false; Result = 0;
         _actSeq = 0;                 // 行动序号从 0 起（每次 Act 自增，单位侧 -1 = 未计）
+        _attacker = null;            // 攻击者上下文只在单次结算内有效，跨场必须清空
         St = new BattleStats();
         _deadNotified.Clear();
         _hpThresh.Clear();
+        RunOnStart();          // 开局光环 / 机制型被动：开战各触发一次
+    }
+
+    /// <summary>
+    /// 开局触发：所有 <see cref="SkillSrc.OnStart"/> 技能在 T=0 各放一次。
+    /// 走的是正常 Fire → Apply 路径，所以增益会以"整场有效"的 buff 形式挂上
+    /// （见 Apply 里 <c>DurOf</c>）；不是额外行动，不增加 Actions/Actions 计数。
+    /// </summary>
+    void RunOnStart()
+    {
+        RunStartFor(A);
+        RunStartFor(B);
+    }
+
+    void RunStartFor(List<BattleUnit> team)
+    {
+        for (int i = 0; i < team.Count; i++)
+        {
+            BattleUnit u = team[i];
+            if (!u.Alive || u.Silenced(T)) continue;
+            for (int k = 0; k < u.Skills.Count; k++)
+                if (u.Skills[k].Src == SkillSrc.OnStart) Fire(u, u.Skills[k]);
+        }
+    }
+
+    /// <summary>buff 持续秒数：开局光环挂整场，其余 10s。</summary>
+    static double DurOf(BattleSkill s)
+    {
+        if (s.Src == SkillSrc.OnStart) return 1e9;
+        return 10;
     }
 
     private BattleUnit Clone(BattleUnit u)
@@ -173,17 +216,41 @@ public sealed class BattleEngine
             if (u.Ttl <= 0) { u.Hp = 0; EmitDeathIfNeeded(u); return; }
         }
         // DoT 系数取**施毒者**的 DotMul（百淬套穿在放毒的人身上，放大的是他造成的伤害）
+        // 毒：每秒一跳，层数不衰减 —— 持久型
         while (u.PoisonStacks > 0 && u.NextPoisonTick > 0 && u.NextPoisonTick <= T && u.Alive)
         { DotDamage(u, u.PoisonStacks * BattleConfig.PoisonPerStack * u.PoisonFrom!.EffAtk(T) * u.PoisonFrom!.DotMul); u.NextPoisonTick += BattleConfig.PoisonTick; }
-        while (u.BurnUntil > T - 1e-9 && u.NextBurnTick > 0 && u.NextBurnTick <= T && u.Alive)
-        { DotDamage(u, BattleConfig.BurnRate * u.BurnFrom!.EffAtk(T) * u.BurnFrom!.DotMul); u.NextBurnTick += BattleConfig.BurnTick; }
+
+        // 火：每秒一跳，用**施加时累加的 BurnValue** 结算，打完 ×(1−10%) —— 高开低走的爆发型。
+        // 与毒的关键差别：毒吃施毒者"当前"攻击（buff 会实时影响），火锁定施加时的值再逐跳衰减。
+        // 到期判定用 **NextBurnTick ≤ BurnUntil**（不是 T）：否则"持续 10 秒、每秒一跳"的第 10 跳
+        // 会正好卡在 T==Until 的边界上被吃掉，实际只打 9 跳。
+        while (u.BurnValue >= BattleConfig.BurnMinValue && u.NextBurnTick > 0 && u.NextBurnTick <= T
+               && u.NextBurnTick <= u.BurnUntil + 1e-9 && u.Alive)
+        {
+            double mul = u.BurnFrom != null ? u.BurnFrom.DotMul : 1.0;
+            DotDamage(u, u.BurnValue * mul);
+            u.BurnValue *= 1 - BattleConfig.BurnDecayPerTick;
+            u.NextBurnTick += BattleConfig.BurnTick;
+            if (u.BurnValue < BattleConfig.BurnMinValue) { u.BurnValue = 0; u.BurnUntil = -1; }
+        }
+
+        // HoT：每 2s 一跳的持续治疗，回血封顶到最大生命（溢出部分不计数、不飘字）。到期判定同上。
+        while (u.HotPerTick > 0 && u.NextHotTick > 0 && u.NextHotTick <= T
+               && u.NextHotTick <= u.HotUntil + 1e-9 && u.Alive)
+        {
+            double before = u.Hp;
+            u.Hp = Math.Min(u.BaseHp, u.Hp + u.HotPerTick);
+            double got = u.Hp - before;
+            if (got > 0) Bus.RaiseHeal(u, u, got, null);
+            u.NextHotTick += BattleConfig.HotTick;
+        }
     }
 
     void DotDamage(BattleUnit u, double amount)
     {
         u.Hp -= amount;
         EmitDeathIfNeeded(u);
-        if (!u.Alive) { u.Hp = 0; u.PoisonStacks = 0; u.BurnUntil = -1; }
+        if (!u.Alive) { u.Hp = 0; u.PoisonStacks = 0; u.BurnUntil = -1; u.BurnValue = 0; u.HotPerTick = 0; u.HotUntil = -1; }
     }
 
     void Act(BattleUnit u)
@@ -286,6 +353,11 @@ public sealed class BattleEngine
         if (countedHit) { tgt.HitActionId = _actSeq; tgt.Hits++; }
         if (tgt.Slot is >= 1 and <= 4) St.DamageTaken[tgt.Slot] += amount;
 
+        // 以下几段会"代替被打的人放技能"，其间把**攻击者**放进上下文，
+        // 让 TargetType=6（攻击者）的反伤/上毒/减速能锁定真正打他的人，而不是随机抽一个敌方。
+        // 用保存-还原而不是直接赋值：B 反伤 A 时 A 的受击武学也会进这段，两层都要各自的攻击者。
+        BattleUnit prevAttacker = _attacker;
+        _attacker = att;
         if (countedHit && tgt.Alive && ChainDepth < BattleConfig.ChainMax)
         {
             ChainDepth++;
@@ -295,9 +367,12 @@ public sealed class BattleEngine
             ChainDepth--;
         }
         if (tgt.Alive && !tgt.Silenced(T))
+        {
             foreach (var s in tgt.Skills)
                 if (s.Src == SkillSrc.OnHpBelow && !tgt.FiredOnce.Contains(s) && _hpThresh.TryGetValue(s, out var pct) && tgt.Hp / tgt.BaseHp <= pct)
                 { tgt.FiredOnce.Add(s); Fire(tgt, s); }
+        }
+        _attacker = prevAttacker;
 
         if (wasAlive) EmitDeathIfNeeded(tgt);
         return amount;
@@ -373,14 +448,24 @@ public sealed class BattleEngine
                 if (s.SummonOrder) OrderSummons(u, s);   // 万剑归宗：召唤即号令己方同类型召唤物齐射
                 break;
             case SkillEff.Weight:
-                foreach (var t in PickTargets(u, s)) if (t.Alive) t.WBuf.Add((s.Mult, T + 10));
+                foreach (var t in BuffTargets(u, s)) if (t.Alive) t.WBuf.Add((s.Mult, T + DurOf(s)));
                 break;
             case SkillEff.SpdMod:
-                foreach (var t in PickTargets(u, s)) if (t.Alive) t.SpdBuf.Add((s.Mult, T + 10));
+                foreach (var t in BuffTargets(u, s)) if (t.Alive) t.SpdBuf.Add((s.Mult, T + DurOf(s)));
                 break;
             case SkillEff.AtkMod:
-                foreach (var t in PickTargets(u, s)) if (t.Alive) t.AtkBuf.Add((s.Mult, T + 10));
+                foreach (var t in BuffTargets(u, s)) if (t.Alive) t.AtkBuf.Add((s.Mult, T + DurOf(s)));
                 break;
+            case SkillEff.CounterUp:
+            {
+                // 开局充能（机制型被动）：给己方所有"次数型"武学加当前计数偏移。
+                // 不是额外行动 —— 只把"第几次能放"往前挪，所以第 1 次行动就可能满足 CondN。
+                int add = (int)s.Mult;
+                foreach (var ally in AliveOf(Allies(u)).ToArray())
+                    foreach (var sk in ally.Skills)
+                        if (sk.Cond == "count") sk.CounterOffset += add;
+                break;
+            }
             case SkillEff.Poison:
                 foreach (var t in PickTargets(u, s))
                     if (t.Alive)
@@ -393,7 +478,25 @@ public sealed class BattleEngine
                 break;
             case SkillEff.Burn:
                 foreach (var t in PickTargets(u, s))
-                    if (t.Alive) { t.BurnFrom = u; t.BurnUntil = T + BattleConfig.BurnDur; if (t.NextBurnTick < 0) t.NextBurnTick = T + BattleConfig.BurnTick; }
+                    if (t.Alive)
+                    {
+                        // 火是衰减型 DoT（2026-10-22）：每次施加把新初值**累加**进来（叠加），并刷新时长。
+                        // 初值 = 施加者此刻攻击 × BurnRate；之后每跳 ×(1−10%)，所以叠加是"又浇一勺油"。
+                        t.BurnFrom = u;
+                        t.BurnValue += u.EffAtk(T) * BattleConfig.BurnRate;
+                        t.BurnUntil = T + BattleConfig.BurnDur;
+                        if (t.NextBurnTick < 0) t.NextBurnTick = T + BattleConfig.BurnTick;
+                    }
+                break;
+            case SkillEff.Hot:
+                foreach (var t in PickAlly(u, s))
+                    if (t.Alive)
+                    {
+                        // HoT 叠加同样走"累加每跳量 + 刷新时长"，每 2s 一跳
+                        t.HotPerTick += AmountOf(u, s);
+                        t.HotUntil = T + BattleConfig.HotDur;
+                        if (t.NextHotTick < 0) t.NextHotTick = T + BattleConfig.HotTick;
+                    }
                 break;
             case SkillEff.Silence:
                 foreach (var t in PickTargets(u, s)) if (t.Alive) t.SilenceUntil = T + 5;
@@ -404,15 +507,25 @@ public sealed class BattleEngine
             case SkillEff.Shield2Dmg:
             {
                 double d = u.Shield; u.Shield = 0;
-                var foes = AliveOf(Foes(u)).ToList();
-                if (d > 0 && foes.Count > 0) DealDamage(u, WeightedPick(foes), d, DamageKind.Internal);
+                if (d > 0)
+                    foreach (var t in PickTargets(u, s))
+                        if (t.Alive)
+                        {
+                            double real = DealDamage(u, t, d, DamageKind.Internal);
+                            Bus.RaiseDamage(u, t, real, s.Name);   // 爆盾也要有飘字，否则玩家看不出发生了什么
+                        }
                 break;
             }
             case SkillEff.ReflectAccum:
             {
                 double rd = u.AccumDmg * s.Mult; u.AccumDmg = 0;
-                var foes = AliveOf(Foes(u)).ToList();
-                if (rd > 0 && foes.Count > 0) DealDamage(u, WeightedPick(foes), rd, DamageKind.Internal);
+                if (rd > 0)
+                    foreach (var t in PickTargets(u, s))
+                        if (t.Alive)
+                        {
+                            double real = DealDamage(u, t, rd, DamageKind.Internal);
+                            Bus.RaiseDamage(u, t, real, s.Name);
+                        }
                 break;
             }
             case SkillEff.ShieldKeep:
@@ -436,6 +549,12 @@ public sealed class BattleEngine
 
     List<BattleUnit> PickTargets(BattleUnit u, BattleSkill s)
     {
+        // 「攻击者」索敌（2026-10-22）：只在受击/阈值链路的上下文里有值。
+        // 拿不到（行动链路、DoT 跳伤、攻击者已死或就是自己）就退化成下面的随机权重 ——
+        // 宁可打错一个人，也不能因为配错目标规则而整张卡空放。
+        if (s.Tgt == SkillTgt.Attacker && _attacker != null && _attacker.Alive && !ReferenceEquals(_attacker, u))
+            return new List<BattleUnit> { _attacker };
+
         var foes = AliveOf(Foes(u)).ToList();
         switch (s.Tgt)
         {
@@ -446,8 +565,17 @@ public sealed class BattleEngine
         }
     }
 
-    List<BattleUnit> PickAlly(BattleUnit u, BattleSkill s)
+    /// <summary>
+    /// 权重 / 速度 / 攻击修正的**目标阵营**：
+    /// 开局光环（含机制型被动）是"给己方的增益"，其余（行动、受击）是"打给敌方的减益"。
+    /// </summary>
+    List<BattleUnit> BuffTargets(BattleUnit u, BattleSkill s)
     {
+        if (s.Src == SkillSrc.OnStart) return PickAlly(u, s);
+        return PickTargets(u, s);
+    }
+
+    List<BattleUnit> PickAlly(BattleUnit u, BattleSkill s)    {
         var allies = AliveOf(Allies(u)).ToList();
         if (allies.Count == 0) return allies;
         return s.Tgt switch
