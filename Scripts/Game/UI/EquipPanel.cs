@@ -207,7 +207,7 @@ public partial class EquipPanel : BasePanel
     const int RowH = 60;          // 跟随图标
     const int FontMain = 22;      // 17 × 1.3
     const int FontSub = 19;       // 副信息（词条 / 已穿状态）
-    const int FontBtn = 20;       // 按钮 15 × 1.3
+    const int FontBtn = 22;       // 按钮：与正文同级（2026-10-22 用户按钮字偏小）
     const int BtnW = 130;         // 四栏「卸下」按钮宽
 
     /// <summary>四栏：显示当前穿戴 + 卸下按钮。</summary>
