@@ -110,6 +110,58 @@ public static class SkillConfigMapper
     }
 
     /// <summary>
+    /// 被动·**属性型**判定（2026-10-22）：这类卡在**装配期**直接写 BattleUnit 字段，
+    /// 不进 Skills、不占战斗期结算，因此必须在"召唤武学代价（LockedHp）"之前应用。
+    /// 机制型被动（开局充能 / 开战护盾 / 开战 HoT / 开战召唤）走 OnStart 技能，不在此列。
+    /// </summary>
+    public static bool IsPassiveAttribute(SkillConfig cfg)
+    {
+        if (cfg == null || cfg.TriggerTime != TriggerType.Passive) return false;
+        switch (cfg.EffectType)
+        {
+            case SkillEffect.MaxHpPct:
+            case SkillEffect.AtkMod:
+            case SkillEffect.SpdMod:
+            case SkillEffect.Weight:
+            case SkillEffect.ShieldKeep:
+            case SkillEffect.DmgTakenPct:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>应用被动·属性型（调用前先过 <see cref="IsPassiveAttribute"/>）。</summary>
+    public static void ApplyPassive(SkillConfig cfg, BattleUnit u)
+    {
+        if (cfg == null || u == null) return;
+        double v = cfg.CalcValue;
+
+        switch (cfg.EffectType)
+        {
+            case SkillEffect.MaxHpPct:
+                u.BaseHp *= 1 + v / 100.0;
+                u.Hp = u.BaseHp;
+                break;
+            case SkillEffect.AtkMod:
+                u.BaseAtk *= 1 + v / 100.0;
+                break;
+            case SkillEffect.SpdMod:
+                u.BaseSpd *= 1 + v / 100.0;
+                break;
+            case SkillEffect.Weight:
+                u.BaseW = Math.Max(BattleConfig.WFloor, u.BaseW + v);
+                break;
+            case SkillEffect.ShieldKeep:
+                u.ShieldKeep += v / 100.0;
+                break;
+            case SkillEffect.DmgTakenPct:
+                u.DmgTakenMul *= 1 + v / 100.0;
+                break;
+        }
+    }
+
+    /// <summary>
     /// 配置 SkillEffect → 引擎 SkillEff。
     /// <para>
     /// 1~14 与 <see cref="SkillEff"/> 同序（值 −1）；**15 之后不再同序**，必须逐条显式列出 ——
@@ -130,6 +182,8 @@ public static class SkillConfigMapper
         switch (e)
         {
             case SkillEffect.ShieldKeep: s = SkillEff.ShieldKeep; return true;
+            case SkillEffect.Hot: s = SkillEff.Hot; return true;
+            case SkillEffect.CounterUp: s = SkillEff.CounterUp; return true;
             default: s = SkillEff.Dmg; return false;
         }
     }
@@ -138,7 +192,11 @@ public static class SkillConfigMapper
     {
         TriggerType.OnHit => SkillSrc.OnHit,
         TriggerType.OnHpBelow => SkillSrc.OnHpBelow,
-        _ => SkillSrc.OnAction,        // OnStart(光环) 引擎未实装（上层按 Status 过滤）
+        TriggerType.OnStart => SkillSrc.OnStart,
+        // 被动·机制型（开局充能 / 开战护盾 / 开战 HoT / 开战召唤）同样走"开局触发一次"；
+        // 被动·属性型（攻血速/权重/减伤/护盾保持率）不经过本映射，在装配层直接写 BattleUnit 字段。
+        TriggerType.Passive => SkillSrc.OnStart,
+        _ => SkillSrc.OnAction,
     };
 
     static DamageKind ToDmgKind(DamageType t) => t switch
@@ -155,7 +213,7 @@ public static class SkillConfigMapper
         SkillTarget.LowestHpAlly => SkillTgt.LowestHpAlly,
         SkillTarget.HighestWeight => SkillTgt.HighestW,
         SkillTarget.All => SkillTgt.All,
-        SkillTarget.Attacker => SkillTgt.Random,   // 引擎暂无"攻击者"索敌，退化处理
+        SkillTarget.Attacker => SkillTgt.Attacker,   // 反伤/上毒/减速回敬"刚才打我的人"（引擎侧见 _attacker）
         _ => SkillTgt.Random,
     };
 
@@ -166,7 +224,7 @@ public static class SkillConfigMapper
     static bool MultOnAtkOf(SkillEff eff, CalcBase calcBase)
     {
         if (eff == SkillEff.Dmg) return true;
-        if (eff == SkillEff.Heal || eff == SkillEff.Shield) return calcBase == CalcBase.AtkMultiple;
+        if (eff == SkillEff.Heal || eff == SkillEff.Shield || eff == SkillEff.Hot) return calcBase == CalcBase.AtkMultiple;
         return false;
     }
 
@@ -183,7 +241,7 @@ public static class SkillConfigMapper
         if (calcBase == CalcBase.SelfMaxHpPercent) byBase = ownerBaseHp * calcValue / 100.0;
         else if (calcBase == CalcBase.AtkMultiple) byBase = calcValue / 100.0;
 
-        if (eff == SkillEff.Dmg || eff == SkillEff.Heal || eff == SkillEff.Shield) return byBase;
+        if (eff == SkillEff.Dmg || eff == SkillEff.Heal || eff == SkillEff.Shield || eff == SkillEff.Hot) return byBase;
 
         if (eff == SkillEff.Weight) return calcValue;          // 权重增量（10 基准）
         if (eff == SkillEff.SpdMod) return calcValue / 100.0;  // ±%
@@ -191,6 +249,7 @@ public static class SkillConfigMapper
         if (eff == SkillEff.Burn) return calcValue / 100.0;    // 每秒倍率
         if (eff == SkillEff.ReflectAccum) return calcValue / 100.0;
         if (eff == SkillEff.ShieldKeep) return calcValue / 100.0;   // 百分点 → 小数（15 → 0.15）
+        if (eff == SkillEff.CounterUp) return calcValue;            // 充能层数（整数，不是百分比）
         if (eff == SkillEff.Shield2Dmg) return 1.0;
         return 0;                                                 // Poison/Silence/Growth/Dodge/Summon 用引擎默认
     }

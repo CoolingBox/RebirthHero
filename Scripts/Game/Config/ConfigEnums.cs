@@ -90,7 +90,8 @@ public enum TriggerType
     OnAction = 1,     // 行动
     OnHit = 2,        // 受击
     OnHpBelow = 3,    // 血量阈值
-    OnStart = 4,      // 开局(光环)
+    OnStart = 4,      // 开局(光环)：开战触发一次、持续整场
+    Passive = 5,      // 被动（常驻）：无条件、装配即生效 —— 2026-10-22
 }
 
 public enum CondType
@@ -130,6 +131,10 @@ public enum SkillEffect
     Aura = 17,         // 光环      [待实装]
     Charge = 18,       // 蓄力      [待实装]
     ShieldKeep = 19,   // 护盾保持率 +CalcValue 个百分点（友方，本场累计）—— 2026-10-21 新增
+    Hot = 20,          // 持续治疗（HoT）：每 2s 一跳，可叠加 —— 2026-10-22 新增
+    CounterUp = 21,    // 开局充能：给己方**次数型**武学的当前计数 +CalcValue（= CounterOffset）—— 2026-10-22
+    MaxHpPct = 22,     // 气血上限 +CalcValue%（被动，装配期生效）
+    DmgTakenPct = 23,  // 受击伤害 +CalcValue%（被动，装配期生效；负数 = 减伤）
 }
 
 public enum CalcBase

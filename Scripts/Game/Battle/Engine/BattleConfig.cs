@@ -60,12 +60,21 @@ public static class BattleConfig
     public static double Slot1HpBonus = 1.3; // 1 号位血量加成
 
     // —— DoT ——
-    public static double PoisonTick = 2.0;    // 叠毒每 2s 一跳
+    // —— DoT / HoT（2026-10-22 用户口径） ——
+    // 毒：持续型。每秒跳一次、层数**不衰减**，靠叠层提伤，适合长线。
+    // 火：爆发型。每秒跳一次、初始值高于毒，但**每跳衰减当前值的 10%** —— 高开低走，
+    //     与毒形成"立刻痛 vs 越拖越痛"的分工。衰减到不足 1 点自动熄灭。
+    // HoT：治愈类持续效果，每 2 秒跳一次（比 DoT 慢一倍，治疗不需要那么密的反馈）。
+    public static double PoisonTick = 1.0;    // 叠毒每秒一跳
     public static double PoisonPerStack = 0.2;// 每栈吃来源 EffAtk 的 20%
     public static int PoisonMaxStack = 5;
-    public static double BurnTick = 1.0;      // 灼烧每 1s 一跳
-    public static double BurnRate = 0.15;     // 吃来源 EffAtk 的 15%
+    public static double BurnTick = 1.0;      // 灼烧每秒一跳
+    public static double BurnRate = 0.25;     // 每跳初始值 = 来源 EffAtk 的 25%（高于毒的 20%，代价是衰减）
+    public static double BurnDecayPerTick = 0.1;  // 每跳后当前值 ×(1 − 10%)
     public static double BurnDur = 10;
+    public static double BurnMinValue = 1;    // 衰减到不足 1 点即熄灭
+    public static double HotTick = 2.0;       // 持续治疗每 2s 一跳
+    public static double HotDur = 10;
 
     // —— 伤害类型减免（框架 §2） ——
     public static double ExtMinRatio = 0.15;  // 外功硬减下限：max(基础×15%, 基础−DEF)

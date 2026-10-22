@@ -99,6 +99,17 @@ public sealed class BattleUnit
     public double NextPoisonTick = -1;
     public BattleUnit BurnFrom;
     public double BurnUntil = -1, NextBurnTick = -1;
+
+    /// <summary>
+    /// 灼烧**当前每跳伤害**（2026-10-22 口径：火是衰减型 DoT）。
+    /// 每次施加把新的初始值累加进来（叠加），每跳打完后 ×(1 − BurnDecayPerTick)，
+    /// 衰减到不足 1 点即熄灭。与毒不同：毒靠层数持久，火靠初值爆发。
+    /// </summary>
+    public double BurnValue;
+
+    /// <summary>HoT（持续治疗）每跳回血量与到期时间。每 <see cref="BattleConfig.HotTick"/> 秒跳一次。</summary>
+    public double HotPerTick;
+    public double HotUntil = -1, NextHotTick = -1;
     public double SilenceUntil = -1;
     public HashSet<BattleSkill> FiredOnce = new();
     public double AccumDmg;            // 累计承伤（反伤用）
