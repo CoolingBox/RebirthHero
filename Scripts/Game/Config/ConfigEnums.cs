@@ -135,6 +135,11 @@ public enum SkillEffect
     CounterUp = 21,    // 开局充能：给己方**次数型**武学的当前计数 +CalcValue（= CounterOffset）—— 2026-10-22
     MaxHpPct = 22,     // 气血上限 +CalcValue%（被动，装配期生效）
     DmgTakenPct = 23,  // 受击伤害 +CalcValue%（被动，装配期生效；负数 = 减伤）
+    PoisonBurst = 24,  // 引爆毒层：伤害 = 攻击 × CalcValue% × 目标毒层数，结算后清空毒层 —— 2026-10-22
+    MissingHp = 25,    // 斩杀：伤害 = 目标**已损失气血** × CalcValue% —— 2026-10-22
+    ShieldScale = 26,  // 按盾加伤：伤害 = 自身当前护盾 × CalcValue%，**不消耗护盾** —— 2026-10-22
+    SelfHpLoss = 27,   // 自损气血：扣自身**气血上限** × CalcValue%（不吃护盾/减伤、不计受击）—— 2026-10-23
+    Expose = 28,       // 破绽：目标每层破绽让**下一次受击**伤害 ×(1+BreakBonus)，挨一刀消耗一层 —— 2026-10-24
 }
 
 public enum CalcBase

@@ -215,42 +215,66 @@ public sealed class BattleEngine
             u.Ttl -= dt;
             if (u.Ttl <= 0) { u.Hp = 0; EmitDeathIfNeeded(u); return; }
         }
-        // DoT 系数取**施毒者**的 DotMul（百淬套穿在放毒的人身上，放大的是他造成的伤害）
-        // 毒：每秒一跳，层数不衰减 —— 持久型
+        // —— 持续状态（2026-10-23 定稿）：每跳伤害 = 层数 × 每层固定点数，**层数无上限** ——
+        // DotMul 取**施加者**的（百淬套穿在放毒的人身上，放大的是他造成的伤害）。
+        // 毒：每秒一跳，层数不衰减，**无视护盾** —— 破坦手段
         while (u.PoisonStacks > 0 && u.NextPoisonTick > 0 && u.NextPoisonTick <= T && u.Alive)
-        { DotDamage(u, u.PoisonStacks * BattleConfig.PoisonPerStack * u.PoisonFrom!.EffAtk(T) * u.PoisonFrom!.DotMul); u.NextPoisonTick += BattleConfig.PoisonTick; }
+        {
+            double mul = u.PoisonFrom != null ? u.PoisonFrom.DotMul : 1.0;
+            DotDamage(u, u.PoisonStacks * BattleConfig.PoisonPerStackDmg * mul, true);
+            u.NextPoisonTick += BattleConfig.PoisonTick;
+        }
 
-        // 火：每秒一跳，用**施加时累加的 BurnValue** 结算，打完 ×(1−10%) —— 高开低走的爆发型。
-        // 与毒的关键差别：毒吃施毒者"当前"攻击（buff 会实时影响），火锁定施加时的值再逐跳衰减。
+        // 火：每秒一跳，层数与毒同构（不衰减、无上限），但默认**被护盾吸收** —— 与毒分工：毒破盾、火清血。
         // 到期判定用 **NextBurnTick ≤ BurnUntil**（不是 T）：否则"持续 10 秒、每秒一跳"的第 10 跳
         // 会正好卡在 T==Until 的边界上被吃掉，实际只打 9 跳。
-        while (u.BurnValue >= BattleConfig.BurnMinValue && u.NextBurnTick > 0 && u.NextBurnTick <= T
+        while (u.BurnStacks > 0 && u.NextBurnTick > 0 && u.NextBurnTick <= T
                && u.NextBurnTick <= u.BurnUntil + 1e-9 && u.Alive)
         {
             double mul = u.BurnFrom != null ? u.BurnFrom.DotMul : 1.0;
-            DotDamage(u, u.BurnValue * mul);
-            u.BurnValue *= 1 - BattleConfig.BurnDecayPerTick;
+            DotDamage(u, u.BurnStacks * BattleConfig.BurnPerStackDmg * mul, BattleConfig.BurnPierceShield);
             u.NextBurnTick += BattleConfig.BurnTick;
-            if (u.BurnValue < BattleConfig.BurnMinValue) { u.BurnValue = 0; u.BurnUntil = -1; }
         }
 
-        // HoT：每 2s 一跳的持续治疗，回血封顶到最大生命（溢出部分不计数、不飘字）。到期判定同上。
-        while (u.HotPerTick > 0 && u.NextHotTick > 0 && u.NextHotTick <= T
+        // HoT：每 2s 一跳的持续治疗，回血封顶到最大生命（溢出部分不计数、不飘字）。
+        // ⚠️ HoT 的这口治疗**不触发解毒**（否则持续回血会把毒洗干净），见 Apply 里的 Heal 分支。
+        while (u.HotStacks > 0 && u.NextHotTick > 0 && u.NextHotTick <= T
                && u.NextHotTick <= u.HotUntil + 1e-9 && u.Alive)
         {
+            double heal = u.HotStacks * BattleConfig.HotPerStackHeal;
             double before = u.Hp;
-            u.Hp = Math.Min(u.BaseHp, u.Hp + u.HotPerTick);
+            u.Hp = Math.Min(u.BaseHp, u.Hp + heal);
             double got = u.Hp - before;
             if (got > 0) Bus.RaiseHeal(u, u, got, null);
             u.NextHotTick += BattleConfig.HotTick;
         }
     }
 
-    void DotDamage(BattleUnit u, double amount)
+    /// <summary>
+    /// 持续状态跳伤。ignoreShield = true（毒）直接扣气血；false（火，默认）先由护盾吸收、余下扣血。
+    /// 这是毒/火唯一的行为差异 —— 毒是破坦手段，火对裸装更狠。
+    /// </summary>
+    void DotDamage(BattleUnit u, double amount, bool ignoreShield)
     {
+        if (amount <= 0) return;
+
+        if (!ignoreShield && u.Shield > 0)
+        {
+            double absorb = Math.Min(u.Shield, amount);
+            u.Shield -= absorb;
+            amount -= absorb;
+        }
+        if (amount <= 0) return;
+
         u.Hp -= amount;
         EmitDeathIfNeeded(u);
-        if (!u.Alive) { u.Hp = 0; u.PoisonStacks = 0; u.BurnUntil = -1; u.BurnValue = 0; u.HotPerTick = 0; u.HotUntil = -1; }
+        if (!u.Alive)
+        {
+            u.Hp = 0;
+            u.PoisonStacks = 0; u.PoisonFrom = null; u.NextPoisonTick = -1;
+            u.BurnStacks = 0; u.BurnUntil = -1;
+            u.HotStacks = 0; u.HotUntil = -1;
+        }
     }
 
     void Act(BattleUnit u)
@@ -322,6 +346,17 @@ public sealed class BattleEngine
         }
         // 承伤修正（资质词条"嗜战如命"的代价面）：>1 = 更脆；放在个体修正链的最前
         if (tgt.DmgTakenMul != 1.0) amount *= tgt.DmgTakenMul;
+        // 破绽（2026-10-24 用户口径「只持续到下次受击」+「允许叠层」）：
+        //   每层 = 一次 +BreakBonus 的易伤，挨一刀消耗一层；层数就是"排队待发的那几刀"。
+        //   **一次行动只吃一层**（BreakHitActionId 去重）：多段技能同属一次受击，
+        //   否则一发三段就把攒的层烧光，层数不可控、也没法给玩家算。
+        //   这里只读层数、不扣；扣在闪避判定之后 —— 打空不该白吃一层。
+        bool breakUsed = false;
+        if (tgt.BreakStacks > 0 && tgt.BreakHitActionId != _actSeq)
+        {
+            breakUsed = true;
+            amount *= 1 + BattleConfig.BreakBonus;
+        }
         // 战斗疲劳（软狂暴）：30s 后承伤每秒 +3%
         if (T > BattleConfig.FatigueStart) amount *= 1 + BattleConfig.FatigueRate * (T - BattleConfig.FatigueStart);
         // 闪避：结算前判定（被沉默不可闪）
@@ -329,6 +364,15 @@ public sealed class BattleEngine
             foreach (var s in tgt.Skills)
                 if (s.Src == SkillSrc.OnHit && s.Eff == SkillEff.Dodge && s.CondMet(tgt, Rng, false))
                 { St.Dodges++; return 0; }
+
+        // 落空判定已过 → 这一刀确实挨上了：吃一层破绽，并记下本次行动已消费，
+        // 让同一行动后续的伤害段不再重复吃（护盾吸收也算挨打）。
+        // 放在 DmgPerHit 之前：命中计数体再削也不影响"已经挨过打"的事实。
+        if (breakUsed)
+        {
+            tgt.BreakStacks--;
+            tgt.BreakHitActionId = _actSeq;
+        }
 
         // 「命中计数体」（飞剑：2 层 / 每次受击 -1，2026-10-16 口径）：
         //   无视伤害量，一次命中只扣固定值 —— 免疫一发大伤害秒杀，但被高频多次命中克制得极狠。
@@ -434,6 +478,15 @@ public sealed class BattleEngine
                     t.Hp = Math.Min(t.BaseHp, t.Hp + heal);
                     double got = t.Hp - before;
                     if (got > 0) Bus.RaiseHeal(u, t, got, s.Name);   // 带上武学名，便于"按武学统计治疗"
+
+                    // 解毒（2026-10-22 用户口径）：每次**实际回血**的治疗，让目标毒层 −5%，最少留 1 层。
+                    // 只有真回了血才减 —— 满血时放治疗不该被当成解药（否则"空放治疗"是无成本的解毒）。
+                    // HoT 的每跳治疗走 TickUnit，**不经过这里**，所以持续性回血不会洗掉毒。
+                    if (got > 0 && t.PoisonStacks > 0)
+                    {
+                        double kept = t.PoisonStacks * (1 - BattleConfig.PoisonWeakenPerHeal);
+                        t.PoisonStacks = kept < 1 ? 1 : kept;
+                    }
                 }
                 break;
             }
@@ -470,8 +523,10 @@ public sealed class BattleEngine
                 foreach (var t in PickTargets(u, s))
                     if (t.Alive)
                     {
-                        // 层数上限取**施毒者**的加成（百淬 4 件）
-                        t.PoisonStacks = Math.Min(BattleConfig.PoisonMaxStack + u.DotStackBonus, t.PoisonStacks + 1);
+                        // 每次施加的层数由卡面决定（Mult = 层数），再叠加装备给的额外层数（百淬 4 件）。
+                        // **不设上限**（2026-10-23 用户口径）：毒就是越叠越痛，唯一的反制是治疗解毒。
+                        int add = StacksOf(s) + ExtraDotStacks(u);
+                        t.PoisonStacks += add;
                         t.PoisonFrom = u;
                         if (t.NextPoisonTick < 0) t.NextPoisonTick = T + BattleConfig.PoisonTick;
                     }
@@ -480,10 +535,11 @@ public sealed class BattleEngine
                 foreach (var t in PickTargets(u, s))
                     if (t.Alive)
                     {
-                        // 火是衰减型 DoT（2026-10-22）：每次施加把新初值**累加**进来（叠加），并刷新时长。
-                        // 初值 = 施加者此刻攻击 × BurnRate；之后每跳 ×(1−10%)，所以叠加是"又浇一勺油"。
+                        // 2026-10-22：火与毒同构 —— 每次施加 +N 层、刷新时长，
+                        // 每跳 = 层数 × BurnPerStackDmg 点。不再累加初值、不再逐跳衰减。
+                        int add = StacksOf(s) + ExtraDotStacks(u);
+                        t.BurnStacks += add;
                         t.BurnFrom = u;
-                        t.BurnValue += u.EffAtk(T) * BattleConfig.BurnRate;
                         t.BurnUntil = T + BattleConfig.BurnDur;
                         if (t.NextBurnTick < 0) t.NextBurnTick = T + BattleConfig.BurnTick;
                     }
@@ -492,8 +548,8 @@ public sealed class BattleEngine
                 foreach (var t in PickAlly(u, s))
                     if (t.Alive)
                     {
-                        // HoT 叠加同样走"累加每跳量 + 刷新时长"，每 2s 一跳
-                        t.HotPerTick += AmountOf(u, s);
+                        // HoT 同样按层数：每次 +N 层、刷新时长，每 2s 一跳
+                        t.HotStacks += StacksOf(s);
                         t.HotUntil = T + BattleConfig.HotDur;
                         if (t.NextHotTick < 0) t.NextHotTick = T + BattleConfig.HotTick;
                     }
@@ -535,6 +591,97 @@ public sealed class BattleEngine
                 foreach (var t in PickAlly(u, s)) if (t.Alive) t.ShieldKeep += s.Mult;
                 break;
             }
+            case SkillEff.PoisonBurst:
+            {
+                // 引爆毒层（2026-10-22）：把目标身上的毒**一次性兑成伤害**，然后清零。
+                // 这是「吃状态」型 —— 没有叠毒卡配合时它只是一记普通打击（按 1 层算），
+                // 有配合时（5 层 = 5 倍）才兑现它的价值。所以它制造的是**卡组搭配决策**，
+                // 而不是又一个"数值更大的伤害卡"。
+                foreach (var t in PickTargets(u, s))
+                {
+                    if (!t.Alive) continue;
+
+                    double stacks = t.PoisonStacks;
+                    bool burst = stacks > 0;
+                    if (stacks < 1) stacks = 1;              // 无毒层也至少算 1 层，不空放
+
+                    if (burst) { t.PoisonStacks = 0; t.PoisonFrom = null; t.NextPoisonTick = -1; }
+
+                    double dmg = u.EffAtk(T) * s.Mult * stacks;
+                    double real = DealDamage(u, t, dmg, s.DmgKind);
+                    Bus.RaiseDamage(u, t, real, s.Name);
+                }
+                break;
+            }
+            case SkillEff.MissingHp:
+            {
+                // 斩杀（2026-10-22）：伤害 = 目标**已损失气血** × Mult。
+                // 「吃局面」型 —— 对方越残越痛，满血时只有保底（MissingHpFloor）。
+                // 与高爆发、多段、削血卡配合才有意义，单独带等于废卡：这是刻意的收割定位。
+                foreach (var t in PickTargets(u, s))
+                {
+                    if (!t.Alive) continue;
+
+                    double missing = Math.Max(0, t.BaseHp - t.Hp);
+                    double dmg = missing * s.Mult;
+                    double floor = u.EffAtk(T) * BattleConfig.MissingHpFloor;
+                    if (dmg < floor) dmg = floor;
+
+                    double real = DealDamage(u, t, dmg, s.DmgKind);
+                    Bus.RaiseDamage(u, t, real, s.Name);
+                }
+                break;
+            }
+            case SkillEff.ShieldScale:
+            {
+                // 按盾加伤（2026-10-22）：伤害 = 自身**当前护盾** × Mult，不消耗护盾。
+                // 与 Shield2Dmg(12) 的分工：
+                //   12 是把盾打出去 —— 清空、等量转化，一次性；
+                //   26 是有盾就够痛 —— 保留盾、可持续，把"堆盾"直接变成输出资源。
+                // ⚠️ Act() 首行会先按 ShieldKeep 衰减护盾，所以这卡的强度**直接吃护盾保持率**：
+                //    默认 0.5 时只有半价，这正是护盾流必须凑玄武 4 件 / 守拙词条的原因。
+                // 没有盾就完全打不出伤害 —— 这是护盾流的代价面，不是 bug（Desc 已写明"需有护盾"）。
+                double sh = u.Shield;
+                if (sh <= 0) break;
+
+                double dmg = sh * s.Mult;
+                foreach (var t in PickTargets(u, s))
+                    if (t.Alive)
+                    {
+                        double real = DealDamage(u, t, dmg, s.DmgKind);
+                        Bus.RaiseDamage(u, t, real, s.Name);
+                    }
+                break;
+            }
+            case SkillEff.SelfHpLoss:
+            {
+                // 自损气血（2026-10-23）：逆练类武学的**代价面**。
+                // 直接扣 Hp，**不走 DealDamage** —— 否则会被防御减免、被护盾吸收、被闪避，
+                // 还会推进受击计数（自损不该算"被打中"）。这是"代价"，不是"受到攻击"。
+                //
+                // 基数取 **BaseHp（气血上限）**，不是当前气血。这一条是实测撞出来的：
+                // 按当前气血扣 5%，连放 200 次后剩 0.03 点血、`Alive` 仍是 true ——
+                // 等比衰减永远到不了 0，"代价"就变成了"免费"。上限% 才是固定成本：
+                // 5% × 20 次 = 必死，玩家能算出来，也才配叫风险。
+                double loss = u.BaseHp * s.Mult;
+                if (loss > 0)
+                {
+                    u.Hp -= loss;
+                    Bus.RaiseDamage(u, u, loss, s.Name);
+                    EmitDeathIfNeeded(u);
+                    if (!u.Alive) { u.Hp = 0; }
+                }
+                break;
+            }
+            case SkillEff.Expose:
+            {
+                // 破绽（2026-10-24）：给目标**叠一层**破绽，每层换一次「下一刀 +BreakBonus」。
+                // 不按秒到期，层数也**不设上限** —— 挂得比吃得慢，实战堆不高；
+                // 层数真正的用途是让"多带破绽卡 / 全体挂破绽"能排队兑现，而不是白挂。
+                foreach (var t in PickTargets(u, s))
+                    if (t.Alive) t.BreakStacks++;
+                break;
+            }
             case SkillEff.Dodge:
                 break;
         }
@@ -546,6 +693,28 @@ public sealed class BattleEngine
     /// false → 直接用 Mult（绝对量语义，如"气血上限%"已在装配时折算）。
     /// </summary>
     double AmountOf(BattleUnit u, BattleSkill s) => s.MultOnAtk ? u.EffAtk(T) * s.Mult : s.Mult;
+
+    /// <summary>
+    /// 毒 / 火 / HoT 的**每次施加层数**。装配期把配置的 CalcValue 直接写进 Mult。
+    /// 下限 1（0 会让整张卡空放）；上限 20 只是防配置写错的护栏 ——
+    /// 每层每跳固定 1 点之后，强度全靠这里，所以上限必须留得足够宽（T4 火已到 8 层）。
+    /// </summary>
+    static int StacksOf(BattleSkill s)
+    {
+        int n = (int)Math.Round(s.Mult);
+        if (n < 1) return 1;
+        if (n > 20) return 20;
+        return n;
+    }
+
+    /// <summary>
+    /// 装备给的**额外施加层数**（百淬 4 件）。层数无上限后，原来"上限 +N"的加成没有意义了，
+    /// 改成"每次多叠 N 层" —— 同一个字段、同一个收集目标，语义从"能叠更高"变成"叠得更快"。
+    /// </summary>
+    static int ExtraDotStacks(BattleUnit u)
+    {
+        return u.DotStackBonus > 0 ? u.DotStackBonus : 0;
+    }
 
     List<BattleUnit> PickTargets(BattleUnit u, BattleSkill s)
     {
