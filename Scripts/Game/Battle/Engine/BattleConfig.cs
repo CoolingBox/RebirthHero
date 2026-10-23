@@ -59,22 +59,46 @@ public static class BattleConfig
     public static double WFloor = 1.0;       // 权重下限（原 0.1 的 ×10；不能归零隐身）
     public static double Slot1HpBonus = 1.3; // 1 号位血量加成
 
-    // —— DoT ——
-    // —— DoT / HoT（2026-10-22 用户口径） ——
-    // 毒：持续型。每秒跳一次、层数**不衰减**，靠叠层提伤，适合长线。
-    // 火：爆发型。每秒跳一次、初始值高于毒，但**每跳衰减当前值的 10%** —— 高开低走，
-    //     与毒形成"立刻痛 vs 越拖越痛"的分工。衰减到不足 1 点自动熄灭。
-    // HoT：治愈类持续效果，每 2 秒跳一次（比 DoT 慢一倍，治疗不需要那么密的反馈）。
-    public static double PoisonTick = 1.0;    // 叠毒每秒一跳
-    public static double PoisonPerStack = 0.2;// 每栈吃来源 EffAtk 的 20%
-    public static int PoisonMaxStack = 5;
-    public static double BurnTick = 1.0;      // 灼烧每秒一跳
-    public static double BurnRate = 0.25;     // 每跳初始值 = 来源 EffAtk 的 25%（高于毒的 20%，代价是衰减）
-    public static double BurnDecayPerTick = 0.1;  // 每跳后当前值 ×(1 − 10%)
+    // —— DoT / HoT（2026-10-23 定稿：**每层每跳 1 点**，层数无上限） ——
+    // ============ 持续状态（层数直接换成固定点数，1 点/层/跳） ============
+    // 口径演进：
+    //   10-22 早 → 毒吃施法者攻击、火逐跳衰减（收益随 buff 波动，算不出来）
+    //   10-22 晚 → 层数 × 每层固定**气血%**（能算了，但仍是比例伤害）
+    //   10-23 早 → 层数 × 每层固定**点数**（4 / 6 / 5 点，但三个数字要记）
+    //   10-23    → **每层每跳一律 1 点**（用户口径：只有一个数字，最好算）
+    // 为什么统一成 1 点：三种状态各用一套点数（4/6/5）时，玩家要在脑子里做三套乘法。
+    // 统一成 1 之后，"N 层毒 = 每秒掉 N 点"是一句人话，不需要记任何倍率。
+    // 强度靠**每次施加的层数**（CalcValue）调，不靠点数 —— 点数一旦分叉就回到"记不住"。
+    //   例：T4 火一次施加 8 层 = 每秒 8 点、持续 10 秒 = 80 点
+    public static double PoisonTick = 1.0;        // 毒每秒一跳
+    public static double PoisonPerStackDmg = 1;   // 毒：每层每跳 1 点（穿盾）
+    public static double BurnTick = 1.0;          // 火每秒一跳
+    public static double BurnPerStackDmg = 1;     // 火：每层每跳 1 点（被护盾吸收）
     public static double BurnDur = 10;
-    public static double BurnMinValue = 1;    // 衰减到不足 1 点即熄灭
-    public static double HotTick = 2.0;       // 持续治疗每 2s 一跳
+    // 火是否无视护盾。设计开关：false = 火先烧盾（默认，毒才是破坦手段）；true = 和毒一样穿透。
+    public static bool BurnPierceShield = false;
+    public static double HotTick = 2.0;           // 持续治疗每 2s 一跳
+    public static double HotPerStackHeal = 1;     // HoT：每层每跳回 1 点
     public static double HotDur = 10;
+
+    // 解毒口径（2026-10-22 用户设定）：**每次实际回血**的治疗，毒层 −5%，最少留 1 层。
+    // HoT 的跳伤治疗**不触发** —— 否则持续性回血会把毒洗干净，毒系就没有威胁了。
+    // 层数无上限后，这条是唯一的反制手段，不能省。
+    public static double PoisonWeakenPerHeal = 0.05;
+
+    // —— 破绽（2026-10-24 用户口径「只持续到下次受击」+「允许叠层」）：排队式易伤 ——
+    // 为什么只借这一个太吾机制：「发挥度 / 破绽部位 / 距离 / 式」都要求玩家实时判断，
+    // 挂机自动战斗里全部退化成纯数值检查；只有「破绽」是一旦挂上就自动生效的状态，
+    // 它制造的决策在构筑层 —— 带不带破绽卡、谁给谁垫刀。
+    // 为什么改成一次性（不当秒表用）：「持续 10 秒」在挂机里等于白送一段全覆盖易伤，
+    //   玩家既算不清覆盖了几刀，也感受不到卡的存在；一次性之后每张破绽卡**明码标价**
+    //   = 把队伍下一刀放大一次。
+    // 为什么允许叠层（2026-10-24 第二轮）：「只给下一刀」会让多张破绽卡互相顶掉 ——
+    //   同一目标连着被挂两次，第二次白挂。改成层数后，每次施加 +1 层、每挨一刀消耗一层，
+    //   层数 = "排队待发的重击次数"，多带破绽卡 / 全体挂破绽终于能兑现。
+    //   ⚠️ 上限不设：挂的频率（每 3 次自身行动 1 层）远低于消耗（每次队伍行动 1 层），
+    //   实战堆不高；设个数字反而是没有 rationale 的 magic number。
+    public static double BreakBonus = 0.40;   // 破绽每层：那一次受击伤害 +40%
 
     // —— 伤害类型减免（框架 §2） ——
     public static double ExtMinRatio = 0.15;  // 外功硬减下限：max(基础×15%, 基础−DEF)
@@ -105,6 +129,13 @@ public static class BattleConfig
     // 行动周期的临时缓冲"，不是第二血条；若允许到 1.0，铁布衫（受击每 3 次给 8% 气血盾）
     // 会重新变成永久墙，前面那条衰减规则就白定了。
     public static double ShieldKeepCap = 0.85;
+
+    // —— 「吃状态」型效果的保底 ——
+    // 斩杀（MissingHp）：伤害 = 目标已损气血 × 倍率。满血目标已损 = 0，卡会变成"点了没反应"。
+    // 保底给 攻击 × 本值，让它满血时仍是一记普通打击，而不是空放 —— 玩家能看出"这张卡在等人残血"，
+    // 而不是"这张卡坏了"。数值来历：≈ 一张入门档单体伤害（0.3×），刻意压得很低，
+    // 避免它变成"满血也能用"的通用伤害卡，那就失去了收割定位。
+    public static double MissingHpFloor = 0.30;
 
     // —— 召唤物上限 ——
     // 携带召唤类武学的代价：每带 1 个，所属侠客最大生命 −本值（叠加；N 个 = N×本值）。

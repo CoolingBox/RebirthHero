@@ -47,10 +47,10 @@
   {
     "Id": 6,
     "Name": "\u767e\u6dec",
-    "Desc": "DoT \u6d41\uff1a\u53e0\u6bd2/\u707c\u70e7\u7684\u4f24\u5bb3\u4e0e\u5c42\u6570\u4e0a\u9650",
+    "Desc": "DoT \u6d41\uff1a\u53e0\u6bd2/\u707c\u70e7\u7684\u4f24\u5bb3\u4e0e\u53e0\u5c42\u901f\u5ea6\uff08\u6bcf\u6b21\u989d\u5916 +1 \u5c42\uff09",
     "Effect2": 10,
     "Value2": 25,
     "Effect4": 11,
-    "Value4": 2
+    "Value4": 1
   }
 ]

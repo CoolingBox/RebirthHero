@@ -101,16 +101,26 @@ public sealed class BattleUnit
     public double BurnUntil = -1, NextBurnTick = -1;
 
     /// <summary>
-    /// 灼烧**当前每跳伤害**（2026-10-22 口径：火是衰减型 DoT）。
-    /// 每次施加把新的初始值累加进来（叠加），每跳打完后 ×(1 − BurnDecayPerTick)，
-    /// 衰减到不足 1 点即熄灭。与毒不同：毒靠层数持久，火靠初值爆发。
+    /// 灼烧层数（2026-10-22 起与毒同构：**层数 × 每层固定量**，不再累加初值、不再逐跳衰减）。
+    /// 差别只在穿透：毒无视护盾，火默认被护盾吸收（`BattleConfig.BurnPierceShield` 可翻转）。
     /// </summary>
-    public double BurnValue;
+    public double BurnStacks;
 
-    /// <summary>HoT（持续治疗）每跳回血量与到期时间。每 <see cref="BattleConfig.HotTick"/> 秒跳一次。</summary>
-    public double HotPerTick;
+    /// <summary>HoT（持续治疗）层数。每 <see cref="BattleConfig.HotTick"/> 秒回「层数 × HotPerStackHp%」气血。</summary>
+    public double HotStacks;
     public double HotUntil = -1, NextHotTick = -1;
     public double SilenceUntil = -1;
+    /// <summary>
+    /// 破绽**层数**（2026-10-24 用户口径「破绽只持续到下次受击」+「允许叠层」）：
+    /// 每层 = 一次 +BreakBonus 的易伤，目标挨一刀消耗一层（不是一次全吃）。
+    /// **一次行动只吃一层** —— 与受击计数同口径（见 <see cref="BreakHitActionId"/>），
+    /// 否则多段技能一次行动就能把攒的层全烧掉，层数完全不可控。
+    /// 被打空（闪避）不消耗；被护盾全吸收算挨打，照样消耗。
+    /// </summary>
+    public int BreakStacks;
+
+    /// <summary>上一次消耗破绽的行动序号（<c>_actSeq</c>）：同一次行动的多段伤害只吃一层。</summary>
+    public long BreakHitActionId = -1;
     public HashSet<BattleSkill> FiredOnce = new();
     public double AccumDmg;            // 累计承伤（反伤用）
     public double BaseW;               // 基础受击权重

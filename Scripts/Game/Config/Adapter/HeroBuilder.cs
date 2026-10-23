@@ -102,8 +102,14 @@ public static class HeroBuilder
                 SkillConfig cfg = skillLookup?.Invoke(id);
                 if (cfg == null) continue;
                 if (!includePending && cfg.Status == SkillStatus.Pending) continue;
-                // 属性型被动已在上面按"装备属性"那一层应用过，这里不再生成战斗技能
-                if (SkillConfigMapper.IsPassiveAttribute(cfg)) continue;
+                // 属性型被动的主效果已在上面按"装备属性"那一层应用过，不再生成主技能；
+                // 但 T4 身份卡可以带**副效果**（属性 + 机制），那一支仍然要建（2026-10-22）
+                if (SkillConfigMapper.IsPassiveAttribute(cfg))
+                {
+                    BattleSkill only = SkillConfigMapper.ToAltSkill(cfg, u.BaseHp);
+                    if (only != null) { ApplyQualityToSkill(only, cfg, quality); u.Skills.Add(only); }
+                    continue;
+                }
                 // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果，见金刚不坏）
                 List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
                 for (int k = 0; k < built.Count; k++)

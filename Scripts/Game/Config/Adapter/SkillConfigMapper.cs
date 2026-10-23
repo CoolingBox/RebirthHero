@@ -162,6 +162,26 @@ public static class SkillConfigMapper
     }
 
     /// <summary>
+    /// 只生成**副效果** —— 给"属性 + 机制"的被动卡用（T4 身份卡：如「气血 +22% 且开战提速」）。
+    /// <para>
+    /// 为什么不能直接调 <see cref="ToBattleSkills"/>：属性型被动的主效果已经在装配期直写
+    /// <see cref="BattleUnit"/> 字段，若再当技能放一次就是双重结算。所以这里只取 AltEffect 一支。
+    /// </para>
+    /// 返回 null = 没有副效果，或副效果引擎未实装。
+    /// </summary>
+    public static BattleSkill ToAltSkill(SkillConfig cfg, double ownerBaseHp)
+    {
+        if (cfg == null) return null;
+
+        SkillEff altEff;
+        if ((int)cfg.AltEffect <= 0) return null;
+        if (!ToEff(cfg.AltEffect, out altEff)) return null;
+        if (altEff == SkillEff.Summon) return null;      // 一张卡不能有两种召唤
+
+        return Build(cfg, altEff, cfg.AltCalcBase, cfg.AltCalcValue, cfg.AltCondN, cfg.AltLimit, ownerBaseHp, true);
+    }
+
+    /// <summary>
     /// 配置 SkillEffect → 引擎 SkillEff。
     /// <para>
     /// 1~14 与 <see cref="SkillEff"/> 同序（值 −1）；**15 之后不再同序**，必须逐条显式列出 ——
@@ -184,6 +204,11 @@ public static class SkillConfigMapper
             case SkillEffect.ShieldKeep: s = SkillEff.ShieldKeep; return true;
             case SkillEffect.Hot: s = SkillEff.Hot; return true;
             case SkillEffect.CounterUp: s = SkillEff.CounterUp; return true;
+            case SkillEffect.PoisonBurst: s = SkillEff.PoisonBurst; return true;
+            case SkillEffect.MissingHp: s = SkillEff.MissingHp; return true;
+            case SkillEffect.ShieldScale: s = SkillEff.ShieldScale; return true;
+            case SkillEffect.SelfHpLoss: s = SkillEff.SelfHpLoss; return true;
+            case SkillEffect.Expose: s = SkillEff.Expose; return true;
             default: s = SkillEff.Dmg; return false;
         }
     }
@@ -224,8 +249,9 @@ public static class SkillConfigMapper
     static bool MultOnAtkOf(SkillEff eff, CalcBase calcBase)
     {
         if (eff == SkillEff.Dmg) return true;
-        if (eff == SkillEff.Heal || eff == SkillEff.Shield || eff == SkillEff.Hot) return calcBase == CalcBase.AtkMultiple;
-        return false;
+        if (eff == SkillEff.PoisonBurst) return true;              // 每层 = 攻击 × Mult
+        if (eff == SkillEff.Heal || eff == SkillEff.Shield) return calcBase == CalcBase.AtkMultiple;
+        return false;                                              // MissingHp 吃的是"目标已损气血"，与攻击无关
     }
 
     /// <summary>
@@ -241,16 +267,25 @@ public static class SkillConfigMapper
         if (calcBase == CalcBase.SelfMaxHpPercent) byBase = ownerBaseHp * calcValue / 100.0;
         else if (calcBase == CalcBase.AtkMultiple) byBase = calcValue / 100.0;
 
-        if (eff == SkillEff.Dmg || eff == SkillEff.Heal || eff == SkillEff.Shield || eff == SkillEff.Hot) return byBase;
+        if (eff == SkillEff.Dmg || eff == SkillEff.Heal || eff == SkillEff.Shield) return byBase;
 
+        // 毒 / 火 / HoT（2026-10-23 定稿）：Mult 存的是**每次施加的层数**（T1 1 / T2 2 / T3 3 / T4 4），
+        // 不是倍率、也不是气血%。每跳的实际量在引擎里按「层数 × 每层固定点数」算（4 / 6 / 5 点），
+        // 所以这里不做任何百分比折算，原值透传。
+        if (eff == SkillEff.Poison || eff == SkillEff.Burn || eff == SkillEff.Hot)
+            return Math.Max(1.0, calcValue);
+
+        if (eff == SkillEff.PoisonBurst) return calcValue / 100.0;  // 每层倍率（80 → 0.8×攻击/层）
+        if (eff == SkillEff.MissingHp) return calcValue / 100.0;    // 已损气血比例（30 → 30%）
+        if (eff == SkillEff.ShieldScale) return calcValue / 100.0;  // 护盾倍数（70 → 护盾×0.7）
+        if (eff == SkillEff.SelfHpLoss) return calcValue / 100.0;   // 自损比例（5 → 当前气血×5%）
         if (eff == SkillEff.Weight) return calcValue;          // 权重增量（10 基准）
         if (eff == SkillEff.SpdMod) return calcValue / 100.0;  // ±%
         if (eff == SkillEff.AtkMod) return calcValue / 100.0;  // ±%
-        if (eff == SkillEff.Burn) return calcValue / 100.0;    // 每秒倍率
         if (eff == SkillEff.ReflectAccum) return calcValue / 100.0;
         if (eff == SkillEff.ShieldKeep) return calcValue / 100.0;   // 百分点 → 小数（15 → 0.15）
         if (eff == SkillEff.CounterUp) return calcValue;            // 充能层数（整数，不是百分比）
         if (eff == SkillEff.Shield2Dmg) return 1.0;
-        return 0;                                                 // Poison/Silence/Growth/Dodge/Summon 用引擎默认
+        return 0;                                                 // Silence/Growth/Dodge/Summon 用引擎默认
     }
 }

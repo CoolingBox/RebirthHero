@@ -163,8 +163,13 @@ public static class EnemyFactory
 
         foreach (SkillConfig cfg in configs)
         {
-            // 属性型被动已在上面应用过，不再生成战斗技能
-            if (SkillConfigMapper.IsPassiveAttribute(cfg)) continue;
+            // 属性型被动的主效果已在上面应用过；副效果（属性 + 机制的身份卡）仍要建
+            if (SkillConfigMapper.IsPassiveAttribute(cfg))
+            {
+                BattleSkill only = SkillConfigMapper.ToAltSkill(cfg, u.BaseHp);
+                if (only != null) u.Skills.Add(only);
+                continue;
+            }
             // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果）
             List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
             for (int k = 0; k < built.Count; k++) u.Skills.Add(built[k]);
