@@ -26,7 +26,10 @@ public static class EquipIcon
     /// <summary>模板 → 图标键（不含扩展名）。</summary>
     public static string KeyOf(EquipConfig cfg)
     {
-        if (cfg == null) return null;
+        if (cfg == null)
+        {
+            return null;
+        }
 
         string head = cfg.SetId > 0 ? ("set" + cfg.SetId) : "scatter";
         return head + "_" + SlotKey(cfg.Slot);
@@ -48,15 +51,23 @@ public static class EquipIcon
     public static Texture2D Load(EquipConfig cfg)
     {
         string key = KeyOf(cfg);
-        if (key == null) return null;
+        if (key == null)
+        {
+            return null;
+        }
 
         Texture2D cached;
-        if (Cache.TryGetValue(key, out cached)) return cached;
+        if (Cache.TryGetValue(key, out cached))
+        {
+            return cached;
+        }
 
         string path = Root + key + ".png";
         Texture2D tex = null;
         if (ResourceLoader.Exists(path))
+        {
             tex = GD.Load<Texture2D>(path);
+        }
 
         Cache[key] = tex;
         return tex;
@@ -76,7 +87,10 @@ public static class EquipIcon
         // 底色：套装朱砂、散件中性灰 —— 这是"套装 vs 散件"最省事的一眼区分
         ColorRect bg = new ColorRect();
         bg.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        if (isSet) bg.Color = new Color(0.55f, 0.16f, 0.11f, 0.38f);
+        if (isSet)
+        {
+            bg.Color = new Color(0.55f, 0.16f, 0.11f, 0.38f);
+        }
         else bg.Color = new Color(1f, 1f, 1f, 0.06f);
         bg.MouseFilter = Control.MouseFilterEnum.Ignore;
         frame.AddChild(bg);

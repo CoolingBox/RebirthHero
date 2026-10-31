@@ -62,7 +62,11 @@ public sealed class BattleEngine
         Rng = new Random(seed);
         A = a.Select(u => Clone(u)).ToList();
         B = b.Select(u => Clone(u)).ToList();
-        T = 0; LastActor = null; ChainDepth = 0; _over = false; Result = 0;
+        T = 0;
+        LastActor = null;
+        ChainDepth = 0;
+        _over = false;
+        Result = 0;
         _actSeq = 0;                 // 行动序号从 0 起（每次 Act 自增，单位侧 -1 = 未计）
         _attacker = null;            // 攻击者上下文只在单次结算内有效，跨场必须清空
         St = new BattleStats();
@@ -87,16 +91,27 @@ public sealed class BattleEngine
         for (int i = 0; i < team.Count; i++)
         {
             BattleUnit u = team[i];
-            if (!u.Alive || u.Silenced(T)) continue;
+            if (!u.Alive || u.Silenced(T))
+            {
+                continue;
+            }
             for (int k = 0; k < u.Skills.Count; k++)
-                if (u.Skills[k].Src == SkillSrc.OnStart) Fire(u, u.Skills[k]);
+            {
+                if (u.Skills[k].Src == SkillSrc.OnStart)
+                {
+                    Fire(u, u.Skills[k]);
+                }
+            }
         }
     }
 
     /// <summary>buff 持续秒数：开局光环挂整场，其余 10s。</summary>
     static double DurOf(BattleSkill s)
     {
-        if (s.Src == SkillSrc.OnStart) return 1e9;
+        if (s.Src == SkillSrc.OnStart)
+        {
+            return 1e9;
+        }
         return 10;
     }
 
@@ -118,7 +133,10 @@ public sealed class BattleEngine
         foreach (var s in u.Skills)
         {
             var k = s.Clone();
-            if (k.Src == SkillSrc.OnHpBelow) _hpThresh[k] = k.CondP;
+            if (k.Src == SkillSrc.OnHpBelow)
+            {
+                _hpThresh[k] = k.CondP;
+            }
             c.Skills.Add(k);
         }
         return c;
@@ -130,7 +148,13 @@ public sealed class BattleEngine
     public List<BattleUnit> Foes(BattleUnit u) => InA(u) ? B : A;
     public IEnumerable<BattleUnit> AliveOf(List<BattleUnit> team)
     {
-        foreach (var u in team) if (u.Alive) yield return u;
+        foreach (var u in team)
+        {
+            if (u.Alive)
+            {
+                yield return u;
+            }
+        }
     }
 
     // ============ 确定性 Run()（无头验证用，复刻 M0） ============
@@ -140,61 +164,154 @@ public sealed class BattleEngine
         {
             FlushRemovals();   // 清理上一轮行动中阵亡的召唤物（必须在遍历 A/B 之前）
             double dt = BattleConfig.DtCap;
-            foreach (var u in A) if (u.Alive && u.Gauge < GaugeMax) dt = Math.Min(dt, (GaugeMax - u.Gauge) / u.EffSpd(T) + 1e-9);
-            foreach (var u in B) if (u.Alive && u.Gauge < GaugeMax) dt = Math.Min(dt, (GaugeMax - u.Gauge) / u.EffSpd(T) + 1e-9);
-            if (dt < 1e-9) dt = 1e-6;
+            foreach (var u in A)
+            {
+                if (u.Alive && u.Gauge < GaugeMax)
+                {
+                    dt = Math.Min(dt, (GaugeMax - u.Gauge) / u.EffSpd(T) + 1e-9);
+                }
+            }
+            foreach (var u in B)
+            {
+                if (u.Alive && u.Gauge < GaugeMax)
+                {
+                    dt = Math.Min(dt, (GaugeMax - u.Gauge) / u.EffSpd(T) + 1e-9);
+                }
+            }
+            if (dt < 1e-9)
+            {
+                dt = 1e-6;
+            }
             Advance(dt);
             FlushRemovals();   // 清理本次 Advance 里 TTL/DoT 到期而死的召唤物
 
             var ready = new List<BattleUnit>();
-            foreach (var u in A) if (u.Alive && u.Gauge >= GaugeMax) ready.Add(u);
-            foreach (var u in B) if (u.Alive && u.Gauge >= GaugeMax) ready.Add(u);
+            foreach (var u in A)
+            {
+                if (u.Alive && u.Gauge >= GaugeMax)
+                {
+                    ready.Add(u);
+                }
+            }
+            foreach (var u in B)
+            {
+                if (u.Alive && u.Gauge >= GaugeMax)
+                {
+                    ready.Add(u);
+                }
+            }
             ready.Sort((x, y) => y.EffSpd(T).CompareTo(x.EffSpd(T)));
             foreach (var u in ready)
             {
-                if (!u.Alive) continue;
+                if (!u.Alive)
+                {
+                    continue;
+                }
                 u.Gauge = 0;
                 Act(u);
-                if (!AliveOf(A).Any()) { FlushRemovals(); St.Duration = T; _over = true; Result = 2; Bus.RaiseEnd(2); return 2; }
-                if (!AliveOf(B).Any()) { FlushRemovals(); St.Duration = T; _over = true; Result = 1; Bus.RaiseEnd(1); return 1; }
-                if (T >= BattleConfig.Limit) break;
+                if (!AliveOf(A).Any())
+                {
+                    FlushRemovals();
+                    St.Duration = T;
+                    _over = true;
+                    Result = 2;
+                    Bus.RaiseEnd(2);
+                    return 2;
+                }
+                if (!AliveOf(B).Any())
+                {
+                    FlushRemovals();
+                    St.Duration = T;
+                    _over = true;
+                    Result = 1;
+                    Bus.RaiseEnd(1);
+                    return 1;
+                }
+                if (T >= BattleConfig.Limit)
+                {
+                    break;
+                }
             }
         }
         FlushRemovals();
         St.Duration = Math.Min(T, BattleConfig.Limit);
-        _over = true; Result = 0; Bus.RaiseEnd(0);
+        _over = true;
+        Result = 0;
+        Bus.RaiseEnd(0);
         return 0;
     }
 
     // ============ 实时 Step(dt)（表现层逐帧驱动） ============
     public void Step(double dt)
     {
-        if (_over) return;
+        if (_over)
+        {
+            return;
+        }
         FlushRemovals();   // 清理上一帧行动中阵亡的召唤物
         T += dt;
-        foreach (var u in A) TickUnit(u, dt);
-        foreach (var u in B) TickUnit(u, dt);
+        foreach (var u in A)
+        {
+            TickUnit(u, dt);
+        }
+        foreach (var u in B)
+        {
+            TickUnit(u, dt);
+        }
 
         int guard = 0;
         while (guard++ < 256)
         {
             FlushRemovals();   // TTL/DoT 到期而死的召唤物在此落地
             var ready = new List<BattleUnit>();
-            foreach (var m in A) if (m.Alive && m.Gauge >= GaugeMax) ready.Add(m);
-            foreach (var m in B) if (m.Alive && m.Gauge >= GaugeMax) ready.Add(m);
-            if (ready.Count == 0) break;
+            foreach (var m in A)
+            {
+                if (m.Alive && m.Gauge >= GaugeMax)
+                {
+                    ready.Add(m);
+                }
+            }
+            foreach (var m in B)
+            {
+                if (m.Alive && m.Gauge >= GaugeMax)
+                {
+                    ready.Add(m);
+                }
+            }
+            if (ready.Count == 0)
+            {
+                break;
+            }
             ready.Sort((x, y) => y.EffSpd(T).CompareTo(x.EffSpd(T)));
             var u = ready[0];
             u.Gauge -= GaugeMax;   // 保留溢出，维持速度比
             Act(u);
-            if (!AliveOf(A).Any()) { FlushRemovals(); St.Duration = T; _over = true; Result = 2; Bus.RaiseEnd(2); return; }
-            if (!AliveOf(B).Any()) { FlushRemovals(); St.Duration = T; _over = true; Result = 1; Bus.RaiseEnd(1); return; }
+            if (!AliveOf(A).Any())
+            {
+                FlushRemovals();
+                St.Duration = T;
+                _over = true;
+                Result = 2;
+                Bus.RaiseEnd(2);
+                return;
+            }
+            if (!AliveOf(B).Any())
+            {
+                FlushRemovals();
+                St.Duration = T;
+                _over = true;
+                Result = 1;
+                Bus.RaiseEnd(1);
+                return;
+            }
         }
         FlushRemovals();   // 保证 Step 返回后队伍里没有召唤物尸体
         if (T >= BattleConfig.Limit && !_over)
         {
             St.Duration = BattleConfig.Limit;
-            _over = true; Result = 0; Bus.RaiseEnd(0);
+            _over = true;
+            Result = 0;
+            Bus.RaiseEnd(0);
         }
     }
 
@@ -202,18 +319,35 @@ public sealed class BattleEngine
     void Advance(double dt)
     {
         T += dt;
-        foreach (var u in A) TickUnit(u, dt);
-        foreach (var u in B) TickUnit(u, dt);
+        foreach (var u in A)
+        {
+            TickUnit(u, dt);
+        }
+        foreach (var u in B)
+        {
+            TickUnit(u, dt);
+        }
     }
 
     void TickUnit(BattleUnit u, double dt)
     {
-        if (!u.Alive) return;
-        if (u.Gauge < GaugeMax) u.Gauge = Math.Min(GaugeMax, u.Gauge + u.EffSpd(T) * dt);
+        if (!u.Alive)
+        {
+            return;
+        }
+        if (u.Gauge < GaugeMax)
+        {
+            u.Gauge = Math.Min(GaugeMax, u.Gauge + u.EffSpd(T) * dt);
+        }
         if (u.IsSummon)
         {
             u.Ttl -= dt;
-            if (u.Ttl <= 0) { u.Hp = 0; EmitDeathIfNeeded(u); return; }
+            if (u.Ttl <= 0)
+            {
+                u.Hp = 0;
+                EmitDeathIfNeeded(u);
+                return;
+            }
         }
         // —— 持续状态（2026-10-23 定稿）：每跳伤害 = 层数 × 每层固定点数，**层数无上限** ——
         // DotMul 取**施加者**的（百淬套穿在放毒的人身上，放大的是他造成的伤害）。
@@ -245,7 +379,10 @@ public sealed class BattleEngine
             double before = u.Hp;
             u.Hp = Math.Min(u.BaseHp, u.Hp + heal);
             double got = u.Hp - before;
-            if (got > 0) Bus.RaiseHeal(u, u, got, null);
+            if (got > 0)
+            {
+                Bus.RaiseHeal(u, u, got, null);
+            }
             u.NextHotTick += BattleConfig.HotTick;
         }
     }
@@ -256,7 +393,10 @@ public sealed class BattleEngine
     /// </summary>
     void DotDamage(BattleUnit u, double amount, bool ignoreShield)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+        {
+            return;
+        }
 
         if (!ignoreShield && u.Shield > 0)
         {
@@ -264,16 +404,23 @@ public sealed class BattleEngine
             u.Shield -= absorb;
             amount -= absorb;
         }
-        if (amount <= 0) return;
+        if (amount <= 0)
+        {
+            return;
+        }
 
         u.Hp -= amount;
         EmitDeathIfNeeded(u);
         if (!u.Alive)
         {
             u.Hp = 0;
-            u.PoisonStacks = 0; u.PoisonFrom = null; u.NextPoisonTick = -1;
-            u.BurnStacks = 0; u.BurnUntil = -1;
-            u.HotStacks = 0; u.HotUntil = -1;
+            u.PoisonStacks = 0;
+            u.PoisonFrom = null;
+            u.NextPoisonTick = -1;
+            u.BurnStacks = 0;
+            u.BurnUntil = -1;
+            u.HotStacks = 0;
+            u.HotUntil = -1;
         }
     }
 
@@ -291,10 +438,19 @@ public sealed class BattleEngine
         if (u.Shield > 0)
         {
             double keep = u.ShieldKeep;
-            if (keep < 0) keep = 0;
-            if (keep > BattleConfig.ShieldKeepCap) keep = BattleConfig.ShieldKeepCap;
+            if (keep < 0)
+            {
+                keep = 0;
+            }
+            if (keep > BattleConfig.ShieldKeepCap)
+            {
+                keep = BattleConfig.ShieldKeepCap;
+            }
             u.Shield *= keep;
-            if (u.Shield < 1) u.Shield = 0;
+            if (u.Shield < 1)
+            {
+                u.Shield = 0;
+            }
         }
 
         u.Actions++;
@@ -305,12 +461,29 @@ public sealed class BattleEngine
 
         var trig = new List<BattleSkill>();
         if (!u.Silenced(T))
+        {
             foreach (var s in u.Skills)
-                if (s.Src == SkillSrc.OnAction && s.CondMet(u, Rng, comboNow)) trig.Add(s);
+            {
+                if (s.Src == SkillSrc.OnAction && s.CondMet(u, Rng, comboNow))
+                {
+                    trig.Add(s);
+                }
+            }
+        }
 
         bool replace = false;
-        foreach (var s in trig) if (s.CannotAttack) { replace = true; break; }
-        foreach (var s in trig) Fire(u, s);
+        foreach (var s in trig)
+        {
+            if (s.CannotAttack)
+            {
+                replace = true;
+                break;
+            }
+        }
+        foreach (var s in trig)
+        {
+            Fire(u, s);
+        }
         if (!replace)
         {
             var foes = AliveOf(Foes(u)).ToList();
@@ -321,13 +494,65 @@ public sealed class BattleEngine
                 Bus.RaiseDamage(u, tgt, amt, null);
             }
         }
+
+        // 行动回合结束：结清「欠着这一位」的破绽衰减（2026-10-24 用户口径：
+        // 破绽到攻击者**当前这次行动**结束就 -1 层，不是等下一个回合）。
+        SettleBreakDecay(u);
+    }
+
+    /// <summary>
+    /// 破绽衰减结算 —— 在**每个行动回合结束时**检查两队：
+    /// 谁的破绽记在这个行动者名下，就 -1 层。
+    /// <para>
+    /// 为什么要等到行动结束（而不是命中当刻）：同一次行动里的**多个武学、多段伤害**
+    /// 都要吃到增伤（用户 2026-10-24 明确口径），这一层才算花完。
+    /// 安全阀：债务主人已阵亡时任何人都能结清 —— 死人不会再行动，否则层数永久挂着。
+    /// </para>
+    /// </summary>
+    void SettleBreakDecay(BattleUnit actor)
+    {
+        for (int i = 0; i < A.Count; i++)
+        {
+            TryDecayBreak(A[i], actor);
+        }
+        for (int i = 0; i < B.Count; i++)
+        {
+            TryDecayBreak(B[i], actor);
+        }
+    }
+
+    void TryDecayBreak(BattleUnit t, BattleUnit actor)
+    {
+        BattleUnit owner = t.BreakDecayOwner;
+        if (owner == null)
+        {
+            return;
+        }
+        if (owner.Alive && owner != actor) return;   // 只在债主自己的回合结算
+
+        if (t.BreakStacks > 0)
+        {
+            t.BreakStacks--;
+        }
+        t.BreakDecayOwner = null;
     }
 
     public BattleUnit WeightedPick(List<BattleUnit> units)
     {
-        double total = 0; foreach (var u in units) total += u.EffW(T);
+        double total = 0;
+        foreach (var u in units)
+        {
+            total += u.EffW(T);
+        }
         double r = Rng.NextDouble() * total;
-        foreach (var u in units) { r -= u.EffW(T); if (r <= 0) return u; }
+        foreach (var u in units)
+        {
+            r -= u.EffW(T);
+            if (r <= 0)
+            {
+                return u;
+            }
+        }
         return units[^1];
     }
 
@@ -341,46 +566,60 @@ public sealed class BattleEngine
         else if (kind == DamageKind.Internal)
         {
             double ratio = BattleConfig.IntCurveK / (BattleConfig.IntCurveK + tgt.BaseDef);
-            if (ratio < BattleConfig.IntMinRatio) ratio = BattleConfig.IntMinRatio;
+            if (ratio < BattleConfig.IntMinRatio)
+            {
+                ratio = BattleConfig.IntMinRatio;
+            }
             amount *= ratio;
         }
         // 承伤修正（资质词条"嗜战如命"的代价面）：>1 = 更脆；放在个体修正链的最前
-        if (tgt.DmgTakenMul != 1.0) amount *= tgt.DmgTakenMul;
-        // 破绽（2026-10-24 用户口径「只持续到下次受击」+「允许叠层」）：
-        //   每层 = 一次 +BreakBonus 的易伤，挨一刀消耗一层；层数就是"排队待发的那几刀"。
-        //   **一次行动只吃一层**（BreakHitActionId 去重）：多段技能同属一次受击，
-        //   否则一发三段就把攒的层烧光，层数不可控、也没法给玩家算。
-        //   这里只读层数、不扣；扣在闪避判定之后 —— 打空不该白吃一层。
-        bool breakUsed = false;
-        if (tgt.BreakStacks > 0 && tgt.BreakHitActionId != _actSeq)
+        if (tgt.DmgTakenMul != 1.0)
         {
-            breakUsed = true;
+            amount *= tgt.DmgTakenMul;
+        }
+        // 破绽（2026-10-24 定稿）：层 = 一次「攻击者的整个行动」的增伤窗口。
+        //   **同一次行动里的多个武学、多段伤害全都吃** +BreakBonus —— 所以这里刻意**不做**
+        //   "一次行动只算一次"的去重（那是上一版口径，用户明确否掉了）。
+        //   扣层在攻击者本次行动结束（Act 末尾的 SettleBreakDecay），这里只读层数。
+        bool breakUsed = tgt.BreakStacks > 0;
+        if (breakUsed)
+        {
             amount *= 1 + BattleConfig.BreakBonus;
         }
         // 战斗疲劳（软狂暴）：30s 后承伤每秒 +3%
-        if (T > BattleConfig.FatigueStart) amount *= 1 + BattleConfig.FatigueRate * (T - BattleConfig.FatigueStart);
+        if (T > BattleConfig.FatigueStart)
+        {
+            amount *= 1 + BattleConfig.FatigueRate * (T - BattleConfig.FatigueStart);
+        }
         // 闪避：结算前判定（被沉默不可闪）
         if (!tgt.Silenced(T))
             foreach (var s in tgt.Skills)
                 if (s.Src == SkillSrc.OnHit && s.Eff == SkillEff.Dodge && s.CondMet(tgt, Rng, false))
                 { St.Dodges++; return 0; }
 
-        // 落空判定已过 → 这一刀确实挨上了：吃一层破绽，并记下本次行动已消费，
-        // 让同一行动后续的伤害段不再重复吃（护盾吸收也算挨打）。
+        // 落空判定已过 → 这一刀确实挨上了：把"扣层"记在**当前这个攻击者**名下，
+        // 它本次行动结束时结清（Act 末尾）。债务只认第一笔，同一行动多段不重复记账。
         // 放在 DmgPerHit 之前：命中计数体再削也不影响"已经挨过打"的事实。
-        if (breakUsed)
+        if (breakUsed && tgt.BreakDecayOwner == null)
         {
-            tgt.BreakStacks--;
-            tgt.BreakHitActionId = _actSeq;
+            tgt.BreakDecayOwner = att;
         }
 
         // 「命中计数体」（飞剑：2 层 / 每次受击 -1，2026-10-16 口径）：
         //   无视伤害量，一次命中只扣固定值 —— 免疫一发大伤害秒杀，但被高频多次命中克制得极狠。
         //   放在护盾结算之前，使 rem / AccumDmg 等下游口径一致。
-        if (tgt.DmgPerHit > 0) amount = Math.Min(amount, tgt.DmgPerHit);
+        if (tgt.DmgPerHit > 0)
+        {
+            amount = Math.Min(amount, tgt.DmgPerHit);
+        }
 
         double rem = amount;
-        if (tgt.Shield > 0) { double ab = Math.Min(tgt.Shield, rem); tgt.Shield -= ab; rem -= ab; }
+        if (tgt.Shield > 0)
+        {
+            double ab = Math.Min(tgt.Shield, rem);
+            tgt.Shield -= ab;
+            rem -= ab;
+        }
         bool wasAlive = tgt.Alive;
         // 气血**下限夹 0**（2026-10-16 修）：原先无下限，阵亡后 Hp 会变成负数，例如 40−60=−20。
         //   后果不只是显示难看 —— 推图"波间延续血量"把终局 Hp 写进 BattleUnit.StartHp，
@@ -394,8 +633,15 @@ public sealed class BattleEngine
         //   同时，受击武学也只在这第一段判定一次 —— 否则 Hits 停在 6、CondN=3 时，
         //   后续每一段都满足 6%3==0，反而会在一次行动里连放 N 次。
         bool countedHit = tgt.HitActionId != _actSeq;
-        if (countedHit) { tgt.HitActionId = _actSeq; tgt.Hits++; }
-        if (tgt.Slot is >= 1 and <= 4) St.DamageTaken[tgt.Slot] += amount;
+        if (countedHit)
+        {
+            tgt.HitActionId = _actSeq;
+            tgt.Hits++;
+        }
+        if (tgt.Slot is >= 1 and <= 4)
+        {
+            St.DamageTaken[tgt.Slot] += amount;
+        }
 
         // 以下几段会"代替被打的人放技能"，其间把**攻击者**放进上下文，
         // 让 TargetType=6（攻击者）的反伤/上毒/减速能锁定真正打他的人，而不是随机抽一个敌方。
@@ -406,8 +652,15 @@ public sealed class BattleEngine
         {
             ChainDepth++;
             if (!tgt.Silenced(T))
+            {
                 foreach (var s in tgt.Skills.ToArray())
-                    if (s.Src == SkillSrc.OnHit && s.Eff != SkillEff.Dodge && s.CondMet(tgt, Rng, false)) Fire(tgt, s);
+                {
+                    if (s.Src == SkillSrc.OnHit && s.Eff != SkillEff.Dodge && s.CondMet(tgt, Rng, false))
+                    {
+                        Fire(tgt, s);
+                    }
+                }
+            }
             ChainDepth--;
         }
         if (tgt.Alive && !tgt.Silenced(T))
@@ -418,14 +671,20 @@ public sealed class BattleEngine
         }
         _attacker = prevAttacker;
 
-        if (wasAlive) EmitDeathIfNeeded(tgt);
+        if (wasAlive)
+        {
+            EmitDeathIfNeeded(tgt);
+        }
         return amount;
     }
 
     public void Fire(BattleUnit u, BattleSkill s)
     {
         // 每场次数上限（SkillConfig.Limit / AltLimit）：到顶就不放，连重放一起挡掉
-        if (s.MaxFires > 0 && s.Fires >= s.MaxFires) return;
+        if (s.MaxFires > 0 && s.Fires >= s.MaxFires)
+        {
+            return;
+        }
         s.Fires++;
 
         Bus.RaiseSkill(u, s.Name);
@@ -440,8 +699,14 @@ public sealed class BattleEngine
             Apply(u, s, ref locked);
             hits++;
         }
-        if (hits > St.MaxChainSeen) St.MaxChainSeen = hits;
-        if (hits >= 5) St.Chains5Plus++;
+        if (hits > St.MaxChainSeen)
+        {
+            St.MaxChainSeen = hits;
+        }
+        if (hits >= 5)
+        {
+            St.Chains5Plus++;
+        }
     }
 
     void Apply(BattleUnit u, BattleSkill s, ref List<BattleUnit> locked)
@@ -463,9 +728,18 @@ public sealed class BattleEngine
                     dealt += real;
                     // 补全：技能伤害此前未抛事件（普攻才有）—— 现在带上武学名，飘字与统计都能归因
                     Bus.RaiseDamage(u, t, real, s.Name);
-                    if (s.SilenceAlso && t.Alive) t.SilenceUntil = T + 5;
+                    if (s.SilenceAlso && t.Alive)
+                    {
+                        t.SilenceUntil = T + 5;
+                    }
                 }
-                if (s.Vamp && u.Alive && dealt > 0) { double h = dealt * 0.5; u.Hp = Math.Min(u.BaseHp, u.Hp + h); St.VampHeal += h; Bus.RaiseHeal(u, u, h, null); }
+                if (s.Vamp && u.Alive && dealt > 0)
+                {
+                    double h = dealt * 0.5;
+                    u.Hp = Math.Min(u.BaseHp, u.Hp + h);
+                    St.VampHeal += h;
+                    Bus.RaiseHeal(u, u, h, null);
+                }
                 break;
             }
             case SkillEff.Heal:
@@ -493,7 +767,14 @@ public sealed class BattleEngine
             case SkillEff.Shield:
             {
                 double add = AmountOf(u, s);
-                foreach (var t in PickAlly(u, s)) if (t.Alive) { t.Shield += add; Bus.RaiseShield(u, t, add); }
+                foreach (var t in PickAlly(u, s))
+                {
+                    if (t.Alive)
+                    {
+                        t.Shield += add;
+                        Bus.RaiseShield(u, t, add);
+                    }
+                }
                 break;
             }
             case SkillEff.Summon:
@@ -501,13 +782,31 @@ public sealed class BattleEngine
                 if (s.SummonOrder) OrderSummons(u, s);   // 万剑归宗：召唤即号令己方同类型召唤物齐射
                 break;
             case SkillEff.Weight:
-                foreach (var t in BuffTargets(u, s)) if (t.Alive) t.WBuf.Add((s.Mult, T + DurOf(s)));
+                foreach (var t in BuffTargets(u, s))
+                {
+                    if (t.Alive)
+                    {
+                        t.WBuf.Add((s.Mult, T + DurOf(s)));
+                    }
+                }
                 break;
             case SkillEff.SpdMod:
-                foreach (var t in BuffTargets(u, s)) if (t.Alive) t.SpdBuf.Add((s.Mult, T + DurOf(s)));
+                foreach (var t in BuffTargets(u, s))
+                {
+                    if (t.Alive)
+                    {
+                        t.SpdBuf.Add((s.Mult, T + DurOf(s)));
+                    }
+                }
                 break;
             case SkillEff.AtkMod:
-                foreach (var t in BuffTargets(u, s)) if (t.Alive) t.AtkBuf.Add((s.Mult, T + DurOf(s)));
+                foreach (var t in BuffTargets(u, s))
+                {
+                    if (t.Alive)
+                    {
+                        t.AtkBuf.Add((s.Mult, T + DurOf(s)));
+                    }
+                }
                 break;
             case SkillEff.CounterUp:
             {
@@ -515,8 +814,15 @@ public sealed class BattleEngine
                 // 不是额外行动 —— 只把"第几次能放"往前挪，所以第 1 次行动就可能满足 CondN。
                 int add = (int)s.Mult;
                 foreach (var ally in AliveOf(Allies(u)).ToArray())
+                {
                     foreach (var sk in ally.Skills)
-                        if (sk.Cond == "count") sk.CounterOffset += add;
+                    {
+                        if (sk.Cond == "count")
+                        {
+                            sk.CounterOffset += add;
+                        }
+                    }
+                }
                 break;
             }
             case SkillEff.Poison:
@@ -528,7 +834,10 @@ public sealed class BattleEngine
                         int add = StacksOf(s) + ExtraDotStacks(u);
                         t.PoisonStacks += add;
                         t.PoisonFrom = u;
-                        if (t.NextPoisonTick < 0) t.NextPoisonTick = T + BattleConfig.PoisonTick;
+                        if (t.NextPoisonTick < 0)
+                        {
+                            t.NextPoisonTick = T + BattleConfig.PoisonTick;
+                        }
                     }
                 break;
             case SkillEff.Burn:
@@ -541,7 +850,10 @@ public sealed class BattleEngine
                         t.BurnStacks += add;
                         t.BurnFrom = u;
                         t.BurnUntil = T + BattleConfig.BurnDur;
-                        if (t.NextBurnTick < 0) t.NextBurnTick = T + BattleConfig.BurnTick;
+                        if (t.NextBurnTick < 0)
+                        {
+                            t.NextBurnTick = T + BattleConfig.BurnTick;
+                        }
                     }
                 break;
             case SkillEff.Hot:
@@ -551,18 +863,28 @@ public sealed class BattleEngine
                         // HoT 同样按层数：每次 +N 层、刷新时长，每 2s 一跳
                         t.HotStacks += StacksOf(s);
                         t.HotUntil = T + BattleConfig.HotDur;
-                        if (t.NextHotTick < 0) t.NextHotTick = T + BattleConfig.HotTick;
+                        if (t.NextHotTick < 0)
+                        {
+                            t.NextHotTick = T + BattleConfig.HotTick;
+                        }
                     }
                 break;
             case SkillEff.Silence:
-                foreach (var t in PickTargets(u, s)) if (t.Alive) t.SilenceUntil = T + 5;
+                foreach (var t in PickTargets(u, s))
+                {
+                    if (t.Alive)
+                    {
+                        t.SilenceUntil = T + 5;
+                    }
+                }
                 break;
             case SkillEff.Growth:
                 u.AtkMult *= 1.03;
                 break;
             case SkillEff.Shield2Dmg:
             {
-                double d = u.Shield; u.Shield = 0;
+                double d = u.Shield;
+                u.Shield = 0;
                 if (d > 0)
                     foreach (var t in PickTargets(u, s))
                         if (t.Alive)
@@ -574,7 +896,8 @@ public sealed class BattleEngine
             }
             case SkillEff.ReflectAccum:
             {
-                double rd = u.AccumDmg * s.Mult; u.AccumDmg = 0;
+                double rd = u.AccumDmg * s.Mult;
+                u.AccumDmg = 0;
                 if (rd > 0)
                     foreach (var t in PickTargets(u, s))
                         if (t.Alive)
@@ -588,7 +911,13 @@ public sealed class BattleEngine
             {
                 // 护盾保持率修正：Mult 已是小数（装配期把"百分点"除 100）。
                 // 只加不清零 —— 想表达"变差"就配负数，clamp 由 Act() 统一做。
-                foreach (var t in PickAlly(u, s)) if (t.Alive) t.ShieldKeep += s.Mult;
+                foreach (var t in PickAlly(u, s))
+                {
+                    if (t.Alive)
+                    {
+                        t.ShieldKeep += s.Mult;
+                    }
+                }
                 break;
             }
             case SkillEff.PoisonBurst:
@@ -599,13 +928,21 @@ public sealed class BattleEngine
                 // 而不是又一个"数值更大的伤害卡"。
                 foreach (var t in PickTargets(u, s))
                 {
-                    if (!t.Alive) continue;
+                    if (!t.Alive)
+                    {
+                        continue;
+                    }
 
                     double stacks = t.PoisonStacks;
                     bool burst = stacks > 0;
                     if (stacks < 1) stacks = 1;              // 无毒层也至少算 1 层，不空放
 
-                    if (burst) { t.PoisonStacks = 0; t.PoisonFrom = null; t.NextPoisonTick = -1; }
+                    if (burst)
+                    {
+                        t.PoisonStacks = 0;
+                        t.PoisonFrom = null;
+                        t.NextPoisonTick = -1;
+                    }
 
                     double dmg = u.EffAtk(T) * s.Mult * stacks;
                     double real = DealDamage(u, t, dmg, s.DmgKind);
@@ -620,12 +957,18 @@ public sealed class BattleEngine
                 // 与高爆发、多段、削血卡配合才有意义，单独带等于废卡：这是刻意的收割定位。
                 foreach (var t in PickTargets(u, s))
                 {
-                    if (!t.Alive) continue;
+                    if (!t.Alive)
+                    {
+                        continue;
+                    }
 
                     double missing = Math.Max(0, t.BaseHp - t.Hp);
                     double dmg = missing * s.Mult;
                     double floor = u.EffAtk(T) * BattleConfig.MissingHpFloor;
-                    if (dmg < floor) dmg = floor;
+                    if (dmg < floor)
+                    {
+                        dmg = floor;
+                    }
 
                     double real = DealDamage(u, t, dmg, s.DmgKind);
                     Bus.RaiseDamage(u, t, real, s.Name);
@@ -642,7 +985,10 @@ public sealed class BattleEngine
                 //    默认 0.5 时只有半价，这正是护盾流必须凑玄武 4 件 / 守拙词条的原因。
                 // 没有盾就完全打不出伤害 —— 这是护盾流的代价面，不是 bug（Desc 已写明"需有护盾"）。
                 double sh = u.Shield;
-                if (sh <= 0) break;
+                if (sh <= 0)
+                {
+                    break;
+                }
 
                 double dmg = sh * s.Mult;
                 foreach (var t in PickTargets(u, s))
@@ -669,17 +1015,25 @@ public sealed class BattleEngine
                     u.Hp -= loss;
                     Bus.RaiseDamage(u, u, loss, s.Name);
                     EmitDeathIfNeeded(u);
-                    if (!u.Alive) { u.Hp = 0; }
+                    if (!u.Alive)
+                    {
+                        u.Hp = 0;
+                    }
                 }
                 break;
             }
             case SkillEff.Expose:
             {
-                // 破绽（2026-10-24）：给目标**叠一层**破绽，每层换一次「下一刀 +BreakBonus」。
-                // 不按秒到期，层数也**不设上限** —— 挂得比吃得慢，实战堆不高；
-                // 层数真正的用途是让"多带破绽卡 / 全体挂破绽"能排队兑现，而不是白挂。
+                // 破绽（2026-10-24）：给目标**叠一层**破绽 —— 一层覆盖"下一个攻击者的一整个行动"：
+                // 那次行动里的多个武学、多段伤害全吃 +BreakBonus，行动结束才扣层。
+                // 不按秒到期，层数也**不设上限**：N 层 = N 次行动受益，多带破绽卡就是多 N 次。
                 foreach (var t in PickTargets(u, s))
-                    if (t.Alive) t.BreakStacks++;
+                {
+                    if (t.Alive)
+                    {
+                        t.BreakStacks++;
+                    }
+                }
                 break;
             }
             case SkillEff.Dodge:
@@ -696,14 +1050,21 @@ public sealed class BattleEngine
 
     /// <summary>
     /// 毒 / 火 / HoT 的**每次施加层数**。装配期把配置的 CalcValue 直接写进 Mult。
-    /// 下限 1（0 会让整张卡空放）；上限 20 只是防配置写错的护栏 ——
-    /// 每层每跳固定 1 点之后，强度全靠这里，所以上限必须留得足够宽（T4 火已到 8 层）。
+    /// 下限 1（0 会让整张卡空放）；上限 60 只是防配置写错的护栏 ——
+    /// 2026-10-24 起"每层每跳 1 点"，强度全部由这里承担，T4 毒 / HoT 已到 **48 层**，
+    /// 所以护栏必须比 48 宽。改这里之前先看 `.codebuddy/docs/轮回大侠-流派强度头模拟-v0.1.md`。
     /// </summary>
     static int StacksOf(BattleSkill s)
     {
         int n = (int)Math.Round(s.Mult);
-        if (n < 1) return 1;
-        if (n > 20) return 20;
+        if (n < 1)
+        {
+            return 1;
+        }
+        if (n > 60)
+        {
+            return 60;
+        }
         return n;
     }
 
@@ -722,7 +1083,9 @@ public sealed class BattleEngine
         // 拿不到（行动链路、DoT 跳伤、攻击者已死或就是自己）就退化成下面的随机权重 ——
         // 宁可打错一个人，也不能因为配错目标规则而整张卡空放。
         if (s.Tgt == SkillTgt.Attacker && _attacker != null && _attacker.Alive && !ReferenceEquals(_attacker, u))
+        {
             return new List<BattleUnit> { _attacker };
+        }
 
         var foes = AliveOf(Foes(u)).ToList();
         switch (s.Tgt)
@@ -740,13 +1103,19 @@ public sealed class BattleEngine
     /// </summary>
     List<BattleUnit> BuffTargets(BattleUnit u, BattleSkill s)
     {
-        if (s.Src == SkillSrc.OnStart) return PickAlly(u, s);
+        if (s.Src == SkillSrc.OnStart)
+        {
+            return PickAlly(u, s);
+        }
         return PickTargets(u, s);
     }
 
     List<BattleUnit> PickAlly(BattleUnit u, BattleSkill s)    {
         var allies = AliveOf(Allies(u)).ToList();
-        if (allies.Count == 0) return allies;
+        if (allies.Count == 0)
+        {
+            return allies;
+        }
         return s.Tgt switch
         {
             SkillTgt.Self => new List<BattleUnit> { u },
@@ -758,7 +1127,10 @@ public sealed class BattleEngine
 
     void AddSummon(BattleUnit owner, BattleSkill src)
     {
-        if (owner == null || !owner.Alive) return;
+        if (owner == null || !owner.Alive)
+        {
+            return;
+        }
 
         // 类型规格：血攻随召唤者，具体档位（含同时上限）来自 SummonConfig 表；表缺失则走引擎兜底
         SummonSpec spec = src?.Summon ?? SummonSpec.Fallback(src?.SummonKind);
@@ -767,7 +1139,12 @@ public sealed class BattleEngine
         // 与 SummonMax（同时存活上限）是两件事；逐只走同一套上限检查，超限即停。
         int times = Math.Max(1, src?.SummonCount ?? 1);
         for (int k = 0; k < times; k++)
-            if (!SpawnSummon(owner, src, spec)) break;
+        {
+            if (!SpawnSummon(owner, src, spec))
+            {
+                break;
+            }
+        }
     }
 
     /// <summary>召唤一只。返回 false = 被上限挡住（外层全队上限 / 内层类型或武学上限）。</summary>
@@ -782,13 +1159,25 @@ public sealed class BattleEngine
         int live = 0, mine = 0;
         foreach (var x in team)
         {
-            if (!x.IsSummon || !x.Alive) continue;
+            if (!x.IsSummon || !x.Alive)
+            {
+                continue;
+            }
             live++;
-            if (src != null && ReferenceEquals(x.SummonFrom, src)) mine++;
+            if (src != null && ReferenceEquals(x.SummonFrom, src))
+            {
+                mine++;
+            }
         }
-        if (live >= BattleConfig.SummonCap) return false;
+        if (live >= BattleConfig.SummonCap)
+        {
+            return false;
+        }
         int cap = src != null && src.SummonMax > 0 ? src.SummonMax : spec.Max;
-        if (cap > 0 && mine >= cap) return false;
+        if (cap > 0 && mine >= cap)
+        {
+            return false;
+        }
 
         // 气血：FixedHp > 0 = 固定层数（不乘召唤者、不吃全局 HpScale）；否则走比例血
         // 资质词条"百兽之王"（SummonHpMul）只作用于比例血型 —— 计数体（飞剑）的"2 层"是机制不是血池
@@ -834,25 +1223,40 @@ public sealed class BattleEngine
     void OrderSummons(BattleUnit owner, BattleSkill src)
     {
         string kind = KindOf(src);
-        if (string.IsNullOrEmpty(kind)) return;
+        if (string.IsNullOrEmpty(kind))
+        {
+            return;
+        }
 
         int ordered = 0;
         // 快照遍历：DealDamage 可能引发召唤（目标方的受击武学），虽然改的是对方队伍，
         // 但用快照可彻底避免"边遍历边改集合"。
         foreach (var m in Allies(owner).ToArray())
         {
-            if (!m.IsSummon || !m.Alive) continue;
-            if (KindOf(m) != kind) continue;
+            if (!m.IsSummon || !m.Alive)
+            {
+                continue;
+            }
+            if (KindOf(m) != kind)
+            {
+                continue;
+            }
 
             var foes = AliveOf(Foes(m)).ToList();
-            if (foes.Count == 0) break;
+            if (foes.Count == 0)
+            {
+                break;
+            }
 
             var tgt = WeightedPick(foes);
             double amt = DealDamage(m, tgt, m.EffAtk(T));
             Bus.RaiseDamage(m, tgt, amt, null);
             ordered++;
         }
-        if (ordered > 0) St.SummonOrders++;
+        if (ordered > 0)
+        {
+            St.SummonOrders++;
+        }
     }
 
     void EmitDeathIfNeeded(BattleUnit u)    {
@@ -869,7 +1273,10 @@ public sealed class BattleEngine
     /// </summary>
     void MarkDeadSummon(BattleUnit u)
     {
-        if (u != null && u.IsSummon && !_pendingRemove.Contains(u)) _pendingRemove.Add(u);
+        if (u != null && u.IsSummon && !_pendingRemove.Contains(u))
+        {
+            _pendingRemove.Add(u);
+        }
     }
 
     /// <summary>
@@ -879,8 +1286,15 @@ public sealed class BattleEngine
     /// </summary>
     void FlushRemovals()
     {
-        if (_pendingRemove.Count == 0) return;
-        foreach (var u in _pendingRemove) { A.Remove(u); B.Remove(u); }
+        if (_pendingRemove.Count == 0)
+        {
+            return;
+        }
+        foreach (var u in _pendingRemove)
+        {
+            A.Remove(u);
+            B.Remove(u);
+        }
         _pendingRemove.Clear();
     }
 }

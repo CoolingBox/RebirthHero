@@ -45,7 +45,10 @@ public partial class SummonStackLayer : Control
     public void Sync(BattleEngine engine, float areaX)
     {
         _engine = engine;
-        if (_engine == null) return;
+        if (_engine == null)
+        {
+            return;
+        }
 
         var groups = new Dictionary<string, List<BattleUnit>>();
         Collect(_engine.A, false, groups);
@@ -55,7 +58,10 @@ public partial class SummonStackLayer : Control
         for (int i = _stackOrder.Count - 1; i >= 0; i--)
         {
             string k = _stackOrder[i];
-            if (groups.ContainsKey(k)) continue;
+            if (groups.ContainsKey(k))
+            {
+                continue;
+            }
             _stacks[k].Root.QueueFree();
             _stacks.Remove(k);
             _stackOrder.RemoveAt(i);
@@ -64,7 +70,10 @@ public partial class SummonStackLayer : Control
         // ② 新出现的类型 → 建卡（按名字首次出场顺序排在后面）
         foreach (var kv in groups)
         {
-            if (_stacks.ContainsKey(kv.Key)) continue;
+            if (_stacks.ContainsKey(kv.Key))
+            {
+                continue;
+            }
             string name = kv.Value[0].Name;
             BuildOne(kv.Key, name, kv.Key.StartsWith("R|"), areaX);
         }
@@ -121,9 +130,15 @@ public partial class SummonStackLayer : Control
     {
         foreach (var u in team)
         {
-            if (!u.IsSummon || !u.Alive) continue;
+            if (!u.IsSummon || !u.Alive)
+            {
+                continue;
+            }
             string key = (right ? "R|" : "L|") + u.Name;
-            if (!groups.TryGetValue(key, out var list)) groups[key] = list = new List<BattleUnit>();
+            if (!groups.TryGetValue(key, out var list))
+            {
+                groups[key] = list = new List<BattleUnit>();
+            }
             list.Add(u);
         }
     }
@@ -139,7 +154,10 @@ public partial class SummonStackLayer : Control
         {
             hp += System.Math.Max(0, u.Hp);
             max += u.BaseHp;
-            if (u.Ttl < ttl) ttl = u.Ttl;
+            if (u.Ttl < ttl)
+            {
+                ttl = u.Ttl;
+            }
         }
         double frac = max > 0 ? System.Math.Clamp(hp / max, 0, 1) : 0;
         st.HpFill.Size = new Vector2((float)((StackW - 12) * frac), 20);

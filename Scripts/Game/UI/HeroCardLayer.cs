@@ -61,8 +61,14 @@ public partial class HeroCardLayer : Control
         float rx = areaX - SideX - CardW;
         for (int i = 0; i < 4; i++)
         {
-            if (i < a.Count && !a[i].IsSummon) BuildOne(a[i], SideX, TopY + i * (CardH + Gap), false);
-            if (i < b.Count && !b[i].IsSummon) BuildOne(b[i], rx, TopY + i * (CardH + Gap), true);
+            if (i < a.Count && !a[i].IsSummon)
+            {
+                BuildOne(a[i], SideX, TopY + i * (CardH + Gap), false);
+            }
+            if (i < b.Count && !b[i].IsSummon)
+            {
+                BuildOne(b[i], rx, TopY + i * (CardH + Gap), true);
+            }
         }
     }
 
@@ -140,9 +146,15 @@ public partial class HeroCardLayer : Control
 
     private static string SkillsText(BattleUnit u)
     {
-        if (u.Skills == null || u.Skills.Count == 0) return "无";
+        if (u.Skills == null || u.Skills.Count == 0)
+        {
+            return "无";
+        }
         var parts = new List<string>();
-        foreach (var s in u.Skills) parts.Add(s.Name);
+        foreach (var s in u.Skills)
+        {
+            parts.Add(s.Name);
+        }
         return "功 " + string.Join("·", parts);
     }
 
@@ -224,14 +236,20 @@ public partial class HeroCardLayer : Control
     /// <summary>每帧推进拖尾（与 0.1s 的数据刷新解耦，否则动画会变成 10Hz 跳格）。</summary>
     public override void _Process(double delta)
     {
-        if (_cards.Count == 0) return;
+        if (_cards.Count == 0)
+        {
+            return;
+        }
 
         float dt = (float)delta;
         float barW = CardW - 16;
 
         foreach (var c in _cards.Values)
         {
-            if (c.TrailPhase == 0) continue;
+            if (c.TrailPhase == 0)
+            {
+                continue;
+            }
 
             c.TrailClock += dt;
 

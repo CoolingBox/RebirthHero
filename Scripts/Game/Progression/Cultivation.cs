@@ -42,7 +42,10 @@ public sealed class Cultivation
     public double ProgressOf(int heroId)
     {
         int l = LevelOf(heroId);
-        if (l >= CultivationConfig.MaxLevel) return 1.0;
+        if (l >= CultivationConfig.MaxLevel)
+        {
+            return 1.0;
+        }
         double need = CultivationConfig.LevelCost(l);
         return need <= 0 ? 0 : PoolOf(heroId) / need;
     }
@@ -59,7 +62,10 @@ public sealed class Cultivation
     /// </summary>
     public double AddExp(IEnumerable<int> heroIds, double perHead)
     {
-        if (perHead <= 0) return 0;
+        if (perHead <= 0)
+        {
+            return 0;
+        }
         int n = 0;
         foreach (int id in heroIds)
         {
@@ -91,7 +97,10 @@ public sealed class Cultivation
             while (lv < CultivationConfig.MaxLevel)
             {
                 double need = CultivationConfig.LevelCost(lv);
-                if (e < need) break;
+                if (e < need)
+                {
+                    break;
+                }
                 e -= need;
                 lv++;
             }
@@ -99,7 +108,10 @@ public sealed class Cultivation
 
             _level[id] = lv;
             _pool[id] = e;
-            if (lv > from) ups.Add(new LevelUp(id, from, lv));
+            if (lv > from)
+            {
+                ups.Add(new LevelUp(id, from, lv));
+            }
         }
         return ups;
     }
@@ -110,14 +122,26 @@ public sealed class Cultivation
     /// </summary>
     public void Restore(int heroId, int level, double pool)
     {
-        if (heroId <= 0) return;
+        if (heroId <= 0)
+        {
+            return;
+        }
 
         int lv = level;
-        if (lv < 1) lv = 1;
-        if (lv > CultivationConfig.MaxLevel) lv = CultivationConfig.MaxLevel;
+        if (lv < 1)
+        {
+            lv = 1;
+        }
+        if (lv > CultivationConfig.MaxLevel)
+        {
+            lv = CultivationConfig.MaxLevel;
+        }
 
         double p = pool;
-        if (p < 0) p = 0;
+        if (p < 0)
+        {
+            p = 0;
+        }
 
         _level[heroId] = lv;
         _pool[heroId] = p;

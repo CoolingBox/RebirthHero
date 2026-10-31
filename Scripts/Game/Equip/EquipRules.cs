@@ -34,34 +34,55 @@ public static class EquipRules
 
     public static double AtkOf(EquipItem item, EquipConfig cfg)
     {
-        if (item == null || cfg == null) return 0;
+        if (item == null || cfg == null)
+        {
+            return 0;
+        }
         return cfg.BaseATK * Multiplier(item.Level);
     }
 
     public static double HpOf(EquipItem item, EquipConfig cfg)
     {
-        if (item == null || cfg == null) return 0;
+        if (item == null || cfg == null)
+        {
+            return 0;
+        }
         return cfg.BaseHP * Multiplier(item.Level);
     }
 
     public static double SpdOf(EquipItem item, EquipConfig cfg)
     {
-        if (item == null || cfg == null) return 0;
+        if (item == null || cfg == null)
+        {
+            return 0;
+        }
         return cfg.BaseSPD * Multiplier(item.Level);
     }
 
     public static double Multiplier(int level)
     {
-        if (level <= 0) return 1.0;
-        if (level > MaxLevel) level = MaxLevel;
+        if (level <= 0)
+        {
+            return 1.0;
+        }
+        if (level > MaxLevel)
+        {
+            level = MaxLevel;
+        }
         return 1.0 + level * LevelBonusPerLevel;
     }
 
     /// <summary>从当前等级升到下一级的费用；已满级返回 -1。</summary>
     public static long EnhanceCost(int currentLevel)
     {
-        if (currentLevel < 0) return -1;
-        if (currentLevel >= MaxLevel) return -1;
+        if (currentLevel < 0)
+        {
+            return -1;
+        }
+        if (currentLevel >= MaxLevel)
+        {
+            return -1;
+        }
 
         return (long)(CostBase * Math.Pow(CostGrowth, currentLevel));
     }
@@ -69,13 +90,22 @@ public static class EquipRules
     /// <summary>花银两强化 +1 级。失败（满级 / 银两不足）返回 false 且不扣钱。</summary>
     public static bool TryEnhance(EquipItem item, Silver silver)
     {
-        if (item == null || silver == null) return false;
+        if (item == null || silver == null)
+        {
+            return false;
+        }
 
         long cost = EnhanceCost(item.Level);
-        if (cost < 0) return false;
+        if (cost < 0)
+        {
+            return false;
+        }
 
         // 先扣钱再升级：TrySpend 内部已做余额判断，扣失败则等级不变
-        if (!silver.TrySpend(cost)) return false;
+        if (!silver.TrySpend(cost))
+        {
+            return false;
+        }
 
         item.Level++;
         return true;
@@ -125,21 +155,36 @@ public static class EquipRules
     /// <summary>某件装备的回收价（银两）。cfg 为模板，item 提供强化等级。</summary>
     public static long RecycleValue(EquipItem item, EquipConfig cfg)
     {
-        if (cfg == null) return 0;
+        if (cfg == null)
+        {
+            return 0;
+        }
 
         int r = (int)cfg.Rarity;
-        if (r < 1) r = 1;
-        if (r > 5) r = 5;
+        if (r < 1)
+        {
+            r = 1;
+        }
+        if (r > 5)
+        {
+            r = 5;
+        }
 
         long baseValue = RecycleBase;
-        for (int i = 1; i < r; i++) baseValue *= RecycleStep;
+        for (int i = 1; i < r; i++)
+        {
+            baseValue *= RecycleStep;
+        }
 
         long spent = 0;
         int lv = item != null ? item.Level : 0;
         for (int i = 0; i < lv; i++)
         {
             long c = EnhanceCost(i);
-            if (c > 0) spent += c;
+            if (c > 0)
+            {
+                spent += c;
+            }
         }
 
         return baseValue + (long)(spent * EnhanceRefundRate);

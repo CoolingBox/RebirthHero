@@ -27,14 +27,20 @@ public static class HeroBuilder
                                    Func<int, EquipBonus> equipOf = null,
                                    Func<int, EquipTuning> tuningOf = null)
     {
-        if (hero == null) return null;
+        if (hero == null)
+        {
+            return null;
+        }
 
         // M2.4 武学装配：默认用表里的 SkillIds；面板装配后由 skillIdsOf 提供 3 槽（0 = 空槽）
         int[] ids = skillIdsOf != null ? skillIdsOf(hero.Id) : hero.SkillIds;
 
         // M2.5 装备：只取一次，避免同一侠客重复遍历四栏
         EquipBonus eq = new EquipBonus();
-        if (equipOf != null) eq = equipOf(hero.Id);
+        if (equipOf != null)
+        {
+            eq = equipOf(hero.Id);
+        }
 
         double hpBonus = slot == 1 ? BattleConfig.Slot1HpBonus : 1.0;
         double slotW = slot == 1 ? BattleConfig.Slot1W : BattleConfig.OtherW;
@@ -66,18 +72,33 @@ public static class HeroBuilder
         // —— P1 装备：套装 + 随机词条 ——
         // 属性% 必须早于下面的"召唤武学代价"：代价按最终最大生命算，否则血条与锁死段对不上
         EquipTuning tune = tuningOf != null ? tuningOf(hero.Id) : null;
-        if (tune != null) EquipSets.ApplyStats(tune, u);
+        if (tune != null)
+        {
+            EquipSets.ApplyStats(tune, u);
+        }
 
         // —— 被动·属性型（2026-10-22）：与装备属性同一层，必须早于"召唤武学代价" ——
         // 否则最大生命 −15% 会按旧基数算，血条与锁死段对不上。
         if (ids != null)
             foreach (int id in ids)
             {
-                if (id <= 0) continue;
+                if (id <= 0)
+                {
+                    continue;
+                }
                 SkillConfig pc = skillLookup?.Invoke(id);
-                if (pc == null) continue;
-                if (!includePending && pc.Status == SkillStatus.Pending) continue;
-                if (SkillConfigMapper.IsPassiveAttribute(pc)) SkillConfigMapper.ApplyPassive(pc, u);
+                if (pc == null)
+                {
+                    continue;
+                }
+                if (!includePending && pc.Status == SkillStatus.Pending)
+                {
+                    continue;
+                }
+                if (SkillConfigMapper.IsPassiveAttribute(pc))
+                {
+                    SkillConfigMapper.ApplyPassive(pc, u);
+                }
             }
 
         // —— 召唤武学代价（2026-10-17 用户）：每携带 1 个召唤类武学，最大生命 −15%（叠加）——
@@ -91,23 +112,45 @@ public static class HeroBuilder
             u.Hp = u.BaseHp;
         }
 
+        // —— 召唤武学代价·其二（2026-10-24 用户："携带召唤技能的侠客受击概率提高"）——
+        // 与上面的最大生命惩罚同源（nSummon），但打在**受击权重**上：召唤物自身的 BaseW 不涨，
+        // 所以召唤师在全队仇恨里的占比被抬高 —— 从"召唤物替你挨"变成"你也得挨"。
+        // 这是对召唤流"高生存"的直接定价（头模拟：召唤 98% vs 直伤 77%，且剩余血最高）。
+        if (nSummon > 0 && BattleConfig.SummonerWeightPerSkill > 0)
+        {
+            u.BaseW += BattleConfig.SummonerWeightPerSkill * nSummon;
+        }
+
         u.Skills = new List<BattleSkill>();
         if (ids != null)
             foreach (int id in ids)
             {
                 // 0 = 空槽（SkillLoadout.Empty）。空槽是合法的装配状态，不该去查表 ——
                 // 查了会命中 GetOne 的"找不到ID为 0"报错，每个空槽刷一条。
-                if (id <= 0) continue;
+                if (id <= 0)
+                {
+                    continue;
+                }
 
                 SkillConfig cfg = skillLookup?.Invoke(id);
-                if (cfg == null) continue;
-                if (!includePending && cfg.Status == SkillStatus.Pending) continue;
+                if (cfg == null)
+                {
+                    continue;
+                }
+                if (!includePending && cfg.Status == SkillStatus.Pending)
+                {
+                    continue;
+                }
                 // 属性型被动的主效果已在上面按"装备属性"那一层应用过，不再生成主技能；
                 // 但 T4 身份卡可以带**副效果**（属性 + 机制），那一支仍然要建（2026-10-22）
                 if (SkillConfigMapper.IsPassiveAttribute(cfg))
                 {
                     BattleSkill only = SkillConfigMapper.ToAltSkill(cfg, u.BaseHp);
-                    if (only != null) { ApplyQualityToSkill(only, cfg, quality); u.Skills.Add(only); }
+                    if (only != null)
+                    {
+                        ApplyQualityToSkill(only, cfg, quality);
+                        u.Skills.Add(only);
+                    }
                     continue;
                 }
                 // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果，见金刚不坏）
@@ -120,7 +163,10 @@ public static class HeroBuilder
             }
 
         // —— P1 装备：武学参数修正（必须等技能全都建好；召唤存在时间等改动只作用于本单位）——
-        if (tune != null) EquipSets.ApplySkills(tune, u.Skills);
+        if (tune != null)
+        {
+            EquipSets.ApplySkills(tune, u.Skills);
+        }
 
         return u;
     }
@@ -137,30 +183,53 @@ public static class HeroBuilder
     /// </summary>
     static void ApplyQualityToSkill(BattleSkill sk, SkillConfig cfg, HeroQuality q)
     {
-        if (q == null) return;
+        if (q == null)
+        {
+            return;
+        }
         if (sk.Eff == SkillEff.Heal && q.HealPct != 0)
+        {
             sk.Mult *= 1 + q.HealPct / 100.0;
+        }
         if (sk.Eff == SkillEff.Dmg)
         {
             double f = q.MulBonusFor(cfg.Category);
-            if (f != 1.0) sk.Mult *= f;
+            if (f != 1.0)
+            {
+                sk.Mult *= f;
+            }
         }
     }
 
     /// <summary>统计该侠客阵容里"召唤类武学"的数量（<see cref="SkillEffect.Summon"/>）。</summary>
     static int CountSummonSkills(int[] ids, Func<int, SkillConfig> skillLookup, bool includePending)
     {
-        if (ids == null) return 0;
+        if (ids == null)
+        {
+            return 0;
+        }
         int n = 0;
         foreach (int id in ids)
         {
             // 0 = 空槽，跳过（同上：空槽不查表）
-            if (id <= 0) continue;
+            if (id <= 0)
+            {
+                continue;
+            }
 
             SkillConfig cfg = skillLookup?.Invoke(id);
-            if (cfg == null) continue;
-            if (!includePending && cfg.Status == SkillStatus.Pending) continue;
-            if (cfg.EffectType == SkillEffect.Summon) n++;
+            if (cfg == null)
+            {
+                continue;
+            }
+            if (!includePending && cfg.Status == SkillStatus.Pending)
+            {
+                continue;
+            }
+            if (cfg.EffectType == SkillEffect.Summon)
+            {
+                n++;
+            }
         }
         return n;
     }
@@ -178,7 +247,11 @@ public static class HeroBuilder
         foreach (HeroConfig h in heroes)
         {
             BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf, tuningOf);
-            if (u != null) { list.Add(u); slot++; }
+            if (u != null)
+            {
+                list.Add(u);
+                slot++;
+            }
         }
         return list;
     }
@@ -197,7 +270,11 @@ public static class HeroBuilder
         {
             int lv = levelOf?.Invoke(h.Id) ?? 1;
             BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf, tuningOf);
-            if (u != null) { list.Add(u); slot++; }
+            if (u != null)
+            {
+                list.Add(u);
+                slot++;
+            }
         }
         return list;
     }

@@ -34,7 +34,10 @@ public sealed class Silver
     /// <summary>消费（M2.3 客栈等出口接入；不足则不扣并返回 false）。</summary>
     public bool TrySpend(double amount)
     {
-        if (amount <= 0 || Amount < amount) return false;
+        if (amount <= 0 || Amount < amount)
+        {
+            return false;
+        }
         Amount -= amount;
         return true;
     }
@@ -45,7 +48,10 @@ public sealed class Silver
     /// </summary>
     public void Add(double amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+        {
+            return;
+        }
         Amount += amount;
         TotalGained += amount;
     }

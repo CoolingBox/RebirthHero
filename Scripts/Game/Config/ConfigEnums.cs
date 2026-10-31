@@ -139,7 +139,7 @@ public enum SkillEffect
     MissingHp = 25,    // 斩杀：伤害 = 目标**已损失气血** × CalcValue% —— 2026-10-22
     ShieldScale = 26,  // 按盾加伤：伤害 = 自身当前护盾 × CalcValue%，**不消耗护盾** —— 2026-10-22
     SelfHpLoss = 27,   // 自损气血：扣自身**气血上限** × CalcValue%（不吃护盾/减伤、不计受击）—— 2026-10-23
-    Expose = 28,       // 破绽：目标每层破绽让**下一次受击**伤害 ×(1+BreakBonus)，挨一刀消耗一层 —— 2026-10-24
+    Expose = 28,       // 破绽：每层让目标在**该次行动内**每段受伤 ×(1+BreakBonus)，行动结束 -1 层 —— 2026-10-24
 }
 
 public enum CalcBase

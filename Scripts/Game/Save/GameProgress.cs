@@ -24,7 +24,10 @@ public static class GameProgress
                                    EquipBag equips, SkillLoadout loadout, Inn inn, List<int> heroIds)
     {
         GameSave save = new GameSave();
-        if (run == null || cult == null || silver == null) return save;
+        if (run == null || cult == null || silver == null)
+        {
+            return save;
+        }
 
         save.Written = true;   // 标记"这份数据是抓出来的"，读档侧据此区分真存档与框架返回的空对象
 
@@ -54,7 +57,10 @@ public static class GameProgress
             for (int tier = 1; tier <= MaterialCatalog.Count; tier++)
             {
                 long n = materials.Get(tier);
-                if (n <= 0) continue;
+                if (n <= 0)
+                {
+                    continue;
+                }
                 MaterialSave m = new MaterialSave();
                 m.Tier = tier;
                 m.Count = n;
@@ -70,7 +76,10 @@ public static class GameProgress
                 s.Uid = item.Uid;
                 s.ConfigId = item.ConfigId;
                 s.Level = item.Level;
-                foreach (int affixId in item.AffixIds) s.AffixIds.Add(affixId);
+                foreach (int affixId in item.AffixIds)
+                {
+                    s.AffixIds.Add(affixId);
+                }
                 save.Equips.Add(s);
             }
 
@@ -80,7 +89,9 @@ public static class GameProgress
                 WornSave w = new WornSave();
                 w.HeroId = heroId;
                 for (int i = 0; i < EquipBag.SlotCount; i++)
+                {
                     w.Uids[i] = slots[i];
+                }
                 save.Worn.Add(w);
             }
         }
@@ -93,7 +104,9 @@ public static class GameProgress
                 LoadoutSave s = new LoadoutSave();
                 s.HeroId = id;
                 for (int i = 0; i < SkillLoadout.Slots; i++)
+                {
                     s.Slots[i] = i < slots.Length ? slots[i] : SkillLoadout.Empty;
+                }
                 save.Loadouts.Add(s);
             }
 
@@ -101,9 +114,18 @@ public static class GameProgress
         if (inn != null)
         {
             save.InnRefreshUsed = inn.RefreshUsed;
-            foreach (HeroQuality q in inn.Slots) save.InnSlots.Add(ToQualitySave(q));
-            foreach (HeroQuality q in inn.Recruited) save.InnRecruited.Add(ToQualitySave(q));
-            foreach (int id in inn.Roster) save.Roster.Add(id);
+            foreach (HeroQuality q in inn.Slots)
+            {
+                save.InnSlots.Add(ToQualitySave(q));
+            }
+            foreach (HeroQuality q in inn.Recruited)
+            {
+                save.InnRecruited.Add(ToQualitySave(q));
+            }
+            foreach (int id in inn.Roster)
+            {
+                save.Roster.Add(id);
+            }
         }
 
         return save;
@@ -112,7 +134,10 @@ public static class GameProgress
     static QualitySave ToQualitySave(HeroQuality q)
     {
         QualitySave s = new QualitySave();
-        if (q == null) return s;
+        if (q == null)
+        {
+            return s;
+        }
 
         s.HeroId = q.HeroId;
         s.Star = q.Star;
@@ -121,7 +146,10 @@ public static class GameProgress
         s.SpdPct = q.SpdPct;
         s.Recruited = q.Recruited;
         s.IsBase = q.IsBase;
-        foreach (int id in q.AffixIds) s.AffixIds.Add(id);
+        foreach (int id in q.AffixIds)
+        {
+            s.AffixIds.Add(id);
+        }
         return s;
     }
 
@@ -138,8 +166,14 @@ public static class GameProgress
     public static bool Apply(GameSave save, StageRun run, Cultivation cult, Silver silver, MaterialBag materials,
                              EquipBag equips, SkillLoadout loadout, Inn inn)
     {
-        if (save == null || !save.Written) return false;
-        if (run == null || cult == null || silver == null) return false;
+        if (save == null || !save.Written)
+        {
+            return false;
+        }
+        if (run == null || cult == null || silver == null)
+        {
+            return false;
+        }
 
         if (save.Version != GameSave.CurrentVersion)
         {
@@ -153,33 +187,53 @@ public static class GameProgress
         silver.Restore(save.SilverAmount, save.SilverTotal);
 
         foreach (HeroExpSave e in save.Heroes)
+        {
             cult.Restore(e.HeroId, e.Level, e.Pool);
+        }
 
         if (materials != null)
+        {
             foreach (MaterialSave m in save.Materials)
+            {
                 materials.Restore(m.Tier, m.Count);
+            }
+        }
 
         if (equips != null)
         {
             foreach (EquipItemSave s in save.Equips)
+            {
                 equips.RestoreItem(s.Uid, s.ConfigId, s.Level, s.AffixIds);
+            }
 
             // 穿戴必须在实例全部恢复之后 —— RestoreWorn 会校验 Uid 是否存在
             foreach (WornSave w in save.Worn)
+            {
                 equips.RestoreWorn(w.HeroId, w.Uids);
+            }
         }
 
         if (loadout != null)
+        {
             foreach (LoadoutSave s in save.Loadouts)
+            {
                 loadout.Restore(s.HeroId, s.Slots);
+            }
+        }
 
         if (inn != null)
         {
             List<HeroQuality> slots = new List<HeroQuality>();
-            foreach (QualitySave s in save.InnSlots) slots.Add(FromQualitySave(s));
+            foreach (QualitySave s in save.InnSlots)
+            {
+                slots.Add(FromQualitySave(s));
+            }
 
             List<HeroQuality> recruited = new List<HeroQuality>();
-            foreach (QualitySave s in save.InnRecruited) recruited.Add(FromQualitySave(s));
+            foreach (QualitySave s in save.InnRecruited)
+            {
+                recruited.Add(FromQualitySave(s));
+            }
 
             inn.Restore(save.InnRefreshUsed, slots, recruited, save.Roster);
         }
@@ -192,7 +246,10 @@ public static class GameProgress
 
     static HeroQuality FromQualitySave(QualitySave s)
     {
-        if (s == null) return null;
+        if (s == null)
+        {
+            return null;
+        }
 
         return HeroQuality.Restore(s.HeroId, s.Star, s.HpPct, s.AtkPct, s.SpdPct,
                                    s.AffixIds, s.Recruited, s.IsBase);

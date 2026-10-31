@@ -47,22 +47,32 @@ public static class Tuning
     /// <summary>把总账表注入各常量类的 public static 字段。可重复调用（幂等）。</summary>
     public static void Load(List<TuningConfig> rows)
     {
-        if (_loaded) return;
+        if (_loaded)
+        {
+            return;
+        }
         _loaded = true;
         Errors.Clear();
         Drifts.Clear();
 
         var fields = new Dictionary<string, FieldInfo>();
         foreach (Type t in Targets)
+        {
             foreach (FieldInfo f in t.GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
                 fields[f.Name] = f;
+            }
+        }
 
         var applied = new HashSet<string>();
         int runtimeRows = 0;
 
         foreach (TuningConfig r in rows ?? new List<TuningConfig>())
         {
-            if (!r.Runtime) continue;
+            if (!r.Runtime)
+            {
+                continue;
+            }
             runtimeRows++;
 
             if (!fields.TryGetValue(r.Key, out FieldInfo fi))
@@ -79,28 +89,56 @@ public static class Tuning
             }
 
             object old = fi.GetValue(null);
-            if (!Equals(old, v)) Drifts.Add($"[{r.Key}] 代码兜底 {old} → 表值 {v}");
+            if (!Equals(old, v))
+            {
+                Drifts.Add($"[{r.Key}] 代码兜底 {old} → 表值 {v}");
+            }
             fi.SetValue(null, v);
             applied.Add(r.Key);
         }
 
         // 反向校验：代码里有、表里没有 → 说明总账漏登记
         foreach (KeyValuePair<string, FieldInfo> kv in fields)
+        {
             if (!applied.Contains(kv.Key))
+            {
                 Errors.Add($"代码里有 {kv.Value.DeclaringType?.Name}.{kv.Key}，但表里没登记（应补一行 Runtime=true）");
+            }
+        }
 
         Console.WriteLine($"[Tuning] 已从 TuningConfig 注入 {applied.Count} 项（表内 Runtime 行 {runtimeRows}）");
-        foreach (string d in Drifts) Console.WriteLine($"[Tuning] 兜底已更新: {d}");
-        foreach (string e in Errors) Console.Error.WriteLine($"[Tuning] ✗ {e}");
+        foreach (string d in Drifts)
+        {
+            Console.WriteLine($"[Tuning] 兜底已更新: {d}");
+        }
+        foreach (string e in Errors)
+        {
+            Console.Error.WriteLine($"[Tuning] ✗ {e}");
+        }
     }
 
     static object ToFieldType(Type t, double v)
     {
-        if (t == typeof(double)) return v;
-        if (t == typeof(float)) return (float)v;
-        if (t == typeof(int)) return (int)Math.Round(v);
-        if (t == typeof(long)) return (long)Math.Round(v);
-        if (t == typeof(bool)) return Math.Abs(v) > 0.5;
+        if (t == typeof(double))
+        {
+            return v;
+        }
+        if (t == typeof(float))
+        {
+            return (float)v;
+        }
+        if (t == typeof(int))
+        {
+            return (int)Math.Round(v);
+        }
+        if (t == typeof(long))
+        {
+            return (long)Math.Round(v);
+        }
+        if (t == typeof(bool))
+        {
+            return Math.Abs(v) > 0.5;
+        }
         return null;
     }
 }

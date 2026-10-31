@@ -37,10 +37,14 @@ public partial class StagePanel : BasePanel
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.ApplyTheme();
     }
@@ -80,7 +84,10 @@ public partial class StagePanel : BasePanel
 
         if (!_wired)
         {
-            if (_TCloseBtn != null) _TCloseBtn.Pressed += OnClosePressed;
+            if (_TCloseBtn != null)
+            {
+                _TCloseBtn.Pressed += OnClosePressed;
+            }
             _wired = true;
         }
 
@@ -96,16 +103,23 @@ public partial class StagePanel : BasePanel
     {
         AudioManager.PlayUISFX("ui_close");
         HidePanel<StagePanel>();
-        if (_onClose != null) _onClose();
+        if (_onClose != null)
+        {
+            _onClose();
+        }
     }
 
     void EnsureBackdrop()
     {
         if (_TBg == null)
+        {
             return;
+        }
 
         if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+        {
             return;
+        }
 
         _backdrop = new BackdropLayer();
         _TBg.AddChild(_backdrop);
@@ -115,15 +129,25 @@ public partial class StagePanel : BasePanel
 
     void Build()
     {
-        if (_run == null) return;
+        if (_run == null)
+        {
+            return;
+        }
 
         if (_THint != null)
+        {
             _THint.Text = "当前 第 " + _run.Layer + " 层　·　最高 第 " + _run.BestLayer + " 层　·　持有材料：" + DescribeBag();
+        }
 
         if (_TBottomHint != null)
+        {
             _TBottomHint.Text = "点某层 → 进入锁层挂机（只刷该层）。想继续往上冲 → 关掉面板点「继续推图」。";
+        }
 
-        if (_TContent == null) return;
+        if (_TContent == null)
+        {
+            return;
+        }
         foreach (Node c in _TContent.GetChildren()) c.QueueFree();
 
         int step = MaterialConfig.MatTierEveryLayer > 0 ? MaterialConfig.MatTierEveryLayer : 10;
@@ -134,7 +158,10 @@ public partial class StagePanel : BasePanel
             int lo = (tier - 1) * step + 1;
             if (lo > best) break;                 // 整章未解锁 → 不显示
             int hi = lo + step - 1;
-            if (hi > best) hi = best;
+            if (hi > best)
+            {
+                hi = best;
+            }
 
             _TContent.AddChild(MakeChapterRow(tier, lo, hi));
         }
@@ -159,7 +186,10 @@ public partial class StagePanel : BasePanel
             Button btn = new Button();
             btn.Text = target.ToString();
             btn.CustomMinimumSize = new Vector2(56, 40);
-            if (target == _run.Layer) btn.AddThemeColorOverride("font_color", UISignalColors.Win);
+            if (target == _run.Layer)
+            {
+                btn.AddThemeColorOverride("font_color", UISignalColors.Win);
+            }
             btn.Pressed += () => OnLayerPressed(target);
             row.AddChild(btn);
         }
@@ -169,21 +199,33 @@ public partial class StagePanel : BasePanel
 
     void OnLayerPressed(int layer)
     {
-        if (_onGo != null) _onGo(layer);
+        if (_onGo != null)
+        {
+            _onGo(layer);
+        }
     }
 
     string DescribeBag()
     {
-        if (_bag == null) return "—";
+        if (_bag == null)
+        {
+            return "—";
+        }
 
         List<string> parts = new List<string>();
         for (int t = 1; t <= MaterialCatalog.Count; t++)
         {
             long n = _bag.Get(t);
-            if (n > 0) parts.Add(MaterialCatalog.NameOf(t) + " " + n);
+            if (n > 0)
+            {
+                parts.Add(MaterialCatalog.NameOf(t) + " " + n);
+            }
         }
 
-        if (parts.Count == 0) return "（暂无）";
+        if (parts.Count == 0)
+        {
+            return "（暂无）";
+        }
         return string.Join("　", parts);
     }
 }

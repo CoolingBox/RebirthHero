@@ -20,8 +20,15 @@ public static class SummonCatalog
     {
         var map = new Dictionary<string, SummonConfig>(StringComparer.Ordinal);
         if (all != null)
+        {
             foreach (var c in all)
-                if (c != null && !string.IsNullOrEmpty(c.Kind)) map[c.Kind] = c;
+            {
+                if (c != null && !string.IsNullOrEmpty(c.Kind))
+                {
+                    map[c.Kind] = c;
+                }
+            }
+        }
         _byKind = map;
     }
 
@@ -35,7 +42,10 @@ public static class SummonCatalog
     /// <summary>把配置行转成引擎规格；cfg 为 null 时返回 null（调用方走兜底）。</summary>
     public static SummonSpec ToSpec(SummonConfig cfg)
     {
-        if (cfg == null) return null;
+        if (cfg == null)
+        {
+            return null;
+        }
         return new SummonSpec
         {
             Kind = cfg.Kind,

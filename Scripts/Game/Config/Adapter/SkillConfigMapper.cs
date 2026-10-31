@@ -22,13 +22,19 @@ public static class SkillConfigMapper
     public static List<BattleSkill> ToBattleSkills(SkillConfig cfg, double ownerBaseHp)
     {
         List<BattleSkill> res = new List<BattleSkill>();
-        if (cfg == null) return res;
+        if (cfg == null)
+        {
+            return res;
+        }
 
         SkillEff eff;
         if (ToEff(cfg.EffectType, out eff))
         {
             BattleSkill main = Build(cfg, eff, cfg.CalcBase, cfg.CalcValue, cfg.CondN, cfg.Limit, ownerBaseHp, false);
-            if (main != null) res.Add(main);
+            if (main != null)
+            {
+                res.Add(main);
+            }
         }
 
         // 副效果：条件沿用主行的触发时机/CondType，次数与数值各自独立。
@@ -37,7 +43,10 @@ public static class SkillConfigMapper
         if ((int)cfg.AltEffect > 0 && ToEff(cfg.AltEffect, out altEff) && altEff != SkillEff.Summon)
         {
             BattleSkill alt = Build(cfg, altEff, cfg.AltCalcBase, cfg.AltCalcValue, cfg.AltCondN, cfg.AltLimit, ownerBaseHp, true);
-            if (alt != null) res.Add(alt);
+            if (alt != null)
+            {
+                res.Add(alt);
+            }
         }
 
         return res;
@@ -116,7 +125,10 @@ public static class SkillConfigMapper
     /// </summary>
     public static bool IsPassiveAttribute(SkillConfig cfg)
     {
-        if (cfg == null || cfg.TriggerTime != TriggerType.Passive) return false;
+        if (cfg == null || cfg.TriggerTime != TriggerType.Passive)
+        {
+            return false;
+        }
         switch (cfg.EffectType)
         {
             case SkillEffect.MaxHpPct:
@@ -134,7 +146,10 @@ public static class SkillConfigMapper
     /// <summary>应用被动·属性型（调用前先过 <see cref="IsPassiveAttribute"/>）。</summary>
     public static void ApplyPassive(SkillConfig cfg, BattleUnit u)
     {
-        if (cfg == null || u == null) return;
+        if (cfg == null || u == null)
+        {
+            return;
+        }
         double v = cfg.CalcValue;
 
         switch (cfg.EffectType)
@@ -171,11 +186,20 @@ public static class SkillConfigMapper
     /// </summary>
     public static BattleSkill ToAltSkill(SkillConfig cfg, double ownerBaseHp)
     {
-        if (cfg == null) return null;
+        if (cfg == null)
+        {
+            return null;
+        }
 
         SkillEff altEff;
-        if ((int)cfg.AltEffect <= 0) return null;
-        if (!ToEff(cfg.AltEffect, out altEff)) return null;
+        if ((int)cfg.AltEffect <= 0)
+        {
+            return null;
+        }
+        if (!ToEff(cfg.AltEffect, out altEff))
+        {
+            return null;
+        }
         if (altEff == SkillEff.Summon) return null;      // 一张卡不能有两种召唤
 
         return Build(cfg, altEff, cfg.AltCalcBase, cfg.AltCalcValue, cfg.AltCondN, cfg.AltLimit, ownerBaseHp, true);
@@ -248,9 +272,15 @@ public static class SkillConfigMapper
     /// </summary>
     static bool MultOnAtkOf(SkillEff eff, CalcBase calcBase)
     {
-        if (eff == SkillEff.Dmg) return true;
+        if (eff == SkillEff.Dmg)
+        {
+            return true;
+        }
         if (eff == SkillEff.PoisonBurst) return true;              // 每层 = 攻击 × Mult
-        if (eff == SkillEff.Heal || eff == SkillEff.Shield) return calcBase == CalcBase.AtkMultiple;
+        if (eff == SkillEff.Heal || eff == SkillEff.Shield)
+        {
+            return calcBase == CalcBase.AtkMultiple;
+        }
         return false;                                              // MissingHp 吃的是"目标已损气血"，与攻击无关
     }
 
@@ -264,16 +294,24 @@ public static class SkillConfigMapper
     {
         // 按基准折算：气血% → 绝对量；AtkMultiple → 倍数（值÷100）；Fixed → 原值
         double byBase = calcValue;
-        if (calcBase == CalcBase.SelfMaxHpPercent) byBase = ownerBaseHp * calcValue / 100.0;
+        if (calcBase == CalcBase.SelfMaxHpPercent)
+        {
+            byBase = ownerBaseHp * calcValue / 100.0;
+        }
         else if (calcBase == CalcBase.AtkMultiple) byBase = calcValue / 100.0;
 
-        if (eff == SkillEff.Dmg || eff == SkillEff.Heal || eff == SkillEff.Shield) return byBase;
+        if (eff == SkillEff.Dmg || eff == SkillEff.Heal || eff == SkillEff.Shield)
+        {
+            return byBase;
+        }
 
         // 毒 / 火 / HoT（2026-10-23 定稿）：Mult 存的是**每次施加的层数**（T1 1 / T2 2 / T3 3 / T4 4），
         // 不是倍率、也不是气血%。每跳的实际量在引擎里按「层数 × 每层固定点数」算（4 / 6 / 5 点），
         // 所以这里不做任何百分比折算，原值透传。
         if (eff == SkillEff.Poison || eff == SkillEff.Burn || eff == SkillEff.Hot)
+        {
             return Math.Max(1.0, calcValue);
+        }
 
         if (eff == SkillEff.PoisonBurst) return calcValue / 100.0;  // 每层倍率（80 → 0.8×攻击/层）
         if (eff == SkillEff.MissingHp) return calcValue / 100.0;    // 已损气血比例（30 → 30%）
@@ -282,10 +320,16 @@ public static class SkillConfigMapper
         if (eff == SkillEff.Weight) return calcValue;          // 权重增量（10 基准）
         if (eff == SkillEff.SpdMod) return calcValue / 100.0;  // ±%
         if (eff == SkillEff.AtkMod) return calcValue / 100.0;  // ±%
-        if (eff == SkillEff.ReflectAccum) return calcValue / 100.0;
+        if (eff == SkillEff.ReflectAccum)
+        {
+            return calcValue / 100.0;
+        }
         if (eff == SkillEff.ShieldKeep) return calcValue / 100.0;   // 百分点 → 小数（15 → 0.15）
         if (eff == SkillEff.CounterUp) return calcValue;            // 充能层数（整数，不是百分比）
-        if (eff == SkillEff.Shield2Dmg) return 1.0;
+        if (eff == SkillEff.Shield2Dmg)
+        {
+            return 1.0;
+        }
         return 0;                                                 // Silence/Growth/Dodge/Summon 用引擎默认
     }
 }

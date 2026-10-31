@@ -74,8 +74,15 @@ public sealed class HeroQuality
         q.IsBase = isBase;
 
         if (affixIds != null)
+        {
             foreach (int id in affixIds)
-                if (id > 0) q.AffixIds.Add(id);
+            {
+                if (id > 0)
+                {
+                    q.AffixIds.Add(id);
+                }
+            }
+        }
 
         return q;
     }
@@ -109,10 +116,22 @@ public sealed class HeroQuality
     {
         double total = InnConfig.StarW1 + InnConfig.StarW2 + InnConfig.StarW3 + InnConfig.StarW4 + InnConfig.StarW5;
         double r = rng.NextDouble() * total;
-        if ((r -= InnConfig.StarW1) < 0) return 1;
-        if ((r -= InnConfig.StarW2) < 0) return 2;
-        if ((r -= InnConfig.StarW3) < 0) return 3;
-        if ((r -= InnConfig.StarW4) < 0) return 4;
+        if ((r -= InnConfig.StarW1) < 0)
+        {
+            return 1;
+        }
+        if ((r -= InnConfig.StarW2) < 0)
+        {
+            return 2;
+        }
+        if ((r -= InnConfig.StarW3) < 0)
+        {
+            return 3;
+        }
+        if ((r -= InnConfig.StarW4) < 0)
+        {
+            return 4;
+        }
         return 5;
     }
 
@@ -126,8 +145,14 @@ public sealed class HeroQuality
     {
         double total = InnConfig.AffixW0 + InnConfig.AffixW1 + InnConfig.AffixW2;
         double r = rng.NextDouble() * total;
-        if ((r -= InnConfig.AffixW0) < 0) return 0;
-        if ((r -= InnConfig.AffixW1) < 0) return 1;
+        if ((r -= InnConfig.AffixW0) < 0)
+        {
+            return 0;
+        }
+        if ((r -= InnConfig.AffixW1) < 0)
+        {
+            return 1;
+        }
         return 2;
     }
 
@@ -137,7 +162,10 @@ public sealed class HeroQuality
     /// </summary>
     public void ApplyTo(BattleUnit u, Func<int, QualityConfig> affixLookup)
     {
-        if (u == null) return;
+        if (u == null)
+        {
+            return;
+        }
 
         u.BaseHp *= StarMul * (1 + HpPct / 100.0);
         u.BaseAtk *= StarMul * (1 + AtkPct / 100.0);
@@ -148,11 +176,17 @@ public sealed class HeroQuality
         HealPct = 0;
         MulBonus.Clear();
 
-        if (affixLookup == null) return;
+        if (affixLookup == null)
+        {
+            return;
+        }
         foreach (int id in AffixIds)
         {
             QualityConfig a = affixLookup(id);
-            if (a == null) continue;
+            if (a == null)
+            {
+                continue;
+            }
             ApplyEffect(u, a, a.Effect1, a.Value1);
             ApplyEffect(u, a, a.Effect2, a.Value2);
         }
@@ -165,7 +199,10 @@ public sealed class HeroQuality
     /// </summary>
     void ApplyEffect(BattleUnit u, QualityConfig a, AffixEffect e, double v)
     {
-        if (e == AffixEffect.None) return;
+        if (e == AffixEffect.None)
+        {
+            return;
+        }
         switch (e)
         {
             case AffixEffect.AtkPct:
@@ -212,7 +249,10 @@ public sealed class HeroQuality
         double f = 1.0;
         foreach (MulEntry e in MulBonus)
         {
-            if (e.Cat == 0 || e.Cat == skillCat) f *= 1 + e.Pct / 100.0;
+            if (e.Cat == 0 || e.Cat == skillCat)
+            {
+                f *= 1 + e.Pct / 100.0;
+            }
         }
         return f;
     }

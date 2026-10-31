@@ -47,10 +47,14 @@ public partial class EquipPanel : BasePanel
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.ApplyTheme();
     }
@@ -85,7 +89,10 @@ public partial class EquipPanel : BasePanel
         _affixPool = _ctxAffixPool;
         _onClose = _ctxOnClose;
 
-        if (_selHero >= RosterCount()) _selHero = 0;
+        if (_selHero >= RosterCount())
+        {
+            _selHero = 0;
+        }
 
         // 弹窗不放山水图：同一张 1920×1080 的图裁进小窗口会有"截图放大"感。
         // 让背后的战斗场景透过半透明的 BgPanel 底自然显出来（见主题资源 bgpanel 的 alpha）。
@@ -94,7 +101,10 @@ public partial class EquipPanel : BasePanel
 
         if (!_wired)
         {
-            if (_TCloseBtn != null) _TCloseBtn.Pressed += OnClosePressed;
+            if (_TCloseBtn != null)
+            {
+                _TCloseBtn.Pressed += OnClosePressed;
+            }
             _wired = true;
         }
 
@@ -112,16 +122,23 @@ public partial class EquipPanel : BasePanel
     {
         AudioManager.PlayUISFX("ui_close");
         HidePanel<EquipPanel>();
-        if (_onClose != null) _onClose();
+        if (_onClose != null)
+        {
+            _onClose();
+        }
     }
 
     void EnsureBackdrop()
     {
         if (_TBg == null)
+        {
             return;
+        }
 
         if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+        {
             return;
+        }
 
         _backdrop = new BackdropLayer();
         _TBg.AddChild(_backdrop);
@@ -131,12 +148,18 @@ public partial class EquipPanel : BasePanel
 
     void Build()
     {
-        if (_bag == null || _roster == null) return;
+        if (_bag == null || _roster == null)
+        {
+            return;
+        }
 
         int count = RosterCount();
         if (count == 0)
         {
-            if (_THint != null) _THint.Text = "阵容为空，先去客栈招人。";
+            if (_THint != null)
+            {
+                _THint.Text = "阵容为空，先去客栈招人。";
+            }
             ClearChildren(_TSlotBox);
             ClearChildren(_TBagList);
             return;
@@ -145,7 +168,9 @@ public partial class EquipPanel : BasePanel
         HeroConfig hero = _roster[_selHero];
 
         if (_THeading != null)
+        {
             _THeading.Text = "装备 · " + hero.Name + "的行囊";
+        }
 
         if (_THint != null)
         {
@@ -166,7 +191,10 @@ public partial class EquipPanel : BasePanel
     /// <summary>侠客切换：每个侠客各有独立四栏，必须先选人。</summary>
     void BuildHeroRow()
     {
-        if (_TSlotBox == null) return;
+        if (_TSlotBox == null)
+        {
+            return;
+        }
 
         ClearChildren(_TSlotBox);
 
@@ -189,7 +217,10 @@ public partial class EquipPanel : BasePanel
             btn.Text = selected ? ("● " + _roster[i].Name) : _roster[i].Name;
             btn.CustomMinimumSize = new Vector2(180, RowH - 12);
             btn.AddThemeFontSizeOverride("font_size", FontBtn);
-            if (selected) btn.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+            if (selected)
+            {
+                btn.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+            }
             btn.Pressed += () =>
             {
                 _selHero = idx;
@@ -213,7 +244,10 @@ public partial class EquipPanel : BasePanel
     /// <summary>四栏：显示当前穿戴 + 卸下按钮。</summary>
     void BuildSlots(HeroConfig hero)
     {
-        if (_TSlotBox == null) return;
+        if (_TSlotBox == null)
+        {
+            return;
+        }
 
         int[] slots = _bag.SlotsOf(hero.Id);
 
@@ -235,7 +269,10 @@ public partial class EquipPanel : BasePanel
             // 图标：空栏也给同尺寸占位，保证四行左缘与行高完全对齐
             EquipConfig slotCfg = null;
             EquipItem slotItem = uid != 0 ? _bag.Find(uid) : null;
-            if (slotItem != null) slotCfg = CfgOf(slotItem.ConfigId);
+            if (slotItem != null)
+            {
+                slotCfg = CfgOf(slotItem.ConfigId);
+            }
             if (slotCfg != null)
             {
                 row.AddChild(EquipIcon.BuildThumb(slotCfg, IconSize));
@@ -323,7 +360,10 @@ public partial class EquipPanel : BasePanel
     /// <summary>行囊：全部持有装备，点「穿上」进对应栏。已穿着的标出在谁身上。</summary>
     void BuildBag(HeroConfig hero)
     {
-        if (_TBagList == null) return;
+        if (_TBagList == null)
+        {
+            return;
+        }
 
         ClearChildren(_TBagList);
 
@@ -349,7 +389,10 @@ public partial class EquipPanel : BasePanel
         {
             EquipItem item = view[i];
             EquipConfig cfg = CfgOf(item.ConfigId);
-            if (cfg == null) continue;
+            if (cfg == null)
+            {
+                continue;
+            }
 
             HBoxContainer row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 10);
@@ -362,7 +405,10 @@ public partial class EquipPanel : BasePanel
             Label state = new Label();
             state.CustomMinimumSize = new Vector2(200, RowH);
             state.AddThemeFontSizeOverride("font_size", FontSub);
-            if (wornBy == hero.Id) state.Text = "（" + hero.Name + " 已穿）";
+            if (wornBy == hero.Id)
+            {
+                state.Text = "（" + hero.Name + " 已穿）";
+            }
             else if (wornBy > 0) state.Text = "（在 " + HeroNameOf(wornBy) + " 身上）";
             else state.Text = "";
             state.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);
@@ -377,14 +423,20 @@ public partial class EquipPanel : BasePanel
             wear.Pressed += () =>
             {
                 AudioManager.PlayUISFX("ui_click");
-                if (_bag.Equip(hero.Id, uid, CfgOf)) Build();
+                if (_bag.Equip(hero.Id, uid, CfgOf))
+                {
+                    Build();
+                }
             };
             row.AddChild(wear);
 
             // 强化只对"穿在身上"的做，避免玩家在行囊里给几十件都强化一遍
             Button plus = new Button();
             long cost = EquipRules.EnhanceCost(item.Level);
-            if (cost < 0) plus.Text = "满级";
+            if (cost < 0)
+            {
+                plus.Text = "满级";
+            }
             else plus.Text = "强化 " + cost;
             plus.CustomMinimumSize = new Vector2(170, RowH - 4);
             plus.AddThemeFontSizeOverride("font_size", FontBtn);
@@ -392,7 +444,10 @@ public partial class EquipPanel : BasePanel
             plus.Pressed += () =>
             {
                 AudioManager.PlayUISFX("ui_upgrade");
-                if (EquipRules.TryEnhance(item, _silver)) Build();
+                if (EquipRules.TryEnhance(item, _silver))
+                {
+                    Build();
+                }
             };
             row.AddChild(plus);
 
@@ -408,11 +463,20 @@ public partial class EquipPanel : BasePanel
                 AudioManager.PlayUISFX("ui_click");
                 EquipItem target = _bag.Find(uid);
                 EquipConfig targetCfg = target != null ? CfgOf(target.ConfigId) : null;
-                if (targetCfg == null) return;
+                if (targetCfg == null)
+                {
+                    return;
+                }
 
                 long value = EquipRules.RecycleValue(target, targetCfg);
-                if (!_bag.Remove(uid)) return;
-                if (_silver != null) _silver.Add(value);
+                if (!_bag.Remove(uid))
+                {
+                    return;
+                }
+                if (_silver != null)
+                {
+                    _silver.Add(value);
+                }
                 Build();
             };
             row.AddChild(recycle);
@@ -474,7 +538,10 @@ public partial class EquipPanel : BasePanel
                     : ("一键回收白/绿未穿（" + n + " 件 +" + sum + "）");
                 batch.CustomMinimumSize = new Vector2(360, RowH - 8);
                 batch.AddThemeFontSizeOverride("font_size", FontBtn);
-                if (_batchConfirm) batch.AddThemeColorOverride("font_color", UISignalColors.Lose);
+                if (_batchConfirm)
+                {
+                    batch.AddThemeColorOverride("font_color", UISignalColors.Lose);
+                }
                 batch.Pressed += OnBatchRecycle;
                 _TSortRow.AddChild(batch);
             }
@@ -498,9 +565,18 @@ public partial class EquipPanel : BasePanel
         {
             EquipItem it = _bag.Items[i];
             EquipConfig cfg = CfgOf(it.ConfigId);
-            if (cfg == null) continue;
-            if ((int)cfg.Rarity > 2) continue;
-            if (_bag.WornBy(it.Uid) != 0) continue;
+            if (cfg == null)
+            {
+                continue;
+            }
+            if ((int)cfg.Rarity > 2)
+            {
+                continue;
+            }
+            if (_bag.WornBy(it.Uid) != 0)
+            {
+                continue;
+            }
             uids.Add(it.Uid);
         }
 
@@ -509,12 +585,18 @@ public partial class EquipPanel : BasePanel
         {
             EquipItem it = _bag.Find(uids[i]);
             EquipConfig cfg = it != null ? CfgOf(it.ConfigId) : null;
-            if (cfg == null) continue;
+            if (cfg == null)
+            {
+                continue;
+            }
             total += EquipRules.RecycleValue(it, cfg);
             _bag.Remove(uids[i]);
         }
 
-        if (total > 0 && _silver != null) _silver.Add(total);
+        if (total > 0 && _silver != null)
+        {
+            _silver.Add(total);
+        }
         AudioManager.PlayEventSFX("ui_confirm");
         Build();
     }
@@ -526,9 +608,18 @@ public partial class EquipPanel : BasePanel
         {
             EquipItem it = _bag.Items[i];
             EquipConfig cfg = CfgOf(it.ConfigId);
-            if (cfg == null) continue;
-            if ((int)cfg.Rarity > maxRarity) continue;
-            if (_bag.WornBy(it.Uid) != 0) continue;
+            if (cfg == null)
+            {
+                continue;
+            }
+            if ((int)cfg.Rarity > maxRarity)
+            {
+                continue;
+            }
+            if (_bag.WornBy(it.Uid) != 0)
+            {
+                continue;
+            }
             count++;
             sum += EquipRules.RecycleValue(it, cfg);
         }
@@ -543,13 +634,28 @@ public partial class EquipPanel : BasePanel
         {
             EquipItem it = _bag.Items[i];
             EquipConfig cfg = CfgOf(it.ConfigId);
-            if (cfg == null) continue;
+            if (cfg == null)
+            {
+                continue;
+            }
 
-            if (_filterSlot != 0 && (int)cfg.Slot != _filterSlot) continue;
+            if (_filterSlot != 0 && (int)cfg.Slot != _filterSlot)
+            {
+                continue;
+            }
 
-            if (_filterKind == 1 && cfg.SetId <= 0) continue;
-            if (_filterKind == 2 && cfg.SetId > 0) continue;
-            if (_filterKind == 3 && _bag.WornBy(it.Uid) != 0) continue;
+            if (_filterKind == 1 && cfg.SetId <= 0)
+            {
+                continue;
+            }
+            if (_filterKind == 2 && cfg.SetId > 0)
+            {
+                continue;
+            }
+            if (_filterKind == 3 && _bag.WornBy(it.Uid) != 0)
+            {
+                continue;
+            }
 
             list.Add(it);
         }
@@ -567,16 +673,31 @@ public partial class EquipPanel : BasePanel
 
         if (_sortMode == 1)
         {
-            if (a.Level != b.Level) return b.Level.CompareTo(a.Level);
-            if (ra != rb) return rb.CompareTo(ra);
+            if (a.Level != b.Level)
+            {
+                return b.Level.CompareTo(a.Level);
+            }
+            if (ra != rb)
+            {
+                return rb.CompareTo(ra);
+            }
             return b.Uid.CompareTo(a.Uid);
         }
 
-        if (_sortMode == 2) return b.Uid.CompareTo(a.Uid);
+        if (_sortMode == 2)
+        {
+            return b.Uid.CompareTo(a.Uid);
+        }
 
         // 默认：稀有度降序 → 强化降序 → 新获得优先
-        if (ra != rb) return rb.CompareTo(ra);
-        if (a.Level != b.Level) return b.Level.CompareTo(a.Level);
+        if (ra != rb)
+        {
+            return rb.CompareTo(ra);
+        }
+        if (a.Level != b.Level)
+        {
+            return b.Level.CompareTo(a.Level);
+        }
         return b.Uid.CompareTo(a.Uid);
     }
 
@@ -604,7 +725,10 @@ public partial class EquipPanel : BasePanel
         b.Text = text;
         b.CustomMinimumSize = new Vector2(0, RowH - 14);
         b.AddThemeFontSizeOverride("font_size", FontBtn);
-        if (active) b.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+        if (active)
+        {
+            b.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+        }
         b.Pressed += () =>
         {
             AudioManager.PlayUISFX("ui_click");
@@ -619,22 +743,37 @@ public partial class EquipPanel : BasePanel
     string DescribeHead(EquipConfig cfg, EquipItem item)
     {
         string text = "[" + EquipRules.RarityName(cfg.Rarity) + "] " + cfg.Name;
-        if (item != null && item.Level > 0) text += " +" + item.Level;
+        if (item != null && item.Level > 0)
+        {
+            text += " +" + item.Level;
+        }
 
         double atk = EquipRules.AtkOf(item, cfg);
         double hp = EquipRules.HpOf(item, cfg);
         double spd = EquipRules.SpdOf(item, cfg);
 
         text += "　";
-        if (atk > 0) text += "攻+" + atk.ToString("0") + " ";
-        if (hp > 0) text += "命+" + hp.ToString("0") + " ";
-        if (spd > 0) text += "速+" + spd.ToString("0");
+        if (atk > 0)
+        {
+            text += "攻+" + atk.ToString("0") + " ";
+        }
+        if (hp > 0)
+        {
+            text += "命+" + hp.ToString("0") + " ";
+        }
+        if (spd > 0)
+        {
+            text += "速+" + spd.ToString("0");
+        }
 
         // 套装归属（绿及以上才可能有）
         if (cfg.SetId > 0)
         {
             EquipSetConfig sc = SetOf(cfg.SetId);
-            if (sc != null) text += "　〔" + sc.Name + "套〕";
+            if (sc != null)
+            {
+                text += "　〔" + sc.Name + "套〕";
+            }
         }
 
         return text;
@@ -643,14 +782,23 @@ public partial class EquipPanel : BasePanel
     /// <summary>第二行：随机词条（掉落时掷定，不随强化变化）。无词条返回空串。</summary>
     string DescribeAffix(EquipItem item)
     {
-        if (item == null || item.AffixIds.Count == 0) return "";
+        if (item == null || item.AffixIds.Count == 0)
+        {
+            return "";
+        }
 
         string text = "词条：";
         for (int i = 0; i < item.AffixIds.Count; i++)
         {
             EquipAffixConfig a = AffixOf(item.AffixIds[i]);
-            if (a == null) continue;
-            if (i > 0) text += "、";
+            if (a == null)
+            {
+                continue;
+            }
+            if (i > 0)
+            {
+                text += "、";
+            }
             text += a.Name + "(" + AffixText(a) + ")";
         }
 
@@ -679,13 +827,21 @@ public partial class EquipPanel : BasePanel
 
     int WornBy(int uid)
     {
-        if (_roster == null) return 0;
+        if (_roster == null)
+        {
+            return 0;
+        }
 
         for (int i = 0; i < _roster.Count; i++)
         {
             int[] slots = _bag.SlotsOf(_roster[i].Id);
             for (int s = 0; s < EquipBag.SlotCount; s++)
-                if (slots[s] == uid) return _roster[i].Id;
+            {
+                if (slots[s] == uid)
+                {
+                    return _roster[i].Id;
+                }
+            }
         }
 
         return 0;
@@ -693,10 +849,18 @@ public partial class EquipPanel : BasePanel
 
     string HeroNameOf(int heroId)
     {
-        if (_roster == null) return "#" + heroId;
+        if (_roster == null)
+        {
+            return "#" + heroId;
+        }
 
         for (int i = 0; i < _roster.Count; i++)
-            if (_roster[i].Id == heroId) return _roster[i].Name;
+        {
+            if (_roster[i].Id == heroId)
+            {
+                return _roster[i].Name;
+            }
+        }
 
         return "#" + heroId;
     }
@@ -708,30 +872,54 @@ public partial class EquipPanel : BasePanel
 
     EquipConfig CfgOf(int configId)
     {
-        if (_pool == null) return null;
+        if (_pool == null)
+        {
+            return null;
+        }
 
         for (int i = 0; i < _pool.Count; i++)
-            if (_pool[i].Id == configId) return _pool[i];
+        {
+            if (_pool[i].Id == configId)
+            {
+                return _pool[i];
+            }
+        }
 
         return null;
     }
 
     EquipSetConfig SetOf(int setId)
     {
-        if (_setPool == null) return null;
+        if (_setPool == null)
+        {
+            return null;
+        }
 
         for (int i = 0; i < _setPool.Count; i++)
-            if (_setPool[i].Id == setId) return _setPool[i];
+        {
+            if (_setPool[i].Id == setId)
+            {
+                return _setPool[i];
+            }
+        }
 
         return null;
     }
 
     EquipAffixConfig AffixOf(int affixId)
     {
-        if (_affixPool == null) return null;
+        if (_affixPool == null)
+        {
+            return null;
+        }
 
         for (int i = 0; i < _affixPool.Count; i++)
-            if (_affixPool[i].Id == affixId) return _affixPool[i];
+        {
+            if (_affixPool[i].Id == affixId)
+            {
+                return _affixPool[i];
+            }
+        }
 
         return null;
     }
@@ -740,17 +928,26 @@ public partial class EquipPanel : BasePanel
     string SetSummary(int heroId)
     {
         EquipTuning tuning = EquipSets.Resolve(_bag, heroId, CfgOf, AffixOf, SetOf);
-        if (tuning.Sets.Count == 0) return "未成套（4 栏同套可激活 4 件效果）";
+        if (tuning.Sets.Count == 0)
+        {
+            return "未成套（4 栏同套可激活 4 件效果）";
+        }
 
         string text = "";
         for (int i = 0; i < tuning.Sets.Count; i++)
         {
             SetState st = tuning.Sets[i];
             if (st.Pieces < 2) continue;          // 单件没有效果，不占位置
-            if (text.Length > 0) text += "　";
+            if (text.Length > 0)
+            {
+                text += "　";
+            }
 
             text += st.Name + " " + st.Pieces + "/4";
-            if (st.Active4) text += "（2+4 件全开）";
+            if (st.Active4)
+            {
+                text += "（2+4 件全开）";
+            }
             else if (st.Active2) text += "（2 件生效）";
         }
 
@@ -759,7 +956,10 @@ public partial class EquipPanel : BasePanel
 
     static void ClearChildren(Node parent)
     {
-        if (parent == null) return;
+        if (parent == null)
+        {
+            return;
+        }
 
         foreach (Node c in parent.GetChildren())
         {

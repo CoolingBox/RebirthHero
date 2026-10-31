@@ -98,8 +98,14 @@ public partial class BattlePanel : BasePanel
     public override void OnHide()
     {
         // 面板被隐藏（如将来叠加其它全屏面板）时暂停战斗，避免后台空转
-        if (_timer != null) _timer.Stop();
-        if (_advanceTimer != null) _advanceTimer.Stop();
+        if (_timer != null)
+        {
+            _timer.Stop();
+        }
+        if (_advanceTimer != null)
+        {
+            _advanceTimer.Stop();
+        }
         base.OnHide();
     }
 
@@ -115,13 +121,19 @@ public partial class BattlePanel : BasePanel
         foreach (int id in new[] { 2, 1, 4, 3 })
         {
             HeroConfig h = FindHero(heroes, id);
-            if (h != null) _roster.Add(h);
+            if (h != null)
+            {
+                _roster.Add(h);
+            }
         }
         // 0 = 空槽（SkillLoadout.Empty），不是合法武学 id —— 在入口拦掉，
         // 避免任何调用方漏判时空查表刷 "找不到ID为 0" 的噪音
         _lookup = id =>
         {
-            if (id <= 0) return null;
+            if (id <= 0)
+            {
+                return null;
+            }
             return ConfigManager.GetOne<SkillConfig>(id);
         };
 
@@ -129,8 +141,15 @@ public partial class BattlePanel : BasePanel
         _skillPool = new List<SkillConfig>();
         List<SkillConfig> allSkills = ConfigManager.GetAll<SkillConfig>();
         if (allSkills != null)
+        {
             foreach (SkillConfig s in allSkills)
-                if (s != null && s.Status == SkillStatus.Implemented) _skillPool.Add(s);
+            {
+                if (s != null && s.Status == SkillStatus.Implemented)
+                {
+                    _skillPool.Add(s);
+                }
+            }
+        }
 
         // 敌方阵容：单位模板（EnemyConfig 表）+ 武学池（已实装全池；按 Id 定序 → 抽取可复现）
         _enemyTemplates = ConfigManager.GetAll<EnemyConfig>() ?? new List<EnemyConfig>();
@@ -138,12 +157,21 @@ public partial class BattlePanel : BasePanel
 
         // M2.5 装备：模板池 + 掉落随机源
         _equipPool = ConfigManager.GetAll<EquipConfig>();
-        if (_equipPool == null) _equipPool = new List<EquipConfig>();
+        if (_equipPool == null)
+        {
+            _equipPool = new List<EquipConfig>();
+        }
         // P1 套装与随机词条
         _equipSetPool = ConfigManager.GetAll<EquipSetConfig>();
-        if (_equipSetPool == null) _equipSetPool = new List<EquipSetConfig>();
+        if (_equipSetPool == null)
+        {
+            _equipSetPool = new List<EquipSetConfig>();
+        }
         _equipAffixPool = ConfigManager.GetAll<EquipAffixConfig>();
-        if (_equipAffixPool == null) _equipAffixPool = new List<EquipAffixConfig>();
+        if (_equipAffixPool == null)
+        {
+            _equipAffixPool = new List<EquipAffixConfig>();
+        }
         _rng = new Random();
         // 召唤物类型档位（SummonConfig 表）——必须在建队前灌入，否则召唤物走引擎兜底规格
         SummonCatalog.Init(ConfigManager.GetAll<SummonConfig>());
@@ -177,7 +205,10 @@ public partial class BattlePanel : BasePanel
     private void SaveProgress()
     {
         GameSave data = CaptureProgress();
-        if (data == null) return;
+        if (data == null)
+        {
+            return;
+        }
 
         SaveManager.Save(data);
     }
@@ -186,7 +217,10 @@ public partial class BattlePanel : BasePanel
     private GameSave CaptureProgress()
     {
         // 状态机还没造好（Init 未跑完）时返回 null，避免初始化的中间态被写盘
-        if (_run == null || _cult == null || _silver == null) return null;
+        if (_run == null || _cult == null || _silver == null)
+        {
+            return null;
+        }
 
         return GameProgress.Capture(_run, _cult, _silver, _materials, _equips, _loadout, _inn, RosterIds());
     }
@@ -213,7 +247,10 @@ public partial class BattlePanel : BasePanel
     private bool ApplyProgress(GameSave data)
     {
         bool ok = GameProgress.Apply(data, _run, _cult, _silver, _materials, _equips, _loadout, _inn);
-        if (!ok) return false;
+        if (!ok)
+        {
+            return false;
+        }
 
         StatsPanel.InvalidateCurrent();   // 换档 → 战报清零
         SaveProgress();
@@ -236,24 +273,36 @@ public partial class BattlePanel : BasePanel
     /// <summary>自动保存开关变了 → 启停计时器（设置本身由面板写盘）。</summary>
     private void SyncAutoSave()
     {
-        if (_autoSave == null) return;
+        if (_autoSave == null)
+        {
+            return;
+        }
 
         SettingData settings = SettingManager.Data;
         bool on = settings != null && settings.AutoSave;
-        if (on) _autoSave.Start();
+        if (on)
+        {
+            _autoSave.Start();
+        }
         else _autoSave.Stop();
     }
 
     /// <summary>M2.3 客栈：当前出战阵容 = 客栈编队（带当世资质）。编队为空即真正空编队（不再回退开局 4 名）。</summary>
     private List<HeroConfig> ActiveRoster()
     {
-        if (_inn == null) return _roster;
+        if (_inn == null)
+        {
+            return _roster;
+        }
         var heroes = ConfigManager.GetAll<HeroConfig>();
         var list = new List<HeroConfig>();
         foreach (int id in _inn.Roster)
         {
             HeroConfig h = FindHero(heroes, id);
-            if (h != null) list.Add(h);
+            if (h != null)
+            {
+                list.Add(h);
+            }
         }
         return list;   // 可能为空（全下阵）→ 真正空编队，下一场按空队打
     }
@@ -261,15 +310,26 @@ public partial class BattlePanel : BasePanel
     private List<int> RosterIds()
     {
         var ids = new List<int>();
-        foreach (HeroConfig h in _roster) ids.Add(h.Id);
+        foreach (HeroConfig h in _roster)
+        {
+            ids.Add(h.Id);
+        }
         return ids;
     }
 
     private static HeroConfig FindHero(IEnumerable<HeroConfig> heroes, int id)
     {
-        if (heroes == null) return null;
+        if (heroes == null)
+        {
+            return null;
+        }
         foreach (HeroConfig h in heroes)
-            if (h.Id == id) return h;
+        {
+            if (h.Id == id)
+            {
+                return h;
+            }
+        }
         return null;
     }
 
@@ -286,10 +346,18 @@ public partial class BattlePanel : BasePanel
     /// <summary>装备模板查表（M2.5）。建队时才调，不在每帧路径上。</summary>
     private EquipConfig EquipById(int id)
     {
-        if (_equipPool == null) return null;
+        if (_equipPool == null)
+        {
+            return null;
+        }
 
         for (int i = 0; i < _equipPool.Count; i++)
-            if (_equipPool[i].Id == id) return _equipPool[i];
+        {
+            if (_equipPool[i].Id == id)
+            {
+                return _equipPool[i];
+            }
+        }
 
         return null;
     }
@@ -297,10 +365,18 @@ public partial class BattlePanel : BasePanel
     /// <summary>套装表查表（P1）。</summary>
     private EquipSetConfig SetById(int id)
     {
-        if (_equipSetPool == null) return null;
+        if (_equipSetPool == null)
+        {
+            return null;
+        }
 
         for (int i = 0; i < _equipSetPool.Count; i++)
-            if (_equipSetPool[i].Id == id) return _equipSetPool[i];
+        {
+            if (_equipSetPool[i].Id == id)
+            {
+                return _equipSetPool[i];
+            }
+        }
 
         return null;
     }
@@ -308,10 +384,18 @@ public partial class BattlePanel : BasePanel
     /// <summary>装备词条表查表（P1）。</summary>
     private EquipAffixConfig AffixById(int id)
     {
-        if (_equipAffixPool == null) return null;
+        if (_equipAffixPool == null)
+        {
+            return null;
+        }
 
         for (int i = 0; i < _equipAffixPool.Count; i++)
-            if (_equipAffixPool[i].Id == id) return _equipAffixPool[i];
+        {
+            if (_equipAffixPool[i].Id == id)
+            {
+                return _equipAffixPool[i];
+            }
+        }
 
         return null;
     }
@@ -347,15 +431,42 @@ public partial class BattlePanel : BasePanel
         _floats = _TFxLayer as FloatLayer;
 
         // 子界面按钮：不判断子面板是否存在 —— 它们由 UIManager 按需创建
-        if (_TPushBtn != null) _TPushBtn.Pressed += OnResumePush;
-        if (_TNextBtn != null) _TNextBtn.Pressed += OnNext;
-        if (_TInnBtn != null) _TInnBtn.Pressed += OnOpenInn;
-        if (_TStatsBtn != null) _TStatsBtn.Pressed += OnToggleStats;
-        if (_TStageBtn != null) _TStageBtn.Pressed += OnOpenStage;
-        if (_TSkillBtn != null) _TSkillBtn.Pressed += OnOpenSkills;
-        if (_TEquipBtn != null) _TEquipBtn.Pressed += OnOpenEquips;
-        if (_TSaveBtn != null) _TSaveBtn.Pressed += OnOpenSave;
-        if (_TSettingBtn != null) _TSettingBtn.Pressed += OnOpenSettings;
+        if (_TPushBtn != null)
+        {
+            _TPushBtn.Pressed += OnResumePush;
+        }
+        if (_TNextBtn != null)
+        {
+            _TNextBtn.Pressed += OnNext;
+        }
+        if (_TInnBtn != null)
+        {
+            _TInnBtn.Pressed += OnOpenInn;
+        }
+        if (_TStatsBtn != null)
+        {
+            _TStatsBtn.Pressed += OnToggleStats;
+        }
+        if (_TStageBtn != null)
+        {
+            _TStageBtn.Pressed += OnOpenStage;
+        }
+        if (_TSkillBtn != null)
+        {
+            _TSkillBtn.Pressed += OnOpenSkills;
+        }
+        if (_TEquipBtn != null)
+        {
+            _TEquipBtn.Pressed += OnOpenEquips;
+        }
+        if (_TSaveBtn != null)
+        {
+            _TSaveBtn.Pressed += OnOpenSave;
+        }
+        if (_TSettingBtn != null)
+        {
+            _TSettingBtn.Pressed += OnOpenSettings;
+        }
 
         _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
         GameObject.AddChild(_timer);
@@ -381,8 +492,14 @@ public partial class BattlePanel : BasePanel
     {
         ClearBattle();
         _advanceTimer.Stop();
-        if (_TNextBtn != null) _TNextBtn.Visible = false;
-        if (_TPushBtn != null) _TPushBtn.Visible = false;
+        if (_TNextBtn != null)
+        {
+            _TNextBtn.Visible = false;
+        }
+        if (_TPushBtn != null)
+        {
+            _TPushBtn.Visible = false;
+        }
 
         _cult.BeginBattle();      // 本场掉落计数清零
         _silver.BeginBattle();
@@ -395,7 +512,10 @@ public partial class BattlePanel : BasePanel
         _cards.Build(_engine.A, _engine.B, _areaX);
 
         _resultShown = false;
-        if (_TResult != null) _TResult.Visible = false;
+        if (_TResult != null)
+        {
+            _TResult.Visible = false;
+        }
         RefreshHeader();
         _timer.Stop();
         _timer.Start();
@@ -434,7 +554,10 @@ public partial class BattlePanel : BasePanel
         AudioManager.PlayUISFX("ui_open");
         _timer.Stop();
         _advanceTimer.Stop();
-        if (_TInnBtn != null) _TInnBtn.Disabled = true;
+        if (_TInnBtn != null)
+        {
+            _TInnBtn.Disabled = true;
+        }
         InnPanel.BindData(_inn, _silver,
                           heroOf: id => ConfigManager.GetOne<HeroConfig>(id),
                           affixOf: id => ConfigManager.GetOne<QualityConfig>(id),
@@ -447,9 +570,15 @@ public partial class BattlePanel : BasePanel
     private void OnCloseInn()
     {
         AudioManager.PlayUISFX("ui_close");
-        if (_TInnBtn != null) _TInnBtn.Disabled = false;
+        if (_TInnBtn != null)
+        {
+            _TInnBtn.Disabled = false;
+        }
         SaveProgress();   // 招募 / 换编队 / 刷新都在客栈里发生
-        if (_engine != null && !_engine.IsOver) _timer.Start();
+        if (_engine != null && !_engine.IsOver)
+        {
+            _timer.Start();
+        }
         else if (_resultShown) _advanceTimer.Start();
     }
 
@@ -548,7 +677,10 @@ public partial class BattlePanel : BasePanel
     /// <summary>子界面关闭后恢复战斗：未结束则继续 tick，已结束则走结算倒计时。</summary>
     private void ResumeBattle()
     {
-        if (_engine != null && !_engine.IsOver) _timer.Start();
+        if (_engine != null && !_engine.IsOver)
+        {
+            _timer.Start();
+        }
         else if (_resultShown) _advanceTimer.Start();
     }
 
@@ -569,7 +701,9 @@ public partial class BattlePanel : BasePanel
         // 标题只留"当前在哪"（短、稳定）；最高层/场次这类统计挪到下面的战况行 ——
         // 导航条里标题宽度有限，长句会被按钮压住（2026-10-20 用户反馈的遮挡问题）
         if (_TTitle != null)
+        {
             _TTitle.Text = "《轮回大侠》· 第 " + _run.Layer + " 层 " + _run.Wave + "/" + _run.WavesInLayer + " 波" + waveTag + mode;
+        }
 
         // 修为池是"每侠客各一份"，绝对值不如进度直观；战斗中途未结算升级，故进度会冲到 100% 以上 → clamp
         var lvParts = new List<string>();
@@ -600,7 +734,10 @@ public partial class BattlePanel : BasePanel
     {
         _engine.Bus.OnDamage += (a, t, amt, skill) =>
         {
-            if (amt <= 0) return;
+            if (amt <= 0)
+            {
+                return;
+            }
             SpawnFloat(t, "-" + amt.ToString("0"), new Color(1f, 0.4f, 0.3f));
             PlayDamageSound(t, skill);
         };
@@ -622,28 +759,43 @@ public partial class BattlePanel : BasePanel
     /// </summary>
     private void PlayDamageSound(BattleUnit tgt, string skillName)
     {
-        if (!TryWorldAnchor(tgt, out Vector2 pos)) return;
+        if (!TryWorldAnchor(tgt, out Vector2 pos))
+        {
+            return;
+        }
 
         bool isSkill = !string.IsNullOrEmpty(skillName);
         string sfx = isSkill ? "hit_heavy" : "hit_light";
 
         AudioManager.SfxPriority priority = AudioManager.SfxPriority.Hit;
-        if (isSkill) priority = AudioManager.SfxPriority.Crit;
+        if (isSkill)
+        {
+            priority = AudioManager.SfxPriority.Crit;
+        }
 
         AudioManager.PlaySFXAt(sfx, pos, priority);
     }
 
     private void PlayDeathSound(BattleUnit u)
     {
-        if (!TryWorldAnchor(u, out Vector2 pos)) return;
+        if (!TryWorldAnchor(u, out Vector2 pos))
+        {
+            return;
+        }
         AudioManager.PlaySFXAt("death", pos, AudioManager.SfxPriority.Death);
     }
 
     /// <summary>取单位的世界坐标（音频定位用）：先问侠客卡，再问召唤堆叠卡。</summary>
     private bool TryWorldAnchor(BattleUnit u, out Vector2 world)
     {
-        if (_cards.TryGetWorldAnchor(u, out world)) return true;
-        if (_stacks.TryGetWorldAnchor(u, out world)) return true;
+        if (_cards.TryGetWorldAnchor(u, out world))
+        {
+            return true;
+        }
+        if (_stacks.TryGetWorldAnchor(u, out world))
+        {
+            return true;
+        }
         world = Vector2.Zero;
         return false;
     }
@@ -654,7 +806,11 @@ public partial class BattlePanel : BasePanel
         PlayDeathSound(u);   // 必须在移除锚点之前取位置
 
         // 召唤物死亡不留"尸体"：引擎已把它移出队伍，这里同步堆叠卡（减 1，减到 0 就撤卡）
-        if (u.IsSummon) { _stacks.Sync(_engine, _areaX); return; }
+        if (u.IsSummon)
+        {
+            _stacks.Sync(_engine, _areaX);
+            return;
+        }
 
         if (_engine?.B == null || !_engine.B.Contains(u)) return;   // 只结算敌方
         int layer = _run.Layer;
@@ -681,7 +837,10 @@ public partial class BattlePanel : BasePanel
                 if (drop.SetId > 0)
                 {
                     EquipSetConfig sc = SetById(drop.SetId);
-                    if (sc != null) setTag = "〔" + sc.Name + "〕";
+                    if (sc != null)
+                    {
+                        setTag = "〔" + sc.Name + "〕";
+                    }
                 }
 
                 SpawnFloat(u, "得 " + setTag + drop.Name + "（" + EquipRules.RarityName(drop.Rarity) + "）",
@@ -701,12 +860,17 @@ public partial class BattlePanel : BasePanel
 
         // 同步之后再取锚点：否则召唤物还没有堆叠卡，拿不到位置
         if (TryWorldAnchor(unit, out Vector2 pos))
+        {
             AudioManager.PlaySFXAt("spawn", pos, AudioManager.SfxPriority.Summon);
+        }
     }
 
     private void OnEnded(int r)
     {
-        if (_resultShown) return;
+        if (_resultShown)
+        {
+            return;
+        }
         _resultShown = true;
 
         int layer = _run.Layer;
@@ -737,9 +901,20 @@ public partial class BattlePanel : BasePanel
         // 层内续战的血量提示（波间只回 10%，阵亡者不复生）
         var survivors = new List<BattleUnit>();
         foreach (var u in _engine.A)
-            if (!u.IsSummon && u.Slot >= 1) survivors.Add(u);
+        {
+            if (!u.IsSummon && u.Slot >= 1)
+            {
+                survivors.Add(u);
+            }
+        }
         int alive = 0;
-        foreach (var u in survivors) if (u.Alive) alive++;
+        foreach (var u in survivors)
+        {
+            if (u.Alive)
+            {
+                alive++;
+            }
+        }
         string hpTag = alive + "/" + survivors.Count + " 人续战（回 10% 气血）";
 
         if (win)
@@ -753,7 +928,10 @@ public partial class BattlePanel : BasePanel
                 matTag = " · " + MaterialCatalog.NameOf(tier) + "+" + MaterialConfig.MatClearBonus;
 
                 // 全屏事件音：首领波用更重的音，普通清层用轻的（都是居中、不参与方位）
-                if (finisher) AudioManager.PlayEventSFX("boss_down");
+                if (finisher)
+                {
+                    AudioManager.PlayEventSFX("boss_down");
+                }
                 else AudioManager.PlayEventSFX("clear_layer");
             }
 
@@ -787,23 +965,38 @@ public partial class BattlePanel : BasePanel
     // ============ 飘字锚点（编排：先问侠客卡，再问召唤堆叠卡） ============
     private bool TryAnchor(BattleUnit u, out Vector2 pos)
     {
-        if (_cards.TryGetAnchor(u, out pos)) return true;
-        if (_stacks.TryGetAnchor(u, out pos)) return true;
+        if (_cards.TryGetAnchor(u, out pos))
+        {
+            return true;
+        }
+        if (_stacks.TryGetAnchor(u, out pos))
+        {
+            return true;
+        }
         pos = Vector2.Zero;
         return false;
     }
 
     private void SpawnFloat(BattleUnit tgt, string text, Color color)
     {
-        if (!TryAnchor(tgt, out Vector2 p)) return;
+        if (!TryAnchor(tgt, out Vector2 p))
+        {
+            return;
+        }
         _floats.Spawn(p, text, color);
     }
 
     // ============ 逐帧驱动 ============
     private void OnTick()
     {
-        if (_engine == null) return;
-        if (!_engine.IsOver) _engine.Step(SimDt);
+        if (_engine == null)
+        {
+            return;
+        }
+        if (!_engine.IsOver)
+        {
+            _engine.Step(SimDt);
+        }
         _cards.Refresh(_engine);
         _stacks.Sync(_engine, _areaX);
         _floats.Update(TickSec);
@@ -821,7 +1014,9 @@ public partial class BattlePanel : BasePanel
     private void ApplyThemeColors()
     {
         if (_TBg != null)
+        {
             EnsureBackdrop();
+        }
 
         // 子界面各自刷自己的背景与重建（它们不一定存在，静态方法内部判空）
         StagePanel.ApplyThemeCurrent();
@@ -834,7 +1029,9 @@ public partial class BattlePanel : BasePanel
         // 卡牌与堆叠卡的底色是在 Build 时写进 ColorRect 的，换主题必须重建节点。
         // 只重建表现层（读现有 BattleUnit），不碰引擎状态与战斗进度。
         if (_engine == null || _cards == null || _stacks == null)
+        {
             return;
+        }
 
         _cards.Clear();
         _cards.Build(_engine.A, _engine.B, _areaX);
@@ -851,10 +1048,14 @@ public partial class BattlePanel : BasePanel
     private void EnsureBackdrop()
     {
         if (_TBg == null)
+        {
             return;
+        }
 
         if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+        {
             return;
+        }
 
         _backdrop = new BackdropLayer();
         _TBg.AddChild(_backdrop);
@@ -868,7 +1069,13 @@ public partial class BattlePanel : BasePanel
 
     string HeroName(int id)
     {
-        foreach (HeroConfig h in _roster) if (h.Id == id) return h.Name;
+        foreach (HeroConfig h in _roster)
+        {
+            if (h.Id == id)
+            {
+                return h.Name;
+            }
+        }
         return "#" + id;
     }
 }

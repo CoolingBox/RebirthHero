@@ -74,7 +74,10 @@ public static class SaveBackup
     /// <summary>把当前进度另存为一条备份，返回条目（失败返回 null）。</summary>
     public static SaveEntry CreateBackup(GameSave data, string displayName)
     {
-        if (data == null) return null;
+        if (data == null)
+        {
+            return null;
+        }
 
         EnsureDir();
         string internalName = NextFreeInternalName(displayName);
@@ -88,7 +91,10 @@ public static class SaveBackup
     /// </summary>
     public static bool ExportTo(GameSave data, string absolutePath)
     {
-        if (data == null || string.IsNullOrEmpty(absolutePath)) return false;
+        if (data == null || string.IsNullOrEmpty(absolutePath))
+        {
+            return false;
+        }
 
         const string tempName = "ExportTemp";
         SaveManager.Save(data, tempName);
@@ -98,7 +104,9 @@ public static class SaveBackup
         {
             string dir = Path.GetDirectoryName(absolutePath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
+            }
 
             File.Copy(temp, absolutePath, true);
             return true;
@@ -117,7 +125,10 @@ public static class SaveBackup
     /// <summary>从任意路径导入：复制进备份夹（成为一条可见备份），返回内部名；失败返回 null。</summary>
     public static string ImportFrom(string absolutePath)
     {
-        if (string.IsNullOrEmpty(absolutePath) || !File.Exists(absolutePath)) return null;
+        if (string.IsNullOrEmpty(absolutePath) || !File.Exists(absolutePath))
+        {
+            return null;
+        }
 
         EnsureDir();
         string stem = Path.GetFileNameWithoutExtension(absolutePath);
@@ -150,12 +161,18 @@ public static class SaveBackup
     /// <summary>读一份存档（主档或备份）。文件不存在时框架返回 new T()（Written=false），这里按失败处理。</summary>
     public static GameSave LoadInternal(string internalName)
     {
-        if (string.IsNullOrEmpty(internalName)) return null;
+        if (string.IsNullOrEmpty(internalName))
+        {
+            return null;
+        }
 
         try
         {
             GameSave data = SaveManager.Load<GameSave>(internalName);
-            if (data == null || !data.Written) return null;
+            if (data == null || !data.Written)
+            {
+                return null;
+            }
             return data;
         }
         catch (Exception e)
@@ -171,13 +188,19 @@ public static class SaveBackup
         List<SaveEntry> list = new List<SaveEntry>();
 
         SaveEntry main = Describe(MainName, true);
-        if (main != null) list.Add(main);
+        if (main != null)
+        {
+            list.Add(main);
+        }
 
         if (Directory.Exists(BackupsDir))
         {
             List<string> files = new List<string>();
             string[] found = Directory.GetFiles(BackupsDir, "*.json");
-            for (int i = 0; i < found.Length; i++) files.Add(found[i]);
+            for (int i = 0; i < found.Length; i++)
+            {
+                files.Add(found[i]);
+            }
 
             files.Sort(CompareByWriteTimeDesc);
 
@@ -196,8 +219,14 @@ public static class SaveBackup
     {
         DateTime ta = File.GetLastWriteTime(a);
         DateTime tb = File.GetLastWriteTime(b);
-        if (ta > tb) return -1;
-        if (ta < tb) return 1;
+        if (ta > tb)
+        {
+            return -1;
+        }
+        if (ta < tb)
+        {
+            return 1;
+        }
         return 0;
     }
 
@@ -206,10 +235,16 @@ public static class SaveBackup
     /// <summary>删除一条备份。主档不给删（要清档走「重开本世」）。</summary>
     public static bool Delete(string internalName)
     {
-        if (string.IsNullOrEmpty(internalName) || internalName == MainName) return false;
+        if (string.IsNullOrEmpty(internalName) || internalName == MainName)
+        {
+            return false;
+        }
 
         string path = PathOf(internalName);
-        if (!File.Exists(path)) return false;
+        if (!File.Exists(path))
+        {
+            return false;
+        }
 
         TryDelete(path);
         return !File.Exists(path);
@@ -220,7 +255,10 @@ public static class SaveBackup
     static SaveEntry Describe(string internalName, bool isMain)
     {
         GameSave data = LoadInternal(internalName);
-        if (data == null) return null;
+        if (data == null)
+        {
+            return null;
+        }
 
         SaveEntry e = new SaveEntry();
         e.InternalName = internalName;
@@ -236,7 +274,9 @@ public static class SaveBackup
     static void EnsureDir()
     {
         if (!Directory.Exists(BackupsDir))
+        {
             Directory.CreateDirectory(BackupsDir);
+        }
     }
 
     /// <summary>把玩家输入的名字变成安全文件名，并保证不与已有备份撞名（撞了追加 _2/_3）。</summary>
@@ -257,17 +297,31 @@ public static class SaveBackup
     public static string SafeName(string rawName)
     {
         string name = rawName;
-        if (string.IsNullOrEmpty(name) || name.Trim().Length == 0) name = DefaultName();
+        if (string.IsNullOrEmpty(name) || name.Trim().Length == 0)
+        {
+            name = DefaultName();
+        }
         name = name.Trim();
 
         char[] bad = { '\\', '/', ':', '*', '?', '"', '<', '>', '|' };
-        for (int i = 0; i < bad.Length; i++) name = name.Replace(bad[i], '_');
+        for (int i = 0; i < bad.Length; i++)
+        {
+            name = name.Replace(bad[i], '_');
+        }
 
         if (name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
             name = name.Substring(0, name.Length - 5);
+        }
 
-        if (name.Length > 60) name = name.Substring(0, 60);
-        if (name.Length == 0) name = DefaultName();
+        if (name.Length > 60)
+        {
+            name = name.Substring(0, 60);
+        }
+        if (name.Length == 0)
+        {
+            name = DefaultName();
+        }
 
         return name;
     }
@@ -282,7 +336,10 @@ public static class SaveBackup
     {
         try
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
         catch (Exception e)
         {

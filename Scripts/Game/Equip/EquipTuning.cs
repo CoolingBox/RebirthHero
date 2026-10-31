@@ -62,7 +62,12 @@ public sealed class EquipTuning
     public int PiecesOf(int setId)
     {
         for (int i = 0; i < Sets.Count; i++)
-            if (Sets[i].SetId == setId) return Sets[i].Pieces;
+        {
+            if (Sets[i].SetId == setId)
+            {
+                return Sets[i].Pieces;
+            }
+        }
         return 0;
     }
 }
@@ -106,7 +111,10 @@ public static class EquipSets
                                       Func<int, EquipSetConfig> setLookup)
     {
         EquipTuning t = new EquipTuning();
-        if (bag == null || heroId <= 0) return t;
+        if (bag == null || heroId <= 0)
+        {
+            return t;
+        }
 
         int[] slots = bag.SlotsOf(heroId);
 
@@ -119,10 +127,16 @@ public static class EquipSets
 
         for (int i = 0; i < EquipBag.SlotCount; i++)
         {
-            if (slots[i] == 0) continue;
+            if (slots[i] == 0)
+            {
+                continue;
+            }
 
             EquipItem item = bag.Find(slots[i]);
-            if (item == null) continue;
+            if (item == null)
+            {
+                continue;
+            }
 
             EquipConfig cfg = cfgLookup != null ? cfgLookup(item.ConfigId) : null;
             if (cfg != null && cfg.SetId > 0)
@@ -133,11 +147,17 @@ public static class EquipSets
             }
 
             // —— 随机词条 ——
-            if (item.AffixIds == null) continue;
+            if (item.AffixIds == null)
+            {
+                continue;
+            }
             foreach (int affixId in item.AffixIds)
             {
                 EquipAffixConfig a = affixLookup != null ? affixLookup(affixId) : null;
-                if (a == null) continue;
+                if (a == null)
+                {
+                    continue;
+                }
 
                 switch (a.Effect)
                 {
@@ -162,15 +182,26 @@ public static class EquipSets
         foreach (KeyValuePair<int, int> kv in setCount)
         {
             EquipSetConfig sc = setLookup != null ? setLookup(kv.Key) : null;
-            if (sc == null) continue;
+            if (sc == null)
+            {
+                continue;
+            }
 
             SetState st = new SetState();
             st.SetId = kv.Key;
             st.Name = sc.Name;
             st.Pieces = kv.Value;
 
-            if (kv.Value >= 2) { ApplySetEffect(t, sc.Effect2, sc.Value2); st.Active2 = true; }
-            if (kv.Value >= 4) { ApplySetEffect(t, sc.Effect4, sc.Value4); st.Active4 = true; }
+            if (kv.Value >= 2)
+            {
+                ApplySetEffect(t, sc.Effect2, sc.Value2);
+                st.Active2 = true;
+            }
+            if (kv.Value >= 4)
+            {
+                ApplySetEffect(t, sc.Effect4, sc.Value4);
+                st.Active4 = true;
+            }
             t.Sets.Add(st);
         }
 
@@ -223,33 +254,66 @@ public static class EquipSets
     /// </summary>
     public static void ApplyStats(EquipTuning t, BattleUnit u)
     {
-        if (t == null || u == null) return;
+        if (t == null || u == null)
+        {
+            return;
+        }
 
-        if (t.HpPct != 0) { u.BaseHp *= 1 + t.HpPct / 100.0; u.Hp = u.BaseHp; }
-        if (t.AtkPct != 0) u.BaseAtk *= 1 + t.AtkPct / 100.0;
-        if (t.SpdPct != 0) u.BaseSpd *= 1 + t.SpdPct / 100.0;
-        if (t.WeightDelta != 0) u.BaseW = Math.Max(BattleConfig.WFloor, u.BaseW + t.WeightDelta);
+        if (t.HpPct != 0)
+        {
+            u.BaseHp *= 1 + t.HpPct / 100.0;
+            u.Hp = u.BaseHp;
+        }
+        if (t.AtkPct != 0)
+        {
+            u.BaseAtk *= 1 + t.AtkPct / 100.0;
+        }
+        if (t.SpdPct != 0)
+        {
+            u.BaseSpd *= 1 + t.SpdPct / 100.0;
+        }
+        if (t.WeightDelta != 0)
+        {
+            u.BaseW = Math.Max(BattleConfig.WFloor, u.BaseW + t.WeightDelta);
+        }
 
-        if (t.DotPct != 0) u.DotMul = 1 + t.DotPct / 100.0;
-        if (t.DotStackUp != 0) u.DotStackBonus = t.DotStackUp;
+        if (t.DotPct != 0)
+        {
+            u.DotMul = 1 + t.DotPct / 100.0;
+        }
+        if (t.DotStackUp != 0)
+        {
+            u.DotStackBonus = t.DotStackUp;
+        }
 
         // 护盾保持率：百分点加在 0.5 的基准上（50 + 20 = 70 → 行动后留 70%）。
         // 不在这里 clamp —— 引擎 Act() 有唯一的 clamp 点，避免两处上限不一致。
-        if (t.ShieldKeepPct != 0) u.ShieldKeep += t.ShieldKeepPct / 100.0;
+        if (t.ShieldKeepPct != 0)
+        {
+            u.ShieldKeep += t.ShieldKeepPct / 100.0;
+        }
     }
 
     /// <summary>武学参数部分：装配完技能后调用（技能列表必须已经建好）。</summary>
     public static void ApplySkills(EquipTuning t, List<BattleSkill> skills)
     {
-        if (t == null || skills == null) return;
+        if (t == null || skills == null)
+        {
+            return;
+        }
 
         for (int i = 0; i < skills.Count; i++)
+        {
             ApplyToSkill(t, skills[i]);
+        }
     }
 
     static void ApplyToSkill(EquipTuning t, BattleSkill sk)
     {
-        if (sk == null) return;
+        if (sk == null)
+        {
+            return;
+        }
 
         // ① 需求次数（只对"条件=次数"的武学有意义）
         //    2026-10-21 用户口径：**只有原始需求 > 3 次的武学才吃"减次数"，且减后不低于 3**。
@@ -259,14 +323,23 @@ public static class EquipSets
         if (sk.Cond == "count" && sk.CondN > CondDownFloor)
         {
             int down = 0;
-            if (sk.Src == SkillSrc.OnAction) down = t.CondDownAction;
+            if (sk.Src == SkillSrc.OnAction)
+            {
+                down = t.CondDownAction;
+            }
             else if (sk.Src == SkillSrc.OnHit) down = t.CondDownHit;
-            if (sk.Eff == SkillEff.Summon && t.CondDownSummon > down) down = t.CondDownSummon;
+            if (sk.Eff == SkillEff.Summon && t.CondDownSummon > down)
+            {
+                down = t.CondDownSummon;
+            }
 
             if (down > 0)
             {
                 int n = sk.CondN - down;
-                if (n < CondDownFloor) n = CondDownFloor;
+                if (n < CondDownFloor)
+                {
+                    n = CondDownFloor;
+                }
                 sk.CondN = n;
             }
         }
@@ -296,35 +369,55 @@ public static class EquipSets
 
         // ④ 护盾效果
         if (sk.Eff == SkillEff.Shield && t.ShieldPct != 0)
+        {
             sk.Mult *= 1 + t.ShieldPct / 100.0;
+        }
 
         // ⑤ "不能普攻"武学倍率（破军 4 件）：走武学倍率，不开新乘区
         if (sk.CannotAttack && t.CannotAtkPct != 0)
+        {
             sk.Mult *= 1 + t.CannotAtkPct / 100.0;
+        }
 
         // ⑥ 开战计数（破军 2 件 / "先手"词条）：引擎侧参数位，不是"额外行动"
         if (t.CounterUp != 0)
+        {
             sk.CounterOffset += t.CounterUp;
+        }
 
         // ⑦ 召唤物存在时间：Summon 是共享的规格对象，**必须克隆再改**，
         //    否则给一个侠客加时长会污染整张表（所有召唤者一起变长）
         if (t.SummonTtl != 0 && sk.Summon != null)
+        {
             sk.Summon = sk.Summon.WithTtl(sk.Summon.Ttl + t.SummonTtl);
+        }
     }
 
     // ---------- 工具 ----------
 
     static double Clamp(double v, double lo, double hi)
     {
-        if (v < lo) return lo;
-        if (v > hi) return hi;
+        if (v < lo)
+        {
+            return lo;
+        }
+        if (v > hi)
+        {
+            return hi;
+        }
         return v;
     }
 
     static int ClampInt(int v, int lo, int hi)
     {
-        if (v < lo) return lo;
-        if (v > hi) return hi;
+        if (v < lo)
+        {
+            return lo;
+        }
+        if (v > hi)
+        {
+            return hi;
+        }
         return v;
     }
 

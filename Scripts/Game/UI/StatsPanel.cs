@@ -33,7 +33,9 @@ public partial class StatsPanel : BasePanel
         _ctxLayer = layer;
 
         if (_current != null)
+        {
             _current.ApplyBattleContext();
+        }
     }
 
     /// <summary>重开本世：强制下次开战清零统计。</summary>
@@ -41,7 +43,9 @@ public partial class StatsPanel : BasePanel
     {
         _ctxLayer = -1;
         if (_current != null)
+        {
             _current.InvalidateLayer();
+        }
     }
 
     /// <summary>切换显隐（「战报」按钮）。首次点击才创建面板。</summary>
@@ -54,21 +58,26 @@ public partial class StatsPanel : BasePanel
         }
 
         if (_current.GameObject.Visible)
+        {
             UIManager.HidePanel<StatsPanel>();
-        else
-            UIManager.ShowPanel<StatsPanel>();
+        }
+        else UIManager.ShowPanel<StatsPanel>();
     }
 
     /// <summary>逐帧刷新（面板隐藏时内部直接返回，不做无谓计算）。</summary>
     public static void RefreshCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         // ClosePanel 会 QueueFree 根节点；此后 _current 可能指向已释放对象，
         // 而本方法每 tick 被调用 —— 不判有效会抛 ObjectDisposedException。
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.RefreshRows();
     }
@@ -77,10 +86,14 @@ public partial class StatsPanel : BasePanel
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.ApplyTheme();
     }
@@ -116,8 +129,14 @@ public partial class StatsPanel : BasePanel
 
         if (!_wired)
         {
-            if (_TViewBtn != null) _TViewBtn.Pressed += CycleView;
-            if (_TSortBtn != null) _TSortBtn.Pressed += CycleSort;
+            if (_TViewBtn != null)
+            {
+                _TViewBtn.Pressed += CycleView;
+            }
+            if (_TSortBtn != null)
+            {
+                _TSortBtn.Pressed += CycleSort;
+            }
             _wired = true;
         }
 
@@ -134,7 +153,9 @@ public partial class StatsPanel : BasePanel
     void ApplyBattleContext()
     {
         if (_ctxEngine == null)
+        {
             return;
+        }
 
         _stats.Attach(_ctxEngine);
 
@@ -175,7 +196,9 @@ public partial class StatsPanel : BasePanel
     void RefreshRows()
     {
         if (GameObject == null || !GameObject.Visible)
+        {
             return;
+        }
 
         UpdateHeader();
 
@@ -193,7 +216,9 @@ public partial class StatsPanel : BasePanel
                                   + "　伤 " + BigNum.From(sk.Damage).ToString(2)
                                   + "　疗 " + BigNum.From(sk.Heal).ToString(2);
                     if (sk.Taken > 0)
+                    {
                         text += "　承 " + BigNum.From(sk.Taken).ToString(2);
+                    }
                     lbl.Text = text;
                 }
             }
@@ -216,11 +241,19 @@ public partial class StatsPanel : BasePanel
         foreach (Label lbl in _rows.Values) lbl.QueueFree();
         _rows.Clear();
 
-        if (_TBody == null || _team == null) return;
+        if (_TBody == null || _team == null)
+        {
+            return;
+        }
 
         List<BattleUnit> heroes = new List<BattleUnit>();
         foreach (BattleUnit u in _team)
-            if (!u.IsSummon && u.Slot >= 1) heroes.Add(u);
+        {
+            if (!u.IsSummon && u.Slot >= 1)
+            {
+                heroes.Add(u);
+            }
+        }
         heroes.Sort(CompareSlot);
 
         Color heroColor = UIThemeManager.Accent;
@@ -238,7 +271,9 @@ public partial class StatsPanel : BasePanel
 
                 List<StatsTracker.SkillStat> sk = new List<StatsTracker.SkillStat>();
                 foreach (BattleSkill s in h.Skills)
+                {
                     sk.Add(_stats.EnsureSkill(h, s.Name));
+                }
                 sk.Sort(SkillDesc);
 
                 foreach (StatsTracker.SkillStat ss in sk)
@@ -254,8 +289,12 @@ public partial class StatsPanel : BasePanel
             // —— 按武学排列：每条 (侠客|武学) 独立成行，按指标降序 ——
             List<StatsTracker.SkillStat> sk = new List<StatsTracker.SkillStat>();
             foreach (BattleUnit h in heroes)
+            {
                 foreach (BattleSkill s in h.Skills)
+                {
                     sk.Add(_stats.EnsureSkill(h, s.Name));
+                }
+            }
             sk.Sort(SkillDesc);
 
             foreach (StatsTracker.SkillStat ss in sk)
@@ -276,14 +315,23 @@ public partial class StatsPanel : BasePanel
 
     void UpdateButtons()
     {
-        if (_TViewBtn != null) _TViewBtn.Text = _view == 0 ? "按侠客" : "按武学";
-        if (_TSortBtn != null) _TSortBtn.Text = "序：" + MetricName(_metric);
+        if (_TViewBtn != null)
+        {
+            _TViewBtn.Text = _view == 0 ? "按侠客" : "按武学";
+        }
+        if (_TSortBtn != null)
+        {
+            _TSortBtn.Text = "序：" + MetricName(_metric);
+        }
         UpdateHeader();
     }
 
     void UpdateHeader()
     {
-        if (_THeader == null) return;
+        if (_THeader == null)
+        {
+            return;
+        }
         _THeader.Text = "第 " + _layer + " 层 · 战报（本层实时 · 每层刷新）";
     }
 

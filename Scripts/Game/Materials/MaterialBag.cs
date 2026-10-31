@@ -12,7 +12,10 @@ public sealed class MaterialBag
     /// <summary>入库（tier 从 1 起；非法输入直接忽略）。</summary>
     public void Add(int tier, int count)
     {
-        if (tier <= 0 || count <= 0) return;
+        if (tier <= 0 || count <= 0)
+        {
+            return;
+        }
         _byTier.TryGetValue(tier, out long cur);
         _byTier[tier] = cur + count;
     }
@@ -20,7 +23,10 @@ public sealed class MaterialBag
     /// <summary>某档持有量（未登记返回 0）。</summary>
     public long Get(int tier)
     {
-        if (_byTier.TryGetValue(tier, out long v)) return v;
+        if (_byTier.TryGetValue(tier, out long v))
+        {
+            return v;
+        }
         return 0;
     }
 
@@ -30,7 +36,10 @@ public sealed class MaterialBag
         get
         {
             long sum = 0;
-            foreach (var kv in _byTier) sum += kv.Value;
+            foreach (var kv in _byTier)
+            {
+                sum += kv.Value;
+            }
             return sum;
         }
     }
@@ -38,7 +47,10 @@ public sealed class MaterialBag
     /// <summary>读档：直接写入某档位持有量（非法档位/数量忽略）。</summary>
     public void Restore(int tier, long count)
     {
-        if (tier <= 0 || count <= 0) return;
+        if (tier <= 0 || count <= 0)
+        {
+            return;
+        }
         _byTier[tier] = count;
     }
 

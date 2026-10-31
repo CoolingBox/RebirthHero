@@ -77,43 +77,67 @@ public sealed class StatsTracker
     // 归账到哪个侠客：玩家侠客→自身；玩家召唤物→其召唤者；其余→null（不统计）
     BattleUnit ResolveHero(BattleUnit u)
     {
-        if (u == null) return null;
-        if (u.IsSummon && u.Summoner != null) return u.Summoner;
-        if (_isPlayerHero != null && _isPlayerHero(u)) return u;
+        if (u == null)
+        {
+            return null;
+        }
+        if (u.IsSummon && u.Summoner != null)
+        {
+            return u.Summoner;
+        }
+        if (_isPlayerHero != null && _isPlayerHero(u))
+        {
+            return u;
+        }
         return null;
     }
 
     // 归账到哪个武学名：玩家召唤物的伤害/承伤强制归入其召唤来源武学；其余用事件自带的 skill 名
     string ResolveSkill(BattleUnit u, string evtSkill)
     {
-        if (u != null && u.IsSummon && u.SummonFrom != null) return u.SummonFrom.Name;
+        if (u != null && u.IsSummon && u.SummonFrom != null)
+        {
+            return u.SummonFrom.Name;
+        }
         return evtSkill;
     }
 
     void OnAction(BattleUnit u, bool combo)
     {
         var h = ResolveHero(u);
-        if (h == null) return;
+        if (h == null)
+        {
+            return;
+        }
         Hero(h).Actions++;
     }
 
     void OnSkill(BattleUnit u, string name)
     {
         var h = ResolveHero(u);
-        if (h == null || string.IsNullOrEmpty(name)) return;
+        if (h == null || string.IsNullOrEmpty(name))
+        {
+            return;
+        }
         Hero(h).Triggers++;
         Skill(h, name).Triggers++;
     }
 
     void OnDamage(BattleUnit a, BattleUnit t, double amt, string skill)
     {
-        if (amt <= 0) return;
+        if (amt <= 0)
+        {
+            return;
+        }
         var ha = ResolveHero(a);
         if (ha != null)
         {
             Hero(ha).Damage += amt;
             string sk = ResolveSkill(a, skill);
-            if (!string.IsNullOrEmpty(sk)) Skill(ha, sk).Damage += amt;
+            if (!string.IsNullOrEmpty(sk))
+            {
+                Skill(ha, sk).Damage += amt;
+            }
         }
         var ht = ResolveHero(t);
         if (ht != null)
@@ -121,19 +145,27 @@ public sealed class StatsTracker
             Hero(ht).Taken += amt;
             // 召唤物承伤也归入其召唤来源武学
             if (t != null && t.IsSummon && t.SummonFrom != null)
+            {
                 Skill(ht, t.SummonFrom.Name).Taken += amt;
+            }
         }
     }
 
     void OnHeal(BattleUnit a, BattleUnit t, double amt, string skill)
     {
-        if (amt <= 0) return;
+        if (amt <= 0)
+        {
+            return;
+        }
         var ha = ResolveHero(a);
         if (ha != null)
         {
             Hero(ha).Heal += amt;
             string sk = ResolveSkill(a, skill);
-            if (!string.IsNullOrEmpty(sk)) Skill(ha, sk).Heal += amt;
+            if (!string.IsNullOrEmpty(sk))
+            {
+                Skill(ha, sk).Heal += amt;
+            }
         }
     }
 
@@ -208,7 +240,10 @@ public sealed class StatsTracker
     private static int CompareHeroSlot(HeroStat x, HeroStat y)
     {
         int c = x.Slot.CompareTo(y.Slot);
-        if (c != 0) return c;
+        if (c != 0)
+        {
+            return c;
+        }
         return string.Compare(x.Name, y.Name);
     }
 

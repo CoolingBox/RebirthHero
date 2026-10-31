@@ -48,10 +48,14 @@ public partial class SkillsPanel : BasePanel
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.ApplyTheme();
     }
@@ -101,7 +105,10 @@ public partial class SkillsPanel : BasePanel
 
         if (!_wired)
         {
-            if (_TCloseBtn != null) _TCloseBtn.Pressed += OnClosePressed;
+            if (_TCloseBtn != null)
+            {
+                _TCloseBtn.Pressed += OnClosePressed;
+            }
             _wired = true;
         }
 
@@ -110,23 +117,33 @@ public partial class SkillsPanel : BasePanel
 
     public void ApplyTheme()
     {
-        if (_loadout != null) Build();
+        if (_loadout != null)
+        {
+            Build();
+        }
     }
 
     void OnClosePressed()
     {
         AudioManager.PlayUISFX("ui_close");
         HidePanel<SkillsPanel>();
-        if (_onClose != null) _onClose();
+        if (_onClose != null)
+        {
+            _onClose();
+        }
     }
 
     void EnsureBackdrop()
     {
         if (_TBg == null)
+        {
             return;
+        }
 
         if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+        {
             return;
+        }
 
         _backdrop = new BackdropLayer();
         _TBg.AddChild(_backdrop);
@@ -136,20 +153,26 @@ public partial class SkillsPanel : BasePanel
 
     void Build()
     {
-        if (_loadout == null || _roster == null) return;
+        if (_loadout == null || _roster == null)
+        {
+            return;
+        }
 
         bool hasSel = _selHero > 0 && _selSlot >= 0 && _selSlot < SkillLoadout.Slots;
 
         if (_THint != null)
         {
             if (hasSel)
+            {
                 _THint.Text = "已选中　" + HeroName(_selHero) + "　第 " + (_selSlot + 1) + " 槽　→　点下方武学装配";
-            else
-                _THint.Text = "先点上方某个槽位，再点下方武学装配";
+            }
+            else _THint.Text = "先点上方某个槽位，再点下方武学装配";
         }
 
         if (_TBottomHint != null)
+        {
             _TBottomHint.Text = "免费更换、随时生效（下一场战斗起）。同一侠客不可重复装配同一武学。";
+        }
 
         BuildHeroRows();
         BuildPool(hasSel);
@@ -157,7 +180,10 @@ public partial class SkillsPanel : BasePanel
 
     void BuildHeroRows()
     {
-        if (_TContent == null) return;
+        if (_TContent == null)
+        {
+            return;
+        }
         foreach (Node c in _TContent.GetChildren()) c.QueueFree();
 
         foreach (HeroConfig h in _roster)
@@ -191,7 +217,10 @@ public partial class SkillsPanel : BasePanel
                 string nm = skillId > 0 ? SkillName(skillId) : "（空）";
                 btn.Text = (selected ? "▶ " : "") + slotTag + " " + nm;
                 btn.CustomMinimumSize = new Vector2(320, 44);
-                if (selected) btn.AddThemeColorOverride("font_color", Green);
+                if (selected)
+                {
+                    btn.AddThemeColorOverride("font_color", Green);
+                }
                 else if (skillId <= 0) btn.AddThemeColorOverride("font_color", Dim);
 
                 btn.Pressed += () =>
@@ -209,7 +238,10 @@ public partial class SkillsPanel : BasePanel
 
     void BuildPool(bool hasSel)
     {
-        if (_TPool == null) return;
+        if (_TPool == null)
+        {
+            return;
+        }
         foreach (Node c in _TPool.GetChildren()) c.QueueFree();
 
         // 第一格 = 清空当前槽
@@ -227,11 +259,17 @@ public partial class SkillsPanel : BasePanel
         };
         _TPool.AddChild(clearBtn);
 
-        if (_poolSkills == null) return;
+        if (_poolSkills == null)
+        {
+            return;
+        }
 
         foreach (SkillConfig s in _poolSkills)
         {
-            if (s == null) continue;
+            if (s == null)
+            {
+                continue;
+            }
             int skillId = s.Id;
             bool equipped = hasSel && _loadout.Has(_selHero, skillId);
 
@@ -239,7 +277,10 @@ public partial class SkillsPanel : BasePanel
             b.Text = s.Name;
             b.CustomMinimumSize = new Vector2(180, 40);
             b.Disabled = !hasSel;
-            if (equipped) b.AddThemeColorOverride("font_color", Gold);
+            if (equipped)
+            {
+                b.AddThemeColorOverride("font_color", Gold);
+            }
 
             b.Pressed += () =>
             {
@@ -255,17 +296,31 @@ public partial class SkillsPanel : BasePanel
 
     string SkillName(int skillId)
     {
-        if (_skillOf == null) return "#" + skillId;
+        if (_skillOf == null)
+        {
+            return "#" + skillId;
+        }
         SkillConfig cfg = _skillOf(skillId);
-        if (cfg == null) return "#" + skillId;
+        if (cfg == null)
+        {
+            return "#" + skillId;
+        }
         return cfg.Name;
     }
 
     string HeroName(int heroId)
     {
-        if (_roster == null) return "#" + heroId;
+        if (_roster == null)
+        {
+            return "#" + heroId;
+        }
         foreach (HeroConfig h in _roster)
-            if (h.Id == heroId) return h.Name;
+        {
+            if (h.Id == heroId)
+            {
+                return h.Name;
+            }
+        }
         return "#" + heroId;
     }
 }

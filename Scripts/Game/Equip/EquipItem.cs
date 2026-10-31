@@ -64,8 +64,15 @@ public sealed class EquipBag
         item.ConfigId = configId;
         item.Level = 0;
         if (affixIds != null)
+        {
             foreach (int id in affixIds)
-                if (id > 0) item.AffixIds.Add(id);
+            {
+                if (id > 0)
+                {
+                    item.AffixIds.Add(id);
+                }
+            }
+        }
         _nextUid++;
 
         _items.Add(item);
@@ -75,7 +82,12 @@ public sealed class EquipBag
     public EquipItem Find(int uid)
     {
         for (int i = 0; i < _items.Count; i++)
-            if (_items[i].Uid == uid) return _items[i];
+        {
+            if (_items[i].Uid == uid)
+            {
+                return _items[i];
+            }
+        }
 
         return null;
     }
@@ -85,7 +97,9 @@ public sealed class EquipBag
     {
         int[] slots;
         if (_worn.TryGetValue(heroId, out slots))
+        {
             return slots;
+        }
 
         slots = new int[SlotCount];
         _worn[heroId] = slots;
@@ -99,16 +113,28 @@ public sealed class EquipBag
     public bool Equip(int heroId, int uid, Func<int, EquipConfig> lookup)
     {
         EquipItem item = Find(uid);
-        if (item == null) return false;
+        if (item == null)
+        {
+            return false;
+        }
 
         EquipConfig cfg = lookup != null ? lookup(item.ConfigId) : null;
-        if (cfg == null) return false;
+        if (cfg == null)
+        {
+            return false;
+        }
 
         int idx = (int)cfg.Slot - 1;
-        if (idx < 0 || idx >= SlotCount) return false;
+        if (idx < 0 || idx >= SlotCount)
+        {
+            return false;
+        }
 
         // 同一件装备不能同时穿在两个人身上（换人会先卸下，这里兜底防脏数据）
-        if (IsWornByOther(heroId, uid)) return false;
+        if (IsWornByOther(heroId, uid))
+        {
+            return false;
+        }
 
         SlotsOf(heroId)[idx] = uid;
         return true;
@@ -118,10 +144,16 @@ public sealed class EquipBag
     public bool Unequip(int heroId, EquipSlot slot)
     {
         int idx = (int)slot - 1;
-        if (idx < 0 || idx >= SlotCount) return false;
+        if (idx < 0 || idx >= SlotCount)
+        {
+            return false;
+        }
 
         int[] slots = SlotsOf(heroId);
-        if (slots[idx] == 0) return false;
+        if (slots[idx] == 0)
+        {
+            return false;
+        }
 
         slots[idx] = 0;
         return true;
@@ -132,18 +164,30 @@ public sealed class EquipBag
     {
         EquipBonus bonus = new EquipBonus();
 
-        if (lookup == null) return bonus;
+        if (lookup == null)
+        {
+            return bonus;
+        }
 
         int[] slots = SlotsOf(heroId);
         for (int i = 0; i < SlotCount; i++)
         {
-            if (slots[i] == 0) continue;
+            if (slots[i] == 0)
+            {
+                continue;
+            }
 
             EquipItem item = Find(slots[i]);
-            if (item == null) continue;
+            if (item == null)
+            {
+                continue;
+            }
 
             EquipConfig cfg = lookup(item.ConfigId);
-            if (cfg == null) continue;
+            if (cfg == null)
+            {
+                continue;
+            }
 
             bonus.Atk += EquipRules.AtkOf(item, cfg);
             bonus.Hp += EquipRules.HpOf(item, cfg);
@@ -157,11 +201,19 @@ public sealed class EquipBag
     {
         foreach (KeyValuePair<int, int[]> kv in _worn)
         {
-            if (kv.Key == heroId) continue;
+            if (kv.Key == heroId)
+            {
+                continue;
+            }
 
             int[] slots = kv.Value;
             for (int i = 0; i < SlotCount; i++)
-                if (slots[i] == uid) return true;
+            {
+                if (slots[i] == uid)
+                {
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -172,24 +224,40 @@ public sealed class EquipBag
     /// <summary>读档：恢复一件装备实例（含随机词条）。Uid 递增器跟着抬高，避免之后新掉落撞号。</summary>
     public void RestoreItem(int uid, int configId, int level, List<int> affixIds = null)
     {
-        if (uid <= 0 || configId <= 0) return;
+        if (uid <= 0 || configId <= 0)
+        {
+            return;
+        }
 
         EquipItem item = new EquipItem();
         item.Uid = uid;
         item.ConfigId = configId;
         item.Level = level > 0 ? level : 0;
         if (affixIds != null)
+        {
             foreach (int id in affixIds)
-                if (id > 0) item.AffixIds.Add(id);
+            {
+                if (id > 0)
+                {
+                    item.AffixIds.Add(id);
+                }
+            }
+        }
 
         _items.Add(item);
-        if (uid >= _nextUid) _nextUid = uid + 1;
+        if (uid >= _nextUid)
+        {
+            _nextUid = uid + 1;
+        }
     }
 
     /// <summary>读档：恢复某人四个栏位。指向不存在的 Uid 一律留空（脏档不至于让建队炸掉）。</summary>
     public void RestoreWorn(int heroId, int[] uids)
     {
-        if (heroId <= 0) return;
+        if (heroId <= 0)
+        {
+            return;
+        }
 
         int[] slots = SlotsOf(heroId);
         for (int i = 0; i < SlotCount; i++)
@@ -203,18 +271,31 @@ public sealed class EquipBag
     public List<int> WornHeroIds()
     {
         List<int> ids = new List<int>();
-        foreach (KeyValuePair<int, int[]> kv in _worn) ids.Add(kv.Key);
+        foreach (KeyValuePair<int, int[]> kv in _worn)
+        {
+            ids.Add(kv.Key);
+        }
         return ids;
     }
 
     /// <summary>该 Uid 是否被某人穿着（0 = 没穿）。</summary>
     public int WornBy(int uid)
     {
-        if (uid == 0) return 0;
+        if (uid == 0)
+        {
+            return 0;
+        }
 
         foreach (KeyValuePair<int, int[]> kv in _worn)
+        {
             for (int i = 0; i < SlotCount; i++)
-                if (kv.Value[i] == uid) return kv.Key;
+            {
+                if (kv.Value[i] == uid)
+                {
+                    return kv.Key;
+                }
+            }
+        }
 
         return 0;
     }
@@ -225,11 +306,20 @@ public sealed class EquipBag
     /// </summary>
     public bool Remove(int uid)
     {
-        if (uid == 0) return false;
-        if (WornBy(uid) != 0) return false;
+        if (uid == 0)
+        {
+            return false;
+        }
+        if (WornBy(uid) != 0)
+        {
+            return false;
+        }
 
         EquipItem item = Find(uid);
-        if (item == null) return false;
+        if (item == null)
+        {
+            return false;
+        }
 
         _items.Remove(item);
         return true;

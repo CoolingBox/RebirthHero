@@ -77,8 +77,14 @@ public partial class InnPanel : BasePanel
         if (!_wired)
         {
             InitStatic();
-            if (_TRefreshBtn != null) _TRefreshBtn.Pressed += OnRefreshClicked;
-            if (_TCloseBtn != null) _TCloseBtn.Pressed += OnCloseClicked;
+            if (_TRefreshBtn != null)
+            {
+                _TRefreshBtn.Pressed += OnRefreshClicked;
+            }
+            if (_TCloseBtn != null)
+            {
+                _TCloseBtn.Pressed += OnCloseClicked;
+            }
             _wired = true;
         }
         Refresh();
@@ -105,7 +111,10 @@ public partial class InnPanel : BasePanel
     // ================= 绘制 =================
     public void Refresh()
     {
-        if (_inn == null) return;
+        if (_inn == null)
+        {
+            return;
+        }
         float x0 = 60f;
         float gap = 24f;
         float w = GameObject.Size.X;                          // 设计分辨率宽（1920），来自 .tscn 撑满的根面板
@@ -113,7 +122,10 @@ public partial class InnPanel : BasePanel
         float cardH = 320f;
         float rowW = w - x0 * 2f;
 
-        if (_TSilver != null) _TSilver.Text = "银两 " + Fmt(CurrentSilver());
+        if (_TSilver != null)
+        {
+            _TSilver.Text = "银两 " + Fmt(CurrentSilver());
+        }
 
         if (_THint != null)
             _THint.Text = "已刷新 " + _inn.RefreshUsed + " 次　·　栏位 " + _inn.Slots.Count + "/" + InnConfig.InnSlots
@@ -140,8 +152,7 @@ public partial class InnPanel : BasePanel
                      "上阵阵容 " + _inn.Roster.Count + "/" + InnConfig.RosterSize + "　（①1号位=前排·吸仇恨·+30%气血；" +
                      "◀▶ 调站位，下一场生效）", 16, Gold);
 
-            for (int i = 0; i < InnConfig.RosterSize; i++)
-                _TFormationBox.AddChild(MakeFormationRow(i, rowW));
+            for (int i = 0; i < InnConfig.RosterSize; i++) _TFormationBox.AddChild(MakeFormationRow(i, rowW));
 
             string benchHint = _inn.Roster.Count >= InnConfig.RosterSize ? "（已满 —— 先「下阵」腾位）" : "";
             AddLabel(_TFormationBox, Vector2.Zero, new Vector2(rowW, 22), "候补 · 未上阵 " + benchHint, 15, Gold);
@@ -150,7 +161,10 @@ public partial class InnPanel : BasePanel
             var bench = new List<HeroQuality>();
             foreach (HeroQuality q in _inn.Recruited)
             {
-                if (!_inn.InRoster(q.HeroId)) bench.Add(q);
+                if (!_inn.InRoster(q.HeroId))
+                {
+                    bench.Add(q);
+                }
             }
             bench.Sort(CompareBench);   // 星级降序 → 英雄 Id 升序
 
@@ -160,28 +174,37 @@ public partial class InnPanel : BasePanel
             grid.AddThemeConstantOverride("v_separation", 6);
             _TFormationBox.AddChild(grid);
             if (bench.Count == 0)
+            {
                 AddLabel(grid, Vector2.Zero, new Vector2(1000, 26), "（暂无候补 —— 去上面招人）", 14, Dim);
-            else
-                foreach (HeroQuality q in bench) grid.AddChild(MakeBenchButton(q));
+            }
+            else foreach (HeroQuality q in bench) grid.AddChild(MakeBenchButton(q));
         }
 
         if (_TBottomHint != null)
+        {
             _TBottomHint.Text = "上下阵 / 站位变更在**下一场战斗**生效；已招侠客当世锁定（不可退换）。";
+        }
 
         UIThemeManager.ApplyTo(GameObject);
 
         if (_TBg != null)
+        {
             EnsureBackdrop();
+        }
     }
 
     /// <summary>背景层只建一次；换主题时由 BackdropLayer 自己刷新，不重建节点。</summary>
     void EnsureBackdrop()
     {
         if (_TBg == null)
+        {
             return;
+        }
 
         if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+        {
             return;
+        }
 
         _backdrop = new BackdropLayer();
         _TBg.AddChild(_backdrop);
@@ -191,14 +214,20 @@ public partial class InnPanel : BasePanel
     {
         if (_inn.TryRefresh(_silver))
         {
-            if (_onRosterChanged != null) _onRosterChanged();
+            if (_onRosterChanged != null)
+            {
+                _onRosterChanged();
+            }
             Refresh();
         }
     }
 
     void OnCloseClicked()
     {
-        if (_onClose != null) _onClose();
+        if (_onClose != null)
+        {
+            _onClose();
+        }
         HidePanel<InnPanel>();   // BasePanel 保护方法 → UIManager.HidePanel
     }
 
@@ -249,7 +278,10 @@ public partial class InnPanel : BasePanel
         else
         {
             var parts = new List<string>();
-            foreach (int id in q.AffixIds) parts.Add(AffixName(id));
+            foreach (int id in q.AffixIds)
+            {
+                parts.Add(AffixName(id));
+            }
             affix = "词条　" + string.Join(" · ", parts);
         }
         Color affixColor = q.AffixIds.Count > 0 ? Gold : Dim;
@@ -267,7 +299,10 @@ public partial class InnPanel : BasePanel
         {
             if (_inn.TryRecruit(q, _silver))
             {
-                if (_onRosterChanged != null) _onRosterChanged();
+                if (_onRosterChanged != null)
+                {
+                    _onRosterChanged();
+                }
                 Refresh();
             }
         };
@@ -307,7 +342,10 @@ public partial class InnPanel : BasePanel
             bool isBase = q == null || q.IsBase;
 
             string nameText;
-            if (isBase) nameText = nm + "（基准）";
+            if (isBase)
+            {
+                nameText = nm + "（基准）";
+            }
             else nameText = nm + "　" + q.StarText;
             var nameL = new Label();
             nameL.Text = nameText;
@@ -326,7 +364,10 @@ public partial class InnPanel : BasePanel
                 if (q.AffixIds.Count > 0)
                 {
                     var parts = new List<string>();
-                    foreach (int id in q.AffixIds) parts.Add(AffixName(id));
+                    foreach (int id in q.AffixIds)
+                    {
+                        parts.Add(AffixName(id));
+                    }
                     qline = qline + "　" + string.Join("·", parts);
                 }
             }
@@ -358,7 +399,10 @@ public partial class InnPanel : BasePanel
         {
             if (hasHero && _inn.MoveRoster(_inn.Roster[idx], -1))
             {
-                if (_onRosterChanged != null) _onRosterChanged();
+                if (_onRosterChanged != null)
+                {
+                    _onRosterChanged();
+                }
                 Refresh();
             }
         };
@@ -370,7 +414,10 @@ public partial class InnPanel : BasePanel
         {
             if (hasHero && _inn.MoveRoster(_inn.Roster[idx], +1))
             {
-                if (_onRosterChanged != null) _onRosterChanged();
+                if (_onRosterChanged != null)
+                {
+                    _onRosterChanged();
+                }
                 Refresh();
             }
         };
@@ -383,7 +430,10 @@ public partial class InnPanel : BasePanel
             if (hasHero)
             {
                 _inn.RemoveFromRoster(_inn.Roster[idx]);
-                if (_onRosterChanged != null) _onRosterChanged();
+                if (_onRosterChanged != null)
+                {
+                    _onRosterChanged();
+                }
                 Refresh();
             }
         };
@@ -402,12 +452,18 @@ public partial class InnPanel : BasePanel
         btn.Text = "上阵 " + nm + " " + q.StarText;
         btn.CustomMinimumSize = new Vector2(200, 44);
         btn.Disabled = full;
-        if (!full) btn.AddThemeColorOverride("font_color", Green);
+        if (!full)
+        {
+            btn.AddThemeColorOverride("font_color", Green);
+        }
         btn.Pressed += () =>
         {
             if (_inn.AddToRoster(q.HeroId))
             {
-                if (_onRosterChanged != null) _onRosterChanged();
+                if (_onRosterChanged != null)
+                {
+                    _onRosterChanged();
+                }
                 Refresh();
             }
         };
@@ -418,23 +474,38 @@ public partial class InnPanel : BasePanel
 
     double CurrentSilver()
     {
-        if (_silver != null) return _silver.Amount;
+        if (_silver != null)
+        {
+            return _silver.Amount;
+        }
         return 0;
     }
 
     string HeroName(int id)
     {
-        if (_heroOf == null) return "#" + id;
+        if (_heroOf == null)
+        {
+            return "#" + id;
+        }
         HeroConfig h = _heroOf(id);
-        if (h == null) return "#" + id;
+        if (h == null)
+        {
+            return "#" + id;
+        }
         return h.Name;
     }
 
     string AffixName(int id)
     {
-        if (_affixOf == null) return "#" + id;
+        if (_affixOf == null)
+        {
+            return "#" + id;
+        }
         QualityConfig a = _affixOf(id);
-        if (a == null) return "#" + id;
+        if (a == null)
+        {
+            return "#" + id;
+        }
         return a.Name;
     }
 
@@ -458,14 +529,23 @@ public partial class InnPanel : BasePanel
 
     static string Signed(double v)
     {
-        if (v >= 0) return "+" + v.ToString("0.#");
+        if (v >= 0)
+        {
+            return "+" + v.ToString("0.#");
+        }
         return v.ToString("0.#");
     }
 
     static string Fmt(double v)
     {
-        if (v >= 1e8) return (v / 1e8).ToString("0.##") + "亿";
-        if (v >= 1e4) return (v / 1e4).ToString("0.##") + "万";
+        if (v >= 1e8)
+        {
+            return (v / 1e8).ToString("0.##") + "亿";
+        }
+        if (v >= 1e4)
+        {
+            return (v / 1e4).ToString("0.##") + "万";
+        }
         return v.ToString("0.#");
     }
 

@@ -43,10 +43,14 @@ public partial class SavePanel : BasePanel
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.RefreshList();
     }
@@ -54,7 +58,10 @@ public partial class SavePanel : BasePanel
     public override void OnClose()
     {
         // ClosePanel 会 QueueFree 根节点；静态引用必须清掉，否则静态入口会摸到已释放对象
-        if (_current == this) _current = null;
+        if (_current == this)
+        {
+            _current = null;
+        }
         base.OnClose();
     }
 
@@ -75,24 +82,48 @@ public partial class SavePanel : BasePanel
 
         if (!_wired)
         {
-            if (_TCloseBtn != null) _TCloseBtn.Pressed += OnClosePressed;
-            if (_TBtnSaveNow != null) _TBtnSaveNow.Pressed += OnSaveNow;
-            if (_TBtnBackup != null) _TBtnBackup.Pressed += OnBackupPressed;
-            if (_TBtnImport != null) _TBtnImport.Pressed += OnImportPressed;
-            if (_TChkAuto != null) _TChkAuto.Toggled += OnAutoSaveToggled;
+            if (_TCloseBtn != null)
+            {
+                _TCloseBtn.Pressed += OnClosePressed;
+            }
+            if (_TBtnSaveNow != null)
+            {
+                _TBtnSaveNow.Pressed += OnSaveNow;
+            }
+            if (_TBtnBackup != null)
+            {
+                _TBtnBackup.Pressed += OnBackupPressed;
+            }
+            if (_TBtnImport != null)
+            {
+                _TBtnImport.Pressed += OnImportPressed;
+            }
+            if (_TChkAuto != null)
+            {
+                _TChkAuto.Toggled += OnAutoSaveToggled;
+            }
             _wired = true;
         }
 
         bool mobile = SaveBackup.IsMobile;
         if (_TBtnImport != null) _TBtnImport.Visible = !mobile;   // 移动端没有可浏览的路径
 
-        if (_THeading != null) _THeading.Text = "存档 · v" + SaveBackup.Version;
+        if (_THeading != null)
+        {
+            _THeading.Text = "存档 · v" + SaveBackup.Version;
+        }
 
         // SetPressedNoSignal：程序化赋值不该触发 Toggled（否则一打开面板就写一次设置）
-        if (_TChkAuto != null) _TChkAuto.SetPressedNoSignal(SettingManager.Data.AutoSave);
+        if (_TChkAuto != null)
+        {
+            _TChkAuto.SetPressedNoSignal(SettingManager.Data.AutoSave);
+        }
 
         // 默认名按"版本号 + 日期"预填，玩家想改就改
-        if (_TNameEdit != null) _TNameEdit.Text = SaveBackup.DefaultName();
+        if (_TNameEdit != null)
+        {
+            _TNameEdit.Text = SaveBackup.DefaultName();
+        }
 
         RefreshList();
         SetStatus(mobile
@@ -109,7 +140,10 @@ public partial class SavePanel : BasePanel
     {
         AudioManager.PlayUISFX("ui_close");
         HidePanel<SavePanel>();
-        if (_ctxOnClose != null) _ctxOnClose();
+        if (_ctxOnClose != null)
+        {
+            _ctxOnClose();
+        }
     }
 
     // ================= ① 保存 =================
@@ -135,7 +169,10 @@ public partial class SavePanel : BasePanel
         settings.AutoSave = pressed;
         SaveManager.Save(settings);
 
-        if (_ctxAutoSaveChanged != null) _ctxAutoSaveChanged();
+        if (_ctxAutoSaveChanged != null)
+        {
+            _ctxAutoSaveChanged();
+        }
         SetStatus(pressed
             ? "已开启：每 " + SaveBackup.AutoSaveMinutes + " 分钟自动保存主存档。"
             : "已关闭自动保存：记得手动保存或退出（退出时仍会兜底存一次）。");
@@ -166,14 +203,20 @@ public partial class SavePanel : BasePanel
 
             AudioManager.PlayEventSFX("ui_confirm");
             SetStatus("已备份：" + entry.DisplayName);
-            if (_TNameEdit != null) _TNameEdit.Text = SaveBackup.DefaultName();
+            if (_TNameEdit != null)
+            {
+                _TNameEdit.Text = SaveBackup.DefaultName();
+            }
             RefreshList();
             return;
         }
 
         // 桌面端：弹出文件对话框选路径（默认名 = 版本号_日期，可改）
         FileDialog dialog = EnsureDialog();
-        if (dialog == null) return;
+        if (dialog == null)
+        {
+            return;
+        }
 
         _dialogIsExport = true;
         dialog.FileMode = FileDialog.FileModeEnum.SaveFile;
@@ -183,10 +226,16 @@ public partial class SavePanel : BasePanel
 
     void OnImportPressed()
     {
-        if (SaveBackup.IsMobile) return;
+        if (SaveBackup.IsMobile)
+        {
+            return;
+        }
 
         FileDialog dialog = EnsureDialog();
-        if (dialog == null) return;
+        if (dialog == null)
+        {
+            return;
+        }
 
         _dialogIsExport = false;
         dialog.FileMode = FileDialog.FileModeEnum.OpenFile;
@@ -195,8 +244,14 @@ public partial class SavePanel : BasePanel
 
     FileDialog EnsureDialog()
     {
-        if (_dialog != null && GodotObject.IsInstanceValid(_dialog)) return _dialog;
-        if (GameObject == null) return null;
+        if (_dialog != null && GodotObject.IsInstanceValid(_dialog))
+        {
+            return _dialog;
+        }
+        if (GameObject == null)
+        {
+            return null;
+        }
 
         _dialog = new FileDialog();
         _dialog.Access = FileDialog.AccessEnum.Filesystem;
@@ -212,7 +267,11 @@ public partial class SavePanel : BasePanel
         if (_dialogIsExport)
         {
             GameSave data = Capture();
-            if (data == null) { SetStatus("备份失败：进度还没准备好。"); return; }
+            if (data == null)
+            {
+                SetStatus("备份失败：进度还没准备好。");
+                return;
+            }
 
             bool ok = SaveBackup.ExportTo(data, path);
             if (!ok)
@@ -225,9 +284,10 @@ public partial class SavePanel : BasePanel
             string imported = SaveBackup.ImportFrom(path);
             AudioManager.PlayEventSFX("ui_confirm");
             if (imported == null)
+            {
                 SetStatus("已备份到：" + path + "（存档夹复制失败，可用「导入存档…」找回）");
-            else
-                SetStatus("已备份到：" + path + "，并已加入下方载入列表。");
+            }
+            else SetStatus("已备份到：" + path + "，并已加入下方载入列表。");
 
             RefreshList();
             return;
@@ -249,7 +309,10 @@ public partial class SavePanel : BasePanel
 
     void OnLoadEntry(SaveEntry entry)
     {
-        if (entry == null || _ctxApply == null) return;
+        if (entry == null || _ctxApply == null)
+        {
+            return;
+        }
 
         GameSave data = SaveBackup.LoadInternal(entry.InternalName);
         if (data == null)
@@ -267,12 +330,18 @@ public partial class SavePanel : BasePanel
 
         AudioManager.PlayEventSFX("ui_confirm");
         HidePanel<SavePanel>();
-        if (_ctxOnClose != null) _ctxOnClose();
+        if (_ctxOnClose != null)
+        {
+            _ctxOnClose();
+        }
     }
 
     void OnDeleteEntry(SaveEntry entry)
     {
-        if (entry == null) return;
+        if (entry == null)
+        {
+            return;
+        }
 
         bool ok = SaveBackup.Delete(entry.InternalName);
         SetStatus(ok ? ("已删除备份：" + entry.DisplayName) : "删除失败（主存档不可删除）。");
@@ -283,7 +352,10 @@ public partial class SavePanel : BasePanel
 
     void RefreshList()
     {
-        if (_TList == null) return;
+        if (_TList == null)
+        {
+            return;
+        }
 
         foreach (Node child in _TList.GetChildren()) child.QueueFree();
 
@@ -298,8 +370,7 @@ public partial class SavePanel : BasePanel
             return;
         }
 
-        for (int i = 0; i < entries.Count; i++)
-            _TList.AddChild(BuildRow(entries[i]));
+        for (int i = 0; i < entries.Count; i++) _TList.AddChild(BuildRow(entries[i]));
     }
 
     Control BuildRow(SaveEntry entry)
@@ -311,7 +382,10 @@ public partial class SavePanel : BasePanel
         name.Text = entry.DisplayName;
         name.CustomMinimumSize = new Vector2(400, 44);
         name.AddThemeFontSizeOverride("font_size", 23);
-        if (entry.IsMain) name.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+        if (entry.IsMain)
+        {
+            name.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+        }
         row.AddChild(name);
 
         Label meta = new Label();
@@ -344,12 +418,18 @@ public partial class SavePanel : BasePanel
 
     GameSave Capture()
     {
-        if (_ctxCapture == null) return null;
+        if (_ctxCapture == null)
+        {
+            return null;
+        }
         return _ctxCapture();
     }
 
     void SetStatus(string text)
     {
-        if (_TStatus != null) _TStatus.Text = text;
+        if (_TStatus != null)
+        {
+            _TStatus.Text = text;
+        }
     }
 }

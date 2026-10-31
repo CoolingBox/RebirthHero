@@ -34,29 +34,50 @@ public static class EquipDropper
     /// <summary>按层取稀有度权重行。</summary>
     public static int[] WeightsOf(int layer)
     {
-        if (layer <= 10) return RarityWeights[0];
-        if (layer <= 20) return RarityWeights[1];
-        if (layer <= 30) return RarityWeights[2];
+        if (layer <= 10)
+        {
+            return RarityWeights[0];
+        }
+        if (layer <= 20)
+        {
+            return RarityWeights[1];
+        }
+        if (layer <= 30)
+        {
+            return RarityWeights[2];
+        }
         return RarityWeights[3];
     }
 
     /// <summary>该层会掉什么稀有度（1~5）。</summary>
     public static Rarity RollRarity(int layer, Random rng)
     {
-        if (rng == null) rng = new Random();
+        if (rng == null)
+        {
+            rng = new Random();
+        }
 
         int[] w = WeightsOf(layer);
         int total = 0;
-        for (int i = 0; i < w.Length; i++) total += w[i];
+        for (int i = 0; i < w.Length; i++)
+        {
+            total += w[i];
+        }
 
-        if (total <= 0) return Rarity.Common;
+        if (total <= 0)
+        {
+            return Rarity.Common;
+        }
 
         int roll = rng.Next(total);
         int acc = 0;
         for (int i = 0; i < w.Length; i++)
         {
             acc += w[i];
-            if (roll < acc) return (Rarity)(i + 1);
+            if (roll < acc)
+            {
+                return (Rarity)(i + 1);
+            }
         }
 
         return Rarity.Common;
@@ -69,8 +90,14 @@ public static class EquipDropper
     /// </summary>
     public static EquipConfig Roll(int layer, Random rng, List<EquipConfig> pool)
     {
-        if (pool == null || pool.Count == 0) return null;
-        if (rng == null) rng = new Random();
+        if (pool == null || pool.Count == 0)
+        {
+            return null;
+        }
+        if (rng == null)
+        {
+            rng = new Random();
+        }
 
         Rarity rarity = RollRarity(layer, rng);
 
@@ -80,14 +107,22 @@ public static class EquipDropper
             for (int i = 0; i < pool.Count; i++)
             {
                 EquipConfig c = pool[i];
-                if (c != null && (int)c.Rarity == r) candidates.Add(c);
+                if (c != null && (int)c.Rarity == r)
+                {
+                    candidates.Add(c);
+                }
             }
 
-            if (candidates.Count == 0) continue;
+            if (candidates.Count == 0)
+            {
+                continue;
+            }
 
             int total = 0;
             for (int i = 0; i < candidates.Count; i++)
+            {
                 total += candidates[i].DropWeight > 0 ? candidates[i].DropWeight : 1;
+            }
 
             int roll = rng.Next(total);
             int acc = 0;
@@ -95,7 +130,10 @@ public static class EquipDropper
             {
                 int wt = candidates[i].DropWeight > 0 ? candidates[i].DropWeight : 1;
                 acc += wt;
-                if (roll < acc) return candidates[i];
+                if (roll < acc)
+                {
+                    return candidates[i];
+                }
             }
 
             return candidates[candidates.Count - 1];
@@ -107,7 +145,10 @@ public static class EquipDropper
     /// <summary>是否掉落（每次击杀调一次）。</summary>
     public static bool ShouldDrop(Random rng)
     {
-        if (rng == null) rng = new Random();
+        if (rng == null)
+        {
+            rng = new Random();
+        }
         return rng.NextDouble() < DropChance;
     }
 
@@ -126,26 +167,47 @@ public static class EquipDropper
     public static List<int> RollAffixes(Rarity rarity, Random rng, List<EquipAffixConfig> pool)
     {
         List<int> ids = new List<int>();
-        if (pool == null || pool.Count == 0) return ids;
-        if (rng == null) rng = new Random();
+        if (pool == null || pool.Count == 0)
+        {
+            return ids;
+        }
+        if (rng == null)
+        {
+            rng = new Random();
+        }
 
         int idx = (int)rarity;
-        if (idx < 0) idx = 0;
-        if (idx >= AffixCountByRarity.Length) idx = AffixCountByRarity.Length - 1;
+        if (idx < 0)
+        {
+            idx = 0;
+        }
+        if (idx >= AffixCountByRarity.Length)
+        {
+            idx = AffixCountByRarity.Length - 1;
+        }
         int want = AffixCountByRarity[idx];
 
         List<EquipAffixConfig> cand = new List<EquipAffixConfig>();
         for (int i = 0; i < pool.Count; i++)
         {
             EquipAffixConfig c = pool[i];
-            if (c != null && c.Weight > 0) cand.Add(c);
+            if (c != null && c.Weight > 0)
+            {
+                cand.Add(c);
+            }
         }
 
         for (int n = 0; n < want && cand.Count > 0; n++)
         {
             int total = 0;
-            for (int i = 0; i < cand.Count; i++) total += cand[i].Weight;
-            if (total <= 0) break;
+            for (int i = 0; i < cand.Count; i++)
+            {
+                total += cand[i].Weight;
+            }
+            if (total <= 0)
+            {
+                break;
+            }
 
             int roll = rng.Next(total);
             int acc = 0;
@@ -153,7 +215,11 @@ public static class EquipDropper
             for (int i = 0; i < cand.Count; i++)
             {
                 acc += cand[i].Weight;
-                if (roll < acc) { pick = i; break; }
+                if (roll < acc)
+                {
+                    pick = i;
+                    break;
+                }
             }
 
             EquipAffixEffect picked = cand[pick].Effect;
@@ -161,7 +227,12 @@ public static class EquipDropper
 
             // 同类效果出过就整体移除，下一跳换类别
             for (int i = cand.Count - 1; i >= 0; i--)
-                if (cand[i].Effect == picked) cand.RemoveAt(i);
+            {
+                if (cand[i].Effect == picked)
+                {
+                    cand.RemoveAt(i);
+                }
+            }
         }
 
         return ids;

@@ -59,7 +59,10 @@ public static class EnemyFactory
     /// <summary>模板在 layer 层的属性（就是 EnemyConfig 表里的值；三只全局 Scale 已于 2026-10-16 归 1，乘法为恒等）。</summary>
     public static (double hp, double atk, double def) Stats(EnemyConfig t, int layer)
     {
-        if (t == null) return (0, 0, 0);
+        if (t == null)
+        {
+            return (0, 0, 0);
+        }
         double n = Math.Max(0, layer - 1);
         return (t.BaseHp * Math.Pow(t.HpRate, n),
                 t.BaseAtk * Math.Pow(t.AtkRate, n),
@@ -69,9 +72,15 @@ public static class EnemyFactory
     /// <summary>小怪的携带武学数 = SkillCount(基数) + (layer−1)/SkillTier。</summary>
     public static int SkillCountOf(EnemyConfig t, int layer)
     {
-        if (t == null) return 0;
+        if (t == null)
+        {
+            return 0;
+        }
         int n = Math.Max(0, t.SkillCount);
-        if (t.SkillTier > 0) n += Math.Max(0, layer - 1) / t.SkillTier;
+        if (t.SkillTier > 0)
+        {
+            n += Math.Max(0, layer - 1) / t.SkillTier;
+        }
         return n;
     }
 
@@ -93,25 +102,36 @@ public static class EnemyFactory
                                             List<EnemyConfig> templates, List<SkillConfig> skillPool)
     {
         var list = new List<BattleUnit>();
-        if (templates == null || templates.Count == 0) return list;
+        if (templates == null || templates.Count == 0)
+        {
+            return list;
+        }
 
         var picked = new List<EnemyConfig>();
         if (isFinisher)
         {
             // ① 层主（仅层主层，固定占第 1 位）
-            if (IsBossLayer(layer)) picked.AddRange(PickTier(layer, templates, EnemyKind.Boss, 1, waveIndex));
+            if (IsBossLayer(layer))
+            {
+                picked.AddRange(PickTier(layer, templates, EnemyKind.Boss, 1, waveIndex));
+            }
             // ② 精英（普通层的收尾首领 —— 口径："普通层的层主是精英"）
             picked.AddRange(PickTier(layer, templates, EnemyKind.Elite, 1, waveIndex));
         }
         // ③ 余位补小怪（普通波全是小怪）
         int need = StageConfig.WaveSize - picked.Count;
-        if (need > 0) picked.AddRange(PickTier(layer, templates, EnemyKind.Mob, need, waveIndex));
+        if (need > 0)
+        {
+            picked.AddRange(PickTier(layer, templates, EnemyKind.Mob, need, waveIndex));
+        }
 
         // 小怪按层限制品阶；精英/层主用固定组，**不受品阶限制**（组里写什么就是什么）
         var poolAtLayer = PoolForLayer(skillPool, layer);
 
         for (int i = 0; i < picked.Count; i++)
+        {
             list.Add(Make(picked[i], layer, i + 1, poolAtLayer, skillPool));
+        }
 
         return list;
     }
@@ -120,18 +140,29 @@ public static class EnemyFactory
     public static List<EnemyConfig> PickTier(int layer, List<EnemyConfig> templates, EnemyKind kind, int need, int salt = 0)
     {
         var res = new List<EnemyConfig>();
-        if (templates == null || need <= 0) return res;
+        if (templates == null || need <= 0)
+        {
+            return res;
+        }
 
         var cand = templates.Where(t => t.Kind == kind && t.MinLayer <= layer).ToList();
-        if (cand.Count == 0) return res;
+        if (cand.Count == 0)
+        {
+            return res;
+        }
 
         int top = cand.Max(t => t.MinLayer);
         var tier = cand.Where(t => t.MinLayer == top).OrderBy(t => t.Id).ToList();
 
         // salt = 波序号 → 同一层的各普通波取到不同面貌（否则整层小怪一模一样）
         foreach (int idx in PickIndices(tier.Count, need, Mix(Mix(layer, salt), (int)kind * 131)))
+        {
             res.Add(tier[idx]);
-        for (int k = 0; res.Count < need; k++) res.Add(tier[k % tier.Count]);
+        }
+        for (int k = 0; res.Count < need; k++)
+        {
+            res.Add(tier[k % tier.Count]);
+        }
         return res;
     }
 
@@ -159,7 +190,12 @@ public static class EnemyFactory
 
         // 被动·属性型：与玩家同一层处理，必须在生成战斗技能之前
         foreach (SkillConfig pc in configs)
-            if (SkillConfigMapper.IsPassiveAttribute(pc)) SkillConfigMapper.ApplyPassive(pc, u);
+        {
+            if (SkillConfigMapper.IsPassiveAttribute(pc))
+            {
+                SkillConfigMapper.ApplyPassive(pc, u);
+            }
+        }
 
         foreach (SkillConfig cfg in configs)
         {
@@ -167,12 +203,18 @@ public static class EnemyFactory
             if (SkillConfigMapper.IsPassiveAttribute(cfg))
             {
                 BattleSkill only = SkillConfigMapper.ToAltSkill(cfg, u.BaseHp);
-                if (only != null) u.Skills.Add(only);
+                if (only != null)
+                {
+                    u.Skills.Add(only);
+                }
                 continue;
             }
             // 一张卡可能生成 1~2 个 BattleSkill（主效果 + 副效果）
             List<BattleSkill> built = SkillConfigMapper.ToBattleSkills(cfg, u.BaseHp);
-            for (int k = 0; k < built.Count; k++) u.Skills.Add(built[k]);
+            for (int k = 0; k < built.Count; k++)
+            {
+                u.Skills.Add(built[k]);
+            }
         }
         return u;
     }
@@ -181,11 +223,17 @@ public static class EnemyFactory
     static List<SkillConfig> IdsToConfigs(int[] ids, List<SkillConfig> pool)
     {
         var res = new List<SkillConfig>();
-        if (ids == null || pool == null) return res;
+        if (ids == null || pool == null)
+        {
+            return res;
+        }
         foreach (int id in ids)
         {
             SkillConfig hit = pool.FirstOrDefault(s => s.Id == id);
-            if (hit != null) res.Add(hit);
+            if (hit != null)
+            {
+                res.Add(hit);
+            }
         }
         return res;
     }
@@ -193,9 +241,14 @@ public static class EnemyFactory
     static List<SkillConfig> PickFromPool(List<SkillConfig> pool, int count, int layer, int slot)
     {
         var res = new List<SkillConfig>();
-        if (pool == null || pool.Count == 0 || count <= 0) return res;
+        if (pool == null || pool.Count == 0 || count <= 0)
+        {
+            return res;
+        }
         foreach (int idx in PickIndices(pool.Count, count, Mix(layer, slot)))
+        {
             res.Add(pool[idx]);
+        }
         return res;
     }
 
@@ -205,7 +258,10 @@ public static class EnemyFactory
     static List<int> PickIndices(int size, int count, int seed)
     {
         var res = new List<int>();
-        if (size <= 0 || count <= 0) return res;
+        if (size <= 0 || count <= 0)
+        {
+            return res;
+        }
 
         int n = Math.Min(count, size);
         int start = Mix(seed, 17) % size;
@@ -218,7 +274,10 @@ public static class EnemyFactory
         guard = 0;
         while (res.Count < n && guard++ < size * 4)
         {
-            if (used.Add(idx)) res.Add(idx);
+            if (used.Add(idx))
+            {
+                res.Add(idx);
+            }
             idx = (idx + step) % size;
         }
         return res;
@@ -226,7 +285,12 @@ public static class EnemyFactory
 
     static int Gcd(int a, int b)
     {
-        while (b != 0) { int t = a % b; a = b; b = t; }
+        while (b != 0)
+        {
+            int t = a % b;
+            a = b;
+            b = t;
+        }
         return Math.Max(1, a);
     }
 

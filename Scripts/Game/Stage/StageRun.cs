@@ -95,7 +95,10 @@ public sealed class StageRun
         {
             // 失利：退回上一层，波次与队伍都归零，转入挂机
             _carry = null;
-            if (Layer > 1) Layer--;
+            if (Layer > 1)
+            {
+                Layer--;
+            }
             Wave = 1;
             AutoPush = false;
             _idle = 0;
@@ -117,7 +120,10 @@ public sealed class StageRun
             if (AutoPush)
             {
                 Layer++;
-                if (Layer > BestLayer) BestLayer = Layer;
+                if (Layer > BestLayer)
+                {
+                    BestLayer = Layer;
+                }
             }
             // 挂机模式下打完一层 → 停在原层，回到第 1 波重刷（"退回上一层重复刷图"）
         }
@@ -140,18 +146,32 @@ public sealed class StageRun
     /// </summary>
     void CapturePlayerState(BattleEngine eng)
     {
-        if (_carry == null || eng == null) return;
+        if (_carry == null || eng == null)
+        {
+            return;
+        }
 
         var bySlot = new Dictionary<int, BattleUnit>();
         foreach (var c in eng.A)
-            if (!c.IsSummon && c.Slot >= 1) bySlot[c.Slot] = c;   // 召唤物不延续
+        {
+            if (!c.IsSummon && c.Slot >= 1)
+            {
+                bySlot[c.Slot] = c;
+            }
+        }
 
         foreach (var src in _carry)
         {
-            if (!bySlot.TryGetValue(src.Slot, out var fin)) continue;
+            if (!bySlot.TryGetValue(src.Slot, out var fin))
+            {
+                continue;
+            }
             // 下限夹 0：引擎已保证 Hp ≥ 0，这里再夹一次做防御（StartHp 的 −1 哨兵语义对负数敏感）
             double hp = Math.Max(0, fin.Hp);
-            if (hp > 0) hp = Math.Min(src.BaseHp, hp + src.BaseHp * StageConfig.WaveHealRatio);
+            if (hp > 0)
+            {
+                hp = Math.Min(src.BaseHp, hp + src.BaseHp * StageConfig.WaveHealRatio);
+            }
             src.Hp = hp;
             src.StartHp = hp;
         }
@@ -172,8 +192,14 @@ public sealed class StageRun
     public void JumpTo(int layer)
     {
         int target = layer;
-        if (target < 1) target = 1;
-        if (target > BestLayer) target = BestLayer;
+        if (target < 1)
+        {
+            target = 1;
+        }
+        if (target > BestLayer)
+        {
+            target = BestLayer;
+        }
 
         Layer = target;
         Wave = 1;

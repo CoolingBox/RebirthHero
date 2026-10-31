@@ -7,7 +7,7 @@
 //   · Generate/SettingPanelBind.cs —— GenUICode 生成：_T* 字段 + OnBind 里 FindChild 绑定
 //
 // 打开：BattlePanel 点「设置」→ SettingPanel.BindData(onClose) → UIManager.ShowPanel<SettingPanel>()
-// 内容：4 套主题（色块取自各主题资源）+ 主音量 / BGM / SFX
+// 内容：8 套主题（色块取自各主题资源）+ 主音量 / BGM / SFX
 
 using System;
 using Godot;
@@ -30,11 +30,15 @@ public partial class SettingPanel : BasePanel
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
+        {
             return;
+        }
 
         // 面板被销毁后 _current 会指向已释放对象
         if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
             return;
+        }
 
         _current.ApplyTheme();
     }
@@ -62,7 +66,10 @@ public partial class SettingPanel : BasePanel
 
         if (!_wired)
         {
-            if (_TCloseBtn != null) _TCloseBtn.Pressed += OnClosePressed;
+            if (_TCloseBtn != null)
+            {
+                _TCloseBtn.Pressed += OnClosePressed;
+            }
             _wired = true;
         }
 
@@ -78,17 +85,24 @@ public partial class SettingPanel : BasePanel
     {
         AudioManager.PlayUISFX("ui_close");
         HidePanel<SettingPanel>();
-        if (_onClose != null) _onClose();
+        if (_onClose != null)
+        {
+            _onClose();
+        }
     }
 
     /// <summary>背景层只建一次；换主题时由 BackdropLayer 自己刷新，不重建节点。</summary>
     void EnsureBackdrop()
     {
         if (_TBg == null)
+        {
             return;
+        }
 
         if (_backdrop != null && GodotObject.IsInstanceValid(_backdrop))
+        {
             return;
+        }
 
         _backdrop = new BackdropLayer();
         _TBg.AddChild(_backdrop);
@@ -98,13 +112,21 @@ public partial class SettingPanel : BasePanel
 
     void Build()
     {
-        if (_TContent == null) return;
+        if (_TContent == null)
+        {
+            return;
+        }
 
         foreach (Node c in _TContent.GetChildren()) c.QueueFree();
 
-        if (_THeading != null) _THeading.Text = "设置 · " + UIThemeManager.ThemeName;
+        if (_THeading != null)
+        {
+            _THeading.Text = "设置 · " + UIThemeManager.ThemeName;
+        }
         if (_THint != null)
+        {
             _THint.Text = "主题即时生效并记入存档；音量拖动结束后自动保存。";
+        }
 
         BuildThemeSection();
         BuildVolumeSection();
@@ -114,8 +136,12 @@ public partial class SettingPanel : BasePanel
     {
         _TContent.AddChild(SectionLabel("外观 · 武侠主题"));
 
-        HBoxContainer row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 14);
+        // 8 套主题横排要 1458px，弹窗放不下 → 4 列网格，自然分成两行。
+        // 列数固定 4：再增加主题也只是多一行，不会把弹窗撑宽。
+        GridContainer grid = new GridContainer();
+        grid.Columns = 4;
+        grid.AddThemeConstantOverride("h_separation", 14);
+        grid.AddThemeConstantOverride("v_separation", 16);
 
         for (int i = 0; i < UIThemeManager.Count; i++)
         {
@@ -148,7 +174,10 @@ public partial class SettingPanel : BasePanel
             Button btn = new Button();
             btn.Text = current ? ("● " + UIThemeManager.NameOf(i)) : UIThemeManager.NameOf(i);
             btn.CustomMinimumSize = new Vector2(170, 36);
-            if (current) btn.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+            if (current)
+            {
+                btn.AddThemeColorOverride("font_color", UIThemeManager.Accent);
+            }
             btn.Pressed += () =>
             {
                 UIThemeManager.SetTheme(themeId);
@@ -162,10 +191,10 @@ public partial class SettingPanel : BasePanel
             desc.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);
             col.AddChild(desc);
 
-            row.AddChild(col);
+            grid.AddChild(col);
         }
 
-        _TContent.AddChild(row);
+        _TContent.AddChild(grid);
     }
 
     void BuildVolumeSection()
@@ -173,7 +202,10 @@ public partial class SettingPanel : BasePanel
         _TContent.AddChild(SectionLabel("声音"));
 
         SettingData data = SettingManager.Data;
-        if (data == null) return;
+        if (data == null)
+        {
+            return;
+        }
 
         AddVolumeRow("总音量", data.Volume, OnMasterVolume);
         AddVolumeRow("背景音乐", data.BGMVolume, OnBgmVolume);
@@ -248,6 +280,8 @@ public partial class SettingPanel : BasePanel
     {
         SettingData data = SettingManager.Data;
         if (data != null)
+        {
             SaveManager.Save(data);
+        }
     }
 }

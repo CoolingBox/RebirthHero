@@ -14,8 +14,8 @@
 //   背景色调也属于配色，按项目约定不写在 C# 里 —— 改氛围请改资源，不要改代码。
 //
 // 为什么暗色主题共用一张图：
-//   四套里三套是暗色，若各生成一张，体积翻三倍而差异主要靠叠色就能做到。
-//   一张夜雨底图 + 三种叠色，效果差别已经足够明显，也便于后期统一改图。
+//   8 套里 5 套是暗色，若各生成一张，体积翻五倍而差异主要靠叠色就能做到。
+//   一张夜雨底图 + 多种叠色，效果差别已经足够明显，也便于后期统一改图。
 
 using Godot;
 
@@ -54,13 +54,19 @@ public partial class BackdropLayer : Control
         int id = UIThemeManager.Id;
 
         if (_image != null)
+        {
             _image.Texture = LoadBackdrop(id);
+        }
 
         if (_tint != null)
+        {
             _tint.Color = UIThemeManager.ColorOf(id, UIThemeKey.BackdropTint);
+        }
 
         if (_vignette != null)
+        {
             _vignette.Modulate = UIThemeManager.ColorOf(id, UIThemeKey.BackdropShade);
+        }
     }
 
     void OnThemeChanged(int themeId)
@@ -116,15 +122,20 @@ public partial class BackdropLayer : Control
 
     static Texture2D LoadBackdrop(int themeId)
     {
-        if (themeId == (int)UIThemeId.Ink)
+        // 明暗由主题元数据声明，不写死 id —— 新增浅色主题不必回来改这里
+        if (UIThemeManager.IsLightOf(themeId))
         {
             if (_bgInk == null)
+            {
                 _bgInk = ResourceLoader.Load<Texture2D>(BgInkPath, "");
+            }
             return _bgInk;
         }
 
         if (_bgNight == null)
+        {
             _bgNight = ResourceLoader.Load<Texture2D>(BgNightPath, "");
+        }
 
         return _bgNight;
     }

@@ -111,16 +111,16 @@ public sealed class BattleUnit
     public double HotUntil = -1, NextHotTick = -1;
     public double SilenceUntil = -1;
     /// <summary>
-    /// 破绽**层数**（2026-10-24 用户口径「破绽只持续到下次受击」+「允许叠层」）：
-    /// 每层 = 一次 +BreakBonus 的易伤，目标挨一刀消耗一层（不是一次全吃）。
-    /// **一次行动只吃一层** —— 与受击计数同口径（见 <see cref="BreakHitActionId"/>），
-    /// 否则多段技能一次行动就能把攒的层全烧掉，层数完全不可控。
-    /// 被打空（闪避）不消耗；被护盾全吸收算挨打，照样消耗。
+    /// 破绽**层数**（2026-10-24 定稿三轮口径叠加）：
+    /// 每层 = **一次「攻击者的整个行动」**的增伤窗口 —— 同一次行动里的**多个武学、多段伤害全都吃**
+    /// +BreakBonus，这一行动结束（<c>Act()</c> 末尾）才 -1 层。
+    /// 所以它既不是"一刀"（那是第一版），也不是"一整轮"（那是第二版）。
+    /// 被打空（闪避）不增伤也不记账；被护盾全吸收算挨打，照样记账。
     /// </summary>
     public int BreakStacks;
 
-    /// <summary>上一次消耗破绽的行动序号（<c>_actSeq</c>）：同一次行动的多段伤害只吃一层。</summary>
-    public long BreakHitActionId = -1;
+    /// <summary>欠着谁一层破绽衰减：这一位攻击者**本次行动结束**时扣 1 层。</summary>
+    public BattleUnit BreakDecayOwner;
     public HashSet<BattleSkill> FiredOnce = new();
     public double AccumDmg;            // 累计承伤（反伤用）
     public double BaseW;               // 基础受击权重
@@ -131,21 +131,39 @@ public sealed class BattleUnit
     public double EffSpd(double t)
     {
         double f = 1;
-        foreach (var b in SpdBuf) if (b.until > t) f += b.amt;
+        foreach (var b in SpdBuf)
+        {
+            if (b.until > t)
+            {
+                f += b.amt;
+            }
+        }
         return Math.Max(10, BaseSpd * f);
     }
 
     public double EffAtk(double t)
     {
         double f = 1;
-        foreach (var b in AtkBuf) if (b.until > t) f += b.amt;
+        foreach (var b in AtkBuf)
+        {
+            if (b.until > t)
+            {
+                f += b.amt;
+            }
+        }
         return BaseAtk * AtkMult * f;
     }
 
     public double EffW(double t)
     {
         double w = BaseW;
-        foreach (var b in WBuf) if (b.until > t) w += b.amt;
+        foreach (var b in WBuf)
+        {
+            if (b.until > t)
+            {
+                w += b.amt;
+            }
+        }
         return Math.Max(BattleConfig.WFloor, w);
     }
 

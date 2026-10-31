@@ -23,10 +23,16 @@ public sealed class SkillLoadout
     public void Init(IEnumerable<HeroConfig> heroes)
     {
         _byHero.Clear();
-        if (heroes == null) return;
+        if (heroes == null)
+        {
+            return;
+        }
         foreach (HeroConfig h in heroes)
         {
-            if (h == null) continue;
+            if (h == null)
+            {
+                continue;
+            }
             _byHero[h.Id] = BuildDefault(h.SkillIds);
         }
     }
@@ -34,16 +40,25 @@ public sealed class SkillLoadout
     static int[] BuildDefault(int[] ids)
     {
         var arr = new int[Slots];
-        if (ids == null) return arr;
+        if (ids == null)
+        {
+            return arr;
+        }
         int n = ids.Length < Slots ? ids.Length : Slots;
-        for (int i = 0; i < n; i++) arr[i] = ids[i];
+        for (int i = 0; i < n; i++)
+        {
+            arr[i] = ids[i];
+        }
         return arr;
     }
 
     /// <summary>取该侠客的 3 槽（返回内部数组，调用方只读）。未登记返回全 0。</summary>
     public int[] Get(int heroId)
     {
-        if (_byHero.TryGetValue(heroId, out int[] arr)) return arr;
+        if (_byHero.TryGetValue(heroId, out int[] arr))
+        {
+            return arr;
+        }
         return new int[Slots];
     }
 
@@ -53,7 +68,10 @@ public sealed class SkillLoadout
     /// </summary>
     public bool Equip(int heroId, int slot, int skillId)
     {
-        if (slot < 0 || slot >= Slots || skillId <= 0) return false;
+        if (slot < 0 || slot >= Slots || skillId <= 0)
+        {
+            return false;
+        }
 
         if (!_byHero.TryGetValue(heroId, out int[] arr))
         {
@@ -61,7 +79,12 @@ public sealed class SkillLoadout
             _byHero[heroId] = arr;
         }
         for (int i = 0; i < Slots; i++)
-            if (arr[i] == skillId) arr[i] = Empty;
+        {
+            if (arr[i] == skillId)
+            {
+                arr[i] = Empty;
+            }
+        }
 
         arr[slot] = skillId;
         return true;
@@ -70,8 +93,14 @@ public sealed class SkillLoadout
     /// <summary>清空指定槽。</summary>
     public bool Clear(int heroId, int slot)
     {
-        if (slot < 0 || slot >= Slots) return false;
-        if (!_byHero.TryGetValue(heroId, out int[] arr)) return false;
+        if (slot < 0 || slot >= Slots)
+        {
+            return false;
+        }
+        if (!_byHero.TryGetValue(heroId, out int[] arr))
+        {
+            return false;
+        }
         arr[slot] = Empty;
         return true;
     }
@@ -79,13 +108,19 @@ public sealed class SkillLoadout
     /// <summary>读档：整槽恢复（不足 3 个补 0，非法 id 归空槽）。</summary>
     public void Restore(int heroId, int[] ids)
     {
-        if (heroId <= 0) return;
+        if (heroId <= 0)
+        {
+            return;
+        }
 
         int[] arr = new int[Slots];
         if (ids != null)
         {
             int n = ids.Length < Slots ? ids.Length : Slots;
-            for (int i = 0; i < n; i++) arr[i] = ids[i] > 0 ? ids[i] : Empty;
+            for (int i = 0; i < n; i++)
+            {
+                arr[i] = ids[i] > 0 ? ids[i] : Empty;
+            }
         }
 
         _byHero[heroId] = arr;
@@ -94,9 +129,17 @@ public sealed class SkillLoadout
     /// <summary>该侠客是否已装某武学。</summary>
     public bool Has(int heroId, int skillId)
     {
-        if (!_byHero.TryGetValue(heroId, out int[] arr)) return false;
+        if (!_byHero.TryGetValue(heroId, out int[] arr))
+        {
+            return false;
+        }
         for (int i = 0; i < Slots; i++)
-            if (arr[i] == skillId) return true;
+        {
+            if (arr[i] == skillId)
+            {
+                return true;
+            }
+        }
         return false;
     }
 }
