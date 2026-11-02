@@ -25,11 +25,20 @@ public static class HeroBuilder
                                    HeroQuality quality = null, Func<int, QualityConfig> affixLookup = null,
                                    Func<int, int[]> skillIdsOf = null,
                                    Func<int, EquipBonus> equipOf = null,
-                                   Func<int, EquipTuning> tuningOf = null)
+                                   Func<int, EquipTuning> tuningOf = null,
+                                   double realmMult = 1)
     {
         if (hero == null)
         {
             return null;
+        }
+
+        // 境界乘区（2026-11-01）：GDD §4.2 五乘区之②，此生纵向、每境 ×10、转世归零。
+        // 乘在**成长结果**这一层，和 HpScale 同一个位置 —— 之后再叠资质/装备的百分比，
+        // 所以"资质 ×1.6"和"境界 ×10"是乘算关系，谁先谁后不影响结果。
+        if (realmMult <= 0)
+        {
+            realmMult = 1;
         }
 
         // M2.4 武学装配：默认用表里的 SkillIds；面板装配后由 skillIdsOf 提供 3 槽（0 = 空槽）
@@ -57,10 +66,10 @@ public static class HeroBuilder
         {
             Name = hero.Name,
             Slot = slot,
-            BaseHp = hp * hpBonus * BattleConfig.HpScale,
-            BaseAtk = atk * BattleConfig.AtkScale,
-            BaseDef = def * BattleConfig.DefScale,
-            BaseSpd = hero.BaseSPD + eq.Spd,  // SPD 不随等级成长，装备是它的主要来源（境界后续接）
+            BaseHp = hp * hpBonus * BattleConfig.HpScale * realmMult,
+            BaseAtk = atk * BattleConfig.AtkScale * realmMult,
+            BaseDef = def * BattleConfig.DefScale * realmMult,
+            BaseSpd = hero.BaseSPD + eq.Spd,  // SPD 不随等级成长，装备是它的主要来源（境界不加 SPD）
             BaseW = w,
             IsSummon = hero.IsSummon,
         };
@@ -240,13 +249,15 @@ public static class HeroBuilder
                                              Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
                                              Func<int, int[]> skillIdsOf = null,
                                              Func<int, EquipBonus> equipOf = null,
-                                             Func<int, EquipTuning> tuningOf = null)
+                                             Func<int, EquipTuning> tuningOf = null,
+                                             double realmMult = 1)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
-            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf, tuningOf);
+            BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id),
+                                 affixLookup, skillIdsOf, equipOf, tuningOf, realmMult);
             if (u != null)
             {
                 list.Add(u);
@@ -262,14 +273,16 @@ public static class HeroBuilder
                                              Func<int, HeroQuality> qualityOf = null, Func<int, QualityConfig> affixLookup = null,
                                              Func<int, int[]> skillIdsOf = null,
                                              Func<int, EquipBonus> equipOf = null,
-                                             Func<int, EquipTuning> tuningOf = null)
+                                             Func<int, EquipTuning> tuningOf = null,
+                                             double realmMult = 1)
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
             int lv = levelOf?.Invoke(h.Id) ?? 1;
-            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id), affixLookup, skillIdsOf, equipOf, tuningOf);
+            BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id),
+                                 affixLookup, skillIdsOf, equipOf, tuningOf, realmMult);
             if (u != null)
             {
                 list.Add(u);

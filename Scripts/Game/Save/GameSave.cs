@@ -48,6 +48,20 @@ public sealed class GameSave : SaveData
     public double SilverAmount;
     public double SilverTotal;
 
+    // ---------- 境界（本世纵向乘区，转世归零）----------
+    /// <summary>当前境界 Id（1 = 初入江湖）。缺省 1 —— 老存档没有这个字段，读回来就是第一档。</summary>
+    public int RealmId = 1;
+
+    // ---------- 道行（跨世永久货币，转世不清零）----------
+    public double DaoAmount;
+    public double DaoTotal;
+
+    // ---------- 大劫（本世状态）----------
+    /// <summary>本世已打赢几场大劫（决定下一场强度档位）。转世归零。</summary>
+    public int DajieWins;
+    /// <summary>距离下一场大劫已累计的秒数（存档时保留，避免重启就能重置倒计时）。</summary>
+    public double DajieClock;
+
     // ---------- 本世资产 ----------
     public List<HeroExpSave> Heroes = new List<HeroExpSave>();
     public List<MaterialSave> Materials = new List<MaterialSave>();

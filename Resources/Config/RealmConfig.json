@@ -1,0 +1,74 @@
+[
+  {
+    "Id": 1,
+    "Name": "\u521d\u5165\u6c5f\u6e56",
+    "Mult": 1,
+    "ReqSilver": 0,
+    "ReqLayer": 0,
+    "Unlock": "\u2014\uff08\u5f00\u5c40\u5373 3 \u69fd\uff09",
+    "Desc": "\u5f00\u5c40\uff1a\u521a\u4e0b\u5c71\uff0c\u6c5f\u6e56\u4e0a\u8fd8\u6ca1\u4eba\u8ba4\u5f97\u4f60"
+  },
+  {
+    "Id": 2,
+    "Name": "\u4e09\u6d41\u8eab\u624b",
+    "Mult": 10,
+    "ReqSilver": 3000,
+    "ReqLayer": 15,
+    "Unlock": "\u6b66\u5b66\u69fd +1\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u9996\u6b21\u7a81\u7834\uff0c\u73a9\u5bb6\u7b2c\u4e00\u6b21\u611f\u77e5\u6570\u91cf\u7ea7\u8df3\u6863"
+  },
+  {
+    "Id": 3,
+    "Name": "\u4e8c\u6d41\u597d\u624b",
+    "Mult": 100,
+    "ReqSilver": 100000,
+    "ReqLayer": 35,
+    "Unlock": "\u5ba2\u6808\u680f\u4f4d +1\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u5bf9\u5e94\u5c42 35 \u9644\u8fd1\uff0c\u7ea6 9 \u5c42\u94f6\u4e24"
+  },
+  {
+    "Id": 4,
+    "Name": "\u4e00\u6d41\u9ad8\u624b",
+    "Mult": 1000,
+    "ReqSilver": 5000000,
+    "ReqLayer": 60,
+    "Unlock": "\u88c5\u5907\u680f\u4f4d +1\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u7ea6 12 \u5c42\u94f6\u4e24"
+  },
+  {
+    "Id": 5,
+    "Name": "\u7edd\u9876\u9ad8\u624b",
+    "Mult": 10000,
+    "ReqSilver": 500000000,
+    "ReqLayer": 90,
+    "Unlock": "\u53ec\u5524\u7269\u4e0a\u9650 +1\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u7ea6 14 \u5c42\u94f6\u4e24\uff1b\u6c5f\u6e56\u4e0a\u5df2\u5c11\u6709\u654c\u624b"
+  },
+  {
+    "Id": 6,
+    "Name": "\u4e00\u4ee3\u5b97\u5e08",
+    "Mult": 100000,
+    "ReqSilver": 50000000000,
+    "ReqLayer": 125,
+    "Unlock": "\u5ba2\u6808\u514d\u8d39\u5237\u65b0 +1\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u5f00\u5b97\u7acb\u6d3e\uff0c\u957f\u7ebf"
+  },
+  {
+    "Id": 7,
+    "Name": "\u6b66\u6797\u795e\u8bdd",
+    "Mult": 1000000,
+    "ReqSilver": 5000000000000,
+    "ReqLayer": 165,
+    "Unlock": "\u6b66\u5b66\u69fd +1\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u957f\u7ebf"
+  },
+  {
+    "Id": 8,
+    "Name": "\u5929\u4e0b\u7b2c\u4e00",
+    "Mult": 10000000,
+    "ReqSilver": 500000000000000,
+    "ReqLayer": 210,
+    "Unlock": "\u5927\u52ab\u9884\u544a +50%\uff08\u5f85\u5b9e\u88c5\uff09",
+    "Desc": "\u957f\u7ebf\u7ec8\u70b9"
+  }
+]

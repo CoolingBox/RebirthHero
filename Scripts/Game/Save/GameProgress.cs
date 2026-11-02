@@ -21,7 +21,8 @@ public static class GameProgress
 
     /// <summary>把当前所有进度打包成存档数据。heroIds = 参与修为分配的那批侠客（开局阵容）。</summary>
     public static GameSave Capture(StageRun run, Cultivation cult, Silver silver, MaterialBag materials,
-                                   EquipBag equips, SkillLoadout loadout, Inn inn, List<int> heroIds)
+                                   EquipBag equips, SkillLoadout loadout, Inn inn, List<int> heroIds,
+                                   Dao dao = null)
     {
         GameSave save = new GameSave();
         if (run == null || cult == null || silver == null)
@@ -40,6 +41,16 @@ public static class GameProgress
         // —— 银两（本场掉落不存，跨进程无意义）——
         save.SilverAmount = silver.Amount;
         save.SilverTotal = silver.TotalGained;
+
+        // —— 境界（本世纵向乘区）——
+        save.RealmId = Realm.Id;
+
+        // —— 道行（跨世永久货币；转世不清零，所以它跟 RealmId 不是一类东西）——
+        if (dao != null)
+        {
+            save.DaoAmount = dao.Amount;
+            save.DaoTotal = dao.TotalGained;
+        }
 
         // —— 修为 ——
         if (heroIds != null)
@@ -164,7 +175,7 @@ public static class GameProgress
     /// 判据用 `GameSave.Written`（类内自带，属于数据语义，不需要去探文件系统）。
     /// </summary>
     public static bool Apply(GameSave save, StageRun run, Cultivation cult, Silver silver, MaterialBag materials,
-                             EquipBag equips, SkillLoadout loadout, Inn inn)
+                             EquipBag equips, SkillLoadout loadout, Inn inn, Dao dao = null)
     {
         if (save == null || !save.Written)
         {
@@ -185,6 +196,11 @@ public static class GameProgress
 
         run.Restore(save.Layer, save.Wave, save.BestLayer, save.AutoPush);
         silver.Restore(save.SilverAmount, save.SilverTotal);
+        Realm.Restore(save.RealmId);
+        if (dao != null)
+        {
+            dao.Restore(save.DaoAmount, save.DaoTotal);
+        }
 
         foreach (HeroExpSave e in save.Heroes)
         {

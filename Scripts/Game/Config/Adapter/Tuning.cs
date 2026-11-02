@@ -31,6 +31,8 @@ public static class Tuning
         typeof(CultivationConfig),
         typeof(InnConfig),
         typeof(MaterialConfig),
+        typeof(DaoConfig),
+        typeof(DajieConfig),
     };
 
     static bool _loaded;
