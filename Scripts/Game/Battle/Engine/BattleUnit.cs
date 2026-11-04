@@ -126,6 +126,13 @@ public sealed class BattleUnit
     public double BaseW;               // 基础受击权重
     public List<(double amt, double until)> WBuf = new(), SpdBuf = new(), AtkBuf = new();
 
+    /// <summary>
+    /// 出手伤害乘区（2026-11-02 天赋「杀伐 / 决意」）：攻击者为玩家时由建队写进来，敌人恒为 1。
+    /// 乘在**最终伤害**上（护盾吸收之前），普攻与武学一视同仁 —— 这是天赋树唯一能改"伤害"而不是"攻击"的口子。
+    /// ⚠️ 装配期属性 → <c>BattleEngine.Clone()</c> 必须带上，否则跨波续战时第一波之后失效。
+    /// </summary>
+    public double OutDmgMul = 1;
+
     public bool Alive => Hp > 0;
 
     public double EffSpd(double t)

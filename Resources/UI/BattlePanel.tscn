@@ -112,6 +112,18 @@ text_overrun_behavior = 3
 theme_override_font_sizes/font_size = 34
 theme_type_variation = &"TitleLabel"
 
+[node name="TTalentBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "天赋 ✦"
+
+[node name="TGalleryBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(112, 38)
+layout_mode = 2
+size_flags_vertical = 4
+text = "卡册 ✧"
+
 [node name="TInnBtn" type="Button" parent="TNavBar/TNavRow"]
 custom_minimum_size = Vector2(112, 38)
 layout_mode = 2

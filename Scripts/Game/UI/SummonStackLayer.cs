@@ -9,14 +9,11 @@ using Godot;
 
 public partial class SummonStackLayer : Control
 {
-    // 布局常量统一由 BattleLayout 提供：堆叠卡要贴着侠客卡右缘，必须和它共用 CardW
+    // 布局常量统一由 BattleLayout 提供：堆叠卡要贴着卡列外侧排，必须和卡牌同一套尺寸
     private const float StackW = BattleLayout.StackW;
     private const float StackH = BattleLayout.StackH;
     private const float StackGap = BattleLayout.StackGap;
     private const float StackMargin = BattleLayout.StackMargin;
-    private const float TopY = BattleLayout.TopY;
-    private const float SideX = BattleLayout.SideX;
-    private const float CardW = BattleLayout.CardW;
 
     private sealed class StackCard
     {
@@ -79,10 +76,30 @@ public partial class SummonStackLayer : Control
         }
 
         // ③ 归位 + 刷新
+        //    2026-11-04：卡牌改成居中两排后，中间不再有空隙给堆叠卡，
+        //    所以敌方堆叠贴在**右**边距（自上而下）、我方贴在**左**边距（自下而上）。
+        //    贴边而不是贴卡：卡列位置会随分辨率漂移，屏幕边距永远是稳的。
+        int leftCount = 0;
+        int rightCount = 0;
+
         for (int i = 0; i < _stackOrder.Count; i++)
         {
             var st = _stacks[_stackOrder[i]];
-            st.Root.Position = new Vector2(st.Pos.X, TopY + i * (StackH + StackGap));
+            bool isRight = st.Key.StartsWith("R|");
+
+            float y;
+            if (isRight)
+            {
+                y = BattleLayout.EnemyRowY + rightCount * (StackH + StackGap);
+                rightCount++;
+            }
+            else
+            {
+                y = BattleLayout.AllyRowY + BattleLayout.CardH - StackH - leftCount * (StackH + StackGap);
+                leftCount++;
+            }
+
+            st.Root.Position = new Vector2(st.Pos.X, y);
             st.Pos = st.Root.Position;
             Render(st, groups[st.Key]);
         }
@@ -90,9 +107,8 @@ public partial class SummonStackLayer : Control
 
     private StackCard BuildOne(string key, string name, bool right, float areaX)
     {
-        float x = right ? areaX - SideX - CardW - StackW - StackMargin
-                        : SideX + CardW + StackMargin;
-        var root = new Control { Position = new Vector2(x, TopY), Size = new Vector2(StackW, StackH) };
+        float x = right ? areaX - StackMargin - StackW : StackMargin;
+        var root = new Control { Position = new Vector2(x, BattleLayout.EnemyRowY), Size = new Vector2(StackW, StackH) };
         var bg = new ColorRect
         {
             Color = right ? new Color(0.16f, 0.09f, 0.11f) : new Color(0.10f, 0.12f, 0.16f),
@@ -119,7 +135,7 @@ public partial class SummonStackLayer : Control
         {
             Key = key, Name = name, Root = root,
             TitleText = title, HpFill = hpfill, HpText = hptext,
-            Pos = new Vector2(x, TopY),
+            Pos = new Vector2(x, BattleLayout.EnemyRowY),
         };
         _stacks[key] = st;
         _stackOrder.Add(key);

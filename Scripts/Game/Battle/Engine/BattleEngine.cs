@@ -126,6 +126,7 @@ public sealed class BattleEngine
             DotMul = u.DotMul, DotStackBonus = u.DotStackBonus,         // 百淬套：装配期写入，不带上就等于套装没生效
             ShieldKeep = u.ShieldKeep,                                   // 护盾保持率：资质/装备装配期写入
             LockedHp = u.LockedHp,                                       // 召唤惩罚锁死的生命，跨波延续（不变）
+            OutDmgMul = u.OutDmgMul,                                     // 天赋伤害乘区：装配期写入，不带上第一波之后就没了
         };
         // 起手气血：默认满血；StartHp ≥ 0 时按该值起手（推图波间延续血量；0 = 已阵亡）
         c.Hp = u.StartHp >= 0 ? Math.Min(c.BaseHp, u.StartHp) : c.BaseHp;
@@ -576,6 +577,13 @@ public sealed class BattleEngine
         if (tgt.DmgTakenMul != 1.0)
         {
             amount *= tgt.DmgTakenMul;
+        }
+        // 天赋·出手伤害乘区（2026-11-02）：玩家侧才有值，敌人恒为 1。
+        // 放在破绽与疲劳之前 —— 三者都是"乘区"，先后不影响乘积，但放最前面
+        // 能让后面几行的日志/调试读数更接近"原始出手威力"。
+        if (att.OutDmgMul != 1)
+        {
+            amount *= att.OutDmgMul;
         }
         // 破绽（2026-10-24 定稿）：层 = 一次「攻击者的整个行动」的增伤窗口。
         //   **同一次行动里的多个武学、多段伤害全都吃** +BreakBonus —— 所以这里刻意**不做**

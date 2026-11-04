@@ -22,15 +22,21 @@ public partial class StagePanel : BasePanel
     static MaterialBag _ctxBag;
     static Action<int> _ctxOnGo;
     static Action _ctxOnClose;
+    static bool _ctxLocked;      // 大劫进行中 → 换层会让强制战斗作废，一律锁
 
     static StagePanel _current;
 
-    public static void BindData(StageRun run, MaterialBag bag, Action<int> onGo, Action onClose)
+    /// <summary>
+    /// locked：大劫进行中。此时层按钮全部置灰，并说明原因 ——
+    /// 大劫战走独立引擎，换层会把它顶掉，等于跳过转世的唯一触发器。
+    /// </summary>
+    public static void BindData(StageRun run, MaterialBag bag, Action<int> onGo, Action onClose, bool locked = false)
     {
         _ctxRun = run;
         _ctxBag = bag;
         _ctxOnGo = onGo;
         _ctxOnClose = onClose;
+        _ctxLocked = locked;
     }
 
     /// <summary>主题变更后由 BattlePanel 调用。</summary>
@@ -49,11 +55,34 @@ public partial class StagePanel : BasePanel
         _current.ApplyTheme();
     }
 
+    /// <summary>
+    /// 大劫开打 / 结束时同步"已经打开"的选关面板。
+    /// 它可能是在大劫之前打开的（那时还不该锁），不刷一次就会显示成可点、点了才被拒。
+    /// </summary>
+    public static void RefreshLockIfOpen(bool locked)
+    {
+        _ctxLocked = locked;
+
+        if (_current == null)
+        {
+            return;
+        }
+
+        if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+        {
+            return;
+        }
+
+        _current._locked = locked;
+        _current.Build();
+    }
+
     StageRun _run;
     MaterialBag _bag;
     Action<int> _onGo;
     Action _onClose;
     BackdropLayer _backdrop;
+    bool _locked;
     bool _wired;
 
     public override void OnClose()
@@ -76,6 +105,7 @@ public partial class StagePanel : BasePanel
         _bag = _ctxBag;
         _onGo = _ctxOnGo;
         _onClose = _ctxOnClose;
+        _locked = _ctxLocked;
 
         // 弹窗不放山水图：同一张 1920×1080 的图裁进小窗口会有"截图放大"感。
         // 让背后的战斗场景透过半透明的 BgPanel 底自然显出来（见主题资源 bgpanel 的 alpha）。
@@ -141,7 +171,17 @@ public partial class StagePanel : BasePanel
 
         if (_TBottomHint != null)
         {
-            _TBottomHint.Text = "点某层 → 进入锁层挂机（只刷该层）。想继续往上冲 → 关掉面板点「继续推图」。";
+            if (_locked)
+            {
+                _TBottomHint.Text = "⚔ 大劫上门中 —— 这一场打完（赢或输）才能换层。"
+                                    + "大劫战走独立引擎，换层会让它作废，而它是转世的唯一触发器。";
+                _TBottomHint.AddThemeColorOverride("font_color", new Color(1f, 0.72f, 0.35f));
+            }
+            else
+            {
+                _TBottomHint.Text = "点某层 → 进入锁层挂机（只刷该层）。想继续往上冲 → 关掉面板点「继续推图」。";
+                _TBottomHint.RemoveThemeColorOverride("font_color");   // 解锁后要退回主题色，否则一直留着警示黄
+            }
         }
 
         if (_TContent == null)
@@ -186,6 +226,7 @@ public partial class StagePanel : BasePanel
             Button btn = new Button();
             btn.Text = target.ToString();
             btn.CustomMinimumSize = new Vector2(56, 40);
+            btn.Disabled = _locked;        // 大劫中锁死（BattlePanel.OnGoLayer 还会再拦一道）
             if (target == _run.Layer)
             {
                 btn.AddThemeColorOverride("font_color", UISignalColors.Win);

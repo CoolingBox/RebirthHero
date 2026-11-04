@@ -132,24 +132,62 @@ public sealed class Inn
     /// <summary>下一次手动刷新是否免费。</summary>
     public bool NextRefreshIsFree
     {
-        get { return RefreshUsed < InnConfig.InnFreeRefresh; }
+        get { return IsFreeWith(0); }
     }
 
-    /// <summary>下一次手动刷新的价格（银两）；免费时为 0。</summary>
+    /// <summary>
+    /// 免费刷新次数是否还没用完（含天赋「招牌」加的免费次数）。
+    /// 为什么是参数而不是查表：Inn 尽量不依赖天赋系统，探针测客栈不必先灌天赋表。
+    /// </summary>
+    public bool IsFreeWith(int freeAdd)
+    {
+        int free = InnConfig.InnFreeRefresh + (freeAdd > 0 ? freeAdd : 0);
+        return RefreshUsed < free;
+    }
+
+    /// <summary>下一次手动刷新的价格（银两）；免费时为 0。天赋「人脉」之外的折扣走 <see cref="RefreshCostWith"/>。</summary>
     public double RefreshCost()
     {
-        if (NextRefreshIsFree)
+        return RefreshCostWith(0, 0);
+    }
+
+    /// <summary>
+    /// 带天赋折扣的刷新价格（2026-11-02）：discount = 0.2 表示 −20%；freeAdd = 天赋加的免费次数。
+    /// 为什么把折扣做成参数而不是在这里查 Talent：Inn 是纯状态机，UI 层才知道"当前这一局"的加成，
+    /// 保持 Inn 不依赖天赋系统，探针测客栈也不用先灌一张天赋表。
+    /// </summary>
+    public double RefreshCostWith(double discount, int freeAdd = 0)
+    {
+        if (IsFreeWith(freeAdd))
         {
             return 0;
         }
-        int paid = RefreshUsed - InnConfig.InnFreeRefresh; // 第 0、1、2… 次付费
-        return InnConfig.InnRefreshBase * Math.Pow(InnConfig.InnRefreshGrowth, paid);
+        int free = InnConfig.InnFreeRefresh + (freeAdd > 0 ? freeAdd : 0);
+        int paid = RefreshUsed - free; // 第 0、1、2… 次付费
+        double baseCost = InnConfig.InnRefreshBase * Math.Pow(InnConfig.InnRefreshGrowth, paid);
+
+        double d = discount;
+        if (d < 0)
+        {
+            d = 0;
+        }
+        if (d > 0.9)
+        {
+            d = 0.9;
+        }
+        return baseCost * (1 - d);
     }
 
     /// <summary>手动刷新栏位（免费次数内不收钱；之后从银两扣，不足则失败）。</summary>
     public bool TryRefresh(Silver silver)
     {
-        double cost = RefreshCost();
+        return TryRefresh(silver, 0, 0);
+    }
+
+    /// <summary>带天赋折扣的手动刷新（discount = 0.2 表示 −20%；freeAdd = 天赋加的免费次数）。</summary>
+    public bool TryRefresh(Silver silver, double discount, int freeAdd = 0)
+    {
+        double cost = RefreshCostWith(discount, freeAdd);
         if (cost > 0)
         {
             if (silver == null || !silver.TrySpend(cost))
@@ -167,7 +205,12 @@ public sealed class Inn
     void RollSlots()
     {
         var pool = new List<HeroConfig>(_unlocked);
-        int n = Math.Max(0, InnConfig.InnSlots);
+        // 栏位 = 配置基础值 + 天赋「人脉」。夹到候选池大小，避免池子小的时候死循环或重复。
+        int n = Math.Max(0, InnConfig.InnSlots + Talent.Bonus().InnSlotAdd);
+        if (n > pool.Count)
+        {
+            n = pool.Count;
+        }
         for (int i = 0; i < n && pool.Count > 0; i++)
         {
             int k = _rng.Next(pool.Count);

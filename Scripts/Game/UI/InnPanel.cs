@@ -127,14 +127,20 @@ public partial class InnPanel : BasePanel
             _TSilver.Text = "银两 " + Fmt(CurrentSilver());
         }
 
+        // 天赋：候选栏位 +1（Inn.RollSlots 里读）、刷新折扣、免费刷新次数（第二棵「招牌」）
+        TalentBonus tb = Talent.Bonus();
+        int slotTotal = InnConfig.InnSlots + tb.InnSlotAdd;
+
         if (_THint != null)
-            _THint.Text = "已刷新 " + _inn.RefreshUsed + " 次　·　栏位 " + _inn.Slots.Count + "/" + InnConfig.InnSlots
+            _THint.Text = "已刷新 " + _inn.RefreshUsed + " 次　·　栏位 " + _inn.Slots.Count + "/" + slotTotal
                         + "　·　资质 = 星级(HP/ATK，不含速度) + 三维成长率 + 词条";
 
         if (_TRefreshBtn != null)
         {
-            _TRefreshBtn.Text = _inn.NextRefreshIsFree ? "刷新（免费）" : "刷新（" + Fmt(_inn.RefreshCost()) + " 银两）";
-            _TRefreshBtn.Disabled = !_inn.NextRefreshIsFree && CurrentSilver() < _inn.RefreshCost();
+            bool free = _inn.IsFreeWith(tb.InnFreeAdd);
+            double cost = _inn.RefreshCostWith(tb.InnDiscount, tb.InnFreeAdd);
+            _TRefreshBtn.Text = free ? "刷新（免费）" : "刷新（" + Fmt(cost) + " 银两）";
+            _TRefreshBtn.Disabled = !free && CurrentSilver() < cost;
         }
 
         // —— 候选栏位（动态重建）——
@@ -212,7 +218,8 @@ public partial class InnPanel : BasePanel
 
     void OnRefreshClicked()
     {
-        if (_inn.TryRefresh(_silver))
+        TalentBonus tb = Talent.Bonus();
+        if (_inn.TryRefresh(_silver, tb.InnDiscount, tb.InnFreeAdd))
         {
             if (_onRosterChanged != null)
             {

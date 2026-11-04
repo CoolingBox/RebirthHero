@@ -49,8 +49,18 @@ public static class EquipDropper
         return RarityWeights[3];
     }
 
-    /// <summary>该层会掉什么稀有度（1~5）。</summary>
-    public static Rarity RollRarity(int layer, Random rng)
+    /// <summary>
+    /// 该层掉什么稀有度（1~5）。
+    /// <para>
+    /// rarityBoost（2026-11-04，天赋「神兵 / 沉着」）：**按稀有度阶梯放大高档权重** ——
+    /// 第 r 档的乘子是 `1 + boost × (r−1)`，所以白装不变、绿 ×(1+b)、蓝 ×(1+2b) …… 橙 ×(1+4b)。
+    /// 为什么不给所有档同一乘子：那只是"把稀有度整体上移"，玩家看到的是"白装变少了"；
+    /// 按阶梯放大才能说清"越好的东西越容易出"。
+    /// </para>
+    /// ⚠️ 权重为 0 的档**仍然是 0**：10 层内本来就没有紫/橙，天赋不会凭空造出这一层不该有的品阶。
+    /// 这是刻意的 —— "刷更高层才有更好的装备"是推图的核心驱动，不能被一个天赋绕过去。
+    /// </summary>
+    public static Rarity RollRarity(int layer, Random rng, double rarityBoost = 0)
     {
         if (rng == null)
         {
@@ -58,10 +68,21 @@ public static class EquipDropper
         }
 
         int[] w = WeightsOf(layer);
-        int total = 0;
+        int[] ww = new int[w.Length];
         for (int i = 0; i < w.Length; i++)
         {
-            total += w[i];
+            double mult = 1;
+            if (rarityBoost > 0 && i >= 1)
+            {
+                mult = 1 + rarityBoost * i;
+            }
+            ww[i] = (int)Math.Round(w[i] * mult);
+        }
+
+        int total = 0;
+        for (int i = 0; i < ww.Length; i++)
+        {
+            total += ww[i];
         }
 
         if (total <= 0)
@@ -71,9 +92,9 @@ public static class EquipDropper
 
         int roll = rng.Next(total);
         int acc = 0;
-        for (int i = 0; i < w.Length; i++)
+        for (int i = 0; i < ww.Length; i++)
         {
-            acc += w[i];
+            acc += ww[i];
             if (roll < acc)
             {
                 return (Rarity)(i + 1);
@@ -88,7 +109,7 @@ public static class EquipDropper
     /// 该稀有度没有模板时逐档下探（避免高层出了橙装却因为没配橙装而空手）。
     /// 返回 null 表示池里完全没有可用模板。
     /// </summary>
-    public static EquipConfig Roll(int layer, Random rng, List<EquipConfig> pool)
+    public static EquipConfig Roll(int layer, Random rng, List<EquipConfig> pool, double rarityBoost = 0)
     {
         if (pool == null || pool.Count == 0)
         {
@@ -99,7 +120,7 @@ public static class EquipDropper
             rng = new Random();
         }
 
-        Rarity rarity = RollRarity(layer, rng);
+        Rarity rarity = RollRarity(layer, rng, rarityBoost);
 
         for (int r = (int)rarity; r >= 1; r--)
         {
@@ -142,14 +163,27 @@ public static class EquipDropper
         return null;
     }
 
-    /// <summary>是否掉落（每次击杀调一次）。</summary>
-    public static bool ShouldDrop(Random rng)
+    /// <summary>
+    /// 是否掉落（每次击杀调一次）。
+    /// extraChance = 天赋「眼力」之类的**加点数**（0.015 = +1.5%），上限夹到 1。
+    /// </summary>
+    public static bool ShouldDrop(Random rng, double extraChance = 0)
     {
         if (rng == null)
         {
             rng = new Random();
         }
-        return rng.NextDouble() < DropChance;
+
+        double p = DropChance;
+        if (extraChance > 0)
+        {
+            p += extraChance;
+        }
+        if (p > 1.0)
+        {
+            p = 1.0;
+        }
+        return rng.NextDouble() < p;
     }
 
     /// <summary>

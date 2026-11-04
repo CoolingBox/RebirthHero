@@ -24,7 +24,21 @@ public sealed class Silver
     /// <summary>某个敌人被击杀时调用：按层进账一份银两。</summary>
     public double GainForKill(int layer)
     {
-        double g = CultivationConfig.SilverPerKill(layer);
+        return GainForKill(layer, 1.0);
+    }
+
+    /// <summary>
+    /// 带产出的击杀结算（2026-11-02）：mul = 天赋「经营」之类的银两产出乘区。
+    /// 为什么把这个乘区放在这里而不是改 `CultivationConfig.SilverPerKill`：
+    /// 那个是**全局**公式，敌方掉落也走它；而天赋是玩家独有的加成，只能在玩家侧乘。
+    /// </summary>
+    public double GainForKill(int layer, double mul)
+    {
+        if (mul <= 0)
+        {
+            mul = 1.0;
+        }
+        double g = CultivationConfig.SilverPerKill(layer) * mul;
         Amount += g;
         TotalGained += g;
         BattleGained += g;

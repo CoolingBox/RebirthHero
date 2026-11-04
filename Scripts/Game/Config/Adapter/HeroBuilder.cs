@@ -26,7 +26,8 @@ public static class HeroBuilder
                                    Func<int, int[]> skillIdsOf = null,
                                    Func<int, EquipBonus> equipOf = null,
                                    Func<int, EquipTuning> tuningOf = null,
-                                   double realmMult = 1)
+                                   double realmMult = 1,
+                                   TalentBonus talent = default(TalentBonus))
     {
         if (hero == null)
         {
@@ -39,6 +40,14 @@ public static class HeroBuilder
         if (realmMult <= 0)
         {
             realmMult = 1;
+        }
+
+        // 天赋乘区（2026-11-02）：道行点出来的永久加成，跨世不清零 —— 与境界是**乘算**
+        // （境界是"这一世"的纵向，天赋是"所有世"的横向，两者独立叠）。
+        // 未点任何天赋时 TalentBonus 是 Identity（全 1），与"天赋树不存在"完全等价。
+        if (talent.AtkMul <= 0)
+        {
+            talent = TalentBonus.Identity;
         }
 
         // M2.4 武学装配：默认用表里的 SkillIds；面板装配后由 skillIdsOf 提供 3 槽（0 = 空槽）
@@ -58,22 +67,39 @@ public static class HeroBuilder
 
         // 纯加算成长：基础值(L1) + 每级成长 × (L−1)，三属性各自独立
         // 装备加成同为加算，接在成长结果之后（"生命+120"就是实打实的 120 点上限）
-        double hp = HeroGrowth.Hp((double)hero.BaseHP, hero.HpGrowth, level) + eq.Hp;
-        double atk = HeroGrowth.Atk((double)hero.BaseATK, hero.AtkGrowth, level) + eq.Atk;
+        // 第二棵树的「兵刃」支只放大**装备那一段**（eq.*），不动基础成长 —— 这样它的收益
+        // 天然跟"你掉了多少好装备"挂钩，而不是又一个无条件的全属性乘区。
+        double eqHp = eq.Hp * talent.EquipStatMul;
+        double eqAtk = eq.Atk * talent.EquipStatMul;
+        double eqSpd = eq.Spd * talent.EquipStatMul;
+
+        double hp = HeroGrowth.Hp((double)hero.BaseHP, hero.HpGrowth, level) + eqHp;
+        double atk = HeroGrowth.Atk((double)hero.BaseATK, hero.AtkGrowth, level) + eqAtk;
         double def = HeroGrowth.Def((double)hero.BaseDEF, hero.DefGrowth, level);
 
         var u = new BattleUnit
         {
             Name = hero.Name,
             Slot = slot,
-            BaseHp = hp * hpBonus * BattleConfig.HpScale * realmMult,
-            BaseAtk = atk * BattleConfig.AtkScale * realmMult,
-            BaseDef = def * BattleConfig.DefScale * realmMult,
-            BaseSpd = hero.BaseSPD + eq.Spd,  // SPD 不随等级成长，装备是它的主要来源（境界不加 SPD）
-            BaseW = w,
+            BaseHp = hp * hpBonus * BattleConfig.HpScale * realmMult * talent.HpMul,
+            BaseAtk = atk * BattleConfig.AtkScale * realmMult * talent.AtkMul,
+            BaseDef = def * BattleConfig.DefScale * realmMult * talent.DefMul,
+            BaseSpd = (hero.BaseSPD + eqSpd) * talent.SpdMul,  // SPD 不随等级成长（境界也不加），装备 + 天赋是它的两个来源
+            BaseW = w + talent.WeightAdd,
             IsSummon = hero.IsSummon,
         };
         u.Hp = u.BaseHp;
+
+        // 天赋的点数类加成（护盾保持率）—— 与资质、装备同属"加点"，直接相加；
+        // 上限仍由 Act() 首行的 ShieldKeepCap 统一 clamp，这里不做二次夹取。
+        u.ShieldKeep += talent.ShieldKeepAdd;
+
+        // 天赋的出手伤害乘区（外功支「杀伐 / 决意」）—— 这是唯一能改"伤害"而非"攻击"的口子，
+        // 因为攻击会被防御减免，而伤害乘区是最终乘算，后期价值远高于同量级 ATK%。
+        if (talent.DmgMul > 0)
+        {
+            u.OutDmgMul = talent.DmgMul;
+        }
 
         // —— 当世资质（M2.3 客栈）：星级 / 成长率 / 词条 —— 必须在技能装配前应用
         quality?.ApplyTo(u, affixLookup);
@@ -250,14 +276,15 @@ public static class HeroBuilder
                                              Func<int, int[]> skillIdsOf = null,
                                              Func<int, EquipBonus> equipOf = null,
                                              Func<int, EquipTuning> tuningOf = null,
-                                             double realmMult = 1)
+                                             double realmMult = 1,
+                                             TalentBonus talent = default(TalentBonus))
     {
         var list = new List<BattleUnit>();
         int slot = 1;
         foreach (HeroConfig h in heroes)
         {
             BattleUnit u = Build(h, slot, skillLookup, level, includePending, qualityOf?.Invoke(h.Id),
-                                 affixLookup, skillIdsOf, equipOf, tuningOf, realmMult);
+                                 affixLookup, skillIdsOf, equipOf, tuningOf, realmMult, talent);
             if (u != null)
             {
                 list.Add(u);
@@ -274,7 +301,8 @@ public static class HeroBuilder
                                              Func<int, int[]> skillIdsOf = null,
                                              Func<int, EquipBonus> equipOf = null,
                                              Func<int, EquipTuning> tuningOf = null,
-                                             double realmMult = 1)
+                                             double realmMult = 1,
+                                             TalentBonus talent = default(TalentBonus))
     {
         var list = new List<BattleUnit>();
         int slot = 1;
@@ -282,7 +310,7 @@ public static class HeroBuilder
         {
             int lv = levelOf?.Invoke(h.Id) ?? 1;
             BattleUnit u = Build(h, slot, skillLookup, lv, includePending, qualityOf?.Invoke(h.Id),
-                                 affixLookup, skillIdsOf, equipOf, tuningOf, realmMult);
+                                 affixLookup, skillIdsOf, equipOf, tuningOf, realmMult, talent);
             if (u != null)
             {
                 list.Add(u);

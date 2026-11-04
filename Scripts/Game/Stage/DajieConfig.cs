@@ -36,4 +36,26 @@ public static class DajieConfig
         double left = DajieInterval - clock;
         return left > 0 ? left : 0;
     }
+
+    /// <summary>实际间隔（秒）—— 乘天赋「沉着」的间隔乘区（mul &lt; 1 = 来得更勤）。</summary>
+    /// <para>
+    /// 下限 30 秒：天赋可以叠到 −30%，再不设限玩家会把大劫刷成"每 20 秒一场"，
+    /// 那已经不是战斗节奏而是读条。
+    /// </para>
+    public static double IntervalWith(double mul)
+    {
+        if (mul <= 0)
+        {
+            mul = 1;
+        }
+        double v = DajieInterval * mul;
+        return v < 30 ? 30 : v;
+    }
+
+    /// <summary>带天赋乘区的倒计时。</summary>
+    public static double RemainWith(double clock, double mul)
+    {
+        double left = IntervalWith(mul) - clock;
+        return left > 0 ? left : 0;
+    }
 }

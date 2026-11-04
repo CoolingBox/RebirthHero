@@ -1,0 +1,129 @@
+[gd_scene load_steps=2 format=3]
+
+; ============================================================================
+; 卡册 —— 左侧 4 层视差大卡 + 右侧 4 列缩略图
+;
+; 大卡本体（GalleryCard）由脚本在运行时 new 到 TCardHolder 里，不在本场景画 ——
+; 它的 4 个 TextureRect 层是数据驱动的，写进 tscn 反而每次都得跟着代码改。
+; ============================================================================
+
+[ext_resource type="Theme" path="res://Resources/Theme/wuxia_nightblade.tres" id="theme_default"]
+
+[node name="GalleryPanel" type="Control"]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 210.0
+offset_top = 60.0
+offset_right = 1710.0
+offset_bottom = 1020.0
+mouse_filter = 0
+theme = ExtResource("theme_default")
+
+[node name="TBg" type="Panel" parent="."]
+theme_type_variation = &"BgPanel"
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="TTitle" type="Label" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 900.0
+offset_bottom = 56.0
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 31
+theme_type_variation = &"HeadingLabel"
+text = "卡册"
+
+[node name="TCloseBtn" type="Button" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 1380.0
+offset_top = 10.0
+offset_right = 1500.0
+offset_bottom = 44.0
+text = "关闭 ✕"
+
+[node name="TCardHolder" type="Control" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 40.0
+offset_top = 80.0
+offset_right = 592.0
+offset_bottom = 790.0
+mouse_filter = 1
+
+[node name="TGrid" type="GridContainer" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 777.0
+offset_top = 150.0
+offset_right = 1313.0
+offset_bottom = 702.0
+columns = 5
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+
+[node name="TInfo" type="Label" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 620.0
+offset_top = 800.0
+offset_right = 1470.0
+offset_bottom = 844.0
+horizontal_alignment = 0
+vertical_alignment = 1
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 21
+theme_type_variation = &"HintLabel"
+
+[node name="THint" type="Label" parent="."]
+layout_mode = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 872.0
+offset_right = 1470.0
+offset_bottom = 930.0
+horizontal_alignment = 0
+vertical_alignment = 1
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 21
+theme_type_variation = &"AccentLabel"

@@ -56,6 +56,10 @@ public sealed class GameSave : SaveData
     public double DaoAmount;
     public double DaoTotal;
 
+    // ---------- 天赋树（跨世永久，转世不清零）----------
+    /// <summary>已点节点（只存点过的；等级为 0 的不入库）。</summary>
+    public List<TalentSave> Talents = new List<TalentSave>();
+
     // ---------- 大劫（本世状态）----------
     /// <summary>本世已打赢几场大劫（决定下一场强度档位）。转世归零。</summary>
     public int DajieWins;
@@ -111,11 +115,11 @@ public sealed class WornSave
     public int[] Uids = new int[EquipBag.SlotCount];
 }
 
-/// <summary>某侠客的三个武学槽（0 = 空槽）。</summary>
+/// <summary>某侠客的武学槽（0 = 空槽）。长度按 <see cref="SkillLoadout.MaxSlots"/> 固定，天赋加槽不影响存档长度。</summary>
 public sealed class LoadoutSave
 {
     public int HeroId;
-    public int[] Slots = new int[SkillLoadout.Slots];
+    public int[] Slots = new int[SkillLoadout.MaxSlots];
 }
 
 /// <summary>一份资质（客栈栏位 / 已招名单）。派生加成（HealPct/MulBonus）不入库，装配时按词条重算。</summary>

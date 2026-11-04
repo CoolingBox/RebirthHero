@@ -52,6 +52,9 @@ public static class GameProgress
             save.DaoTotal = dao.TotalGained;
         }
 
+        // —— 天赋树（跨世永久；道行的唯一出口，转世同样不清零）——
+        save.Talents = Talent.Snapshot();
+
         // —— 修为 ——
         if (heroIds != null)
             foreach (int id in heroIds)
@@ -114,7 +117,7 @@ public static class GameProgress
                 int[] slots = loadout.Get(id);
                 LoadoutSave s = new LoadoutSave();
                 s.HeroId = id;
-                for (int i = 0; i < SkillLoadout.Slots; i++)
+                for (int i = 0; i < SkillLoadout.MaxSlots; i++)
                 {
                     s.Slots[i] = i < slots.Length ? slots[i] : SkillLoadout.Empty;
                 }
@@ -201,6 +204,9 @@ public static class GameProgress
         {
             dao.Restore(save.DaoAmount, save.DaoTotal);
         }
+        // 天赋必须晚于 Talent.Init（表要先灌进来才能校验 Id / 夹等级）——
+        // BattlePanel 的调用顺序是 Init() → LoadProgress()，满足这条。
+        Talent.Restore(save.Talents);
 
         foreach (HeroExpSave e in save.Heroes)
         {
