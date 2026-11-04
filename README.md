@@ -10,11 +10,15 @@
 
 ## 快速开始
 
-1. 安装 [Godot 4.7 .NET 版](https://godotengine.org/download/) 与 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-2. 用 Godot 打开本目录（`project.godot`），首次导入会自动还原 NuGet 包
-3. F5 运行（主场景 `Resources/Scene/Game.tscn`）
+1. **先装 Git LFS**（`git lfs install`）—— 素材（png / ttf / mp3，约 130MB）走 LFS，
+   没装的话克隆下来会是一堆 132 字节的指针文本，Godot 导入直接报错
+2. 安装 [Godot 4.7 .NET 版](https://godotengine.org/download/) 与 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+3. 用 Godot 打开本目录（`project.godot`），首次导入会自动还原 NuGet 包
+4. F5 运行（主场景 `Resources/Scene/Game.tscn`）
 
 命令行构建：`dotnet build RebirthHero.csproj`
+
+> ⚠️ 把仓库挪到新机器后，若发现图片是几行文本，执行 `git lfs checkout` 即可拉回真实内容。
 
 ---
 
