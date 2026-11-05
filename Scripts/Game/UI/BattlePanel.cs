@@ -7,6 +7,8 @@
 //   · Scripts/Game/UI/BattlePanel.cs  —— 本文件：**只做编排**（生命周期、推图状态机、开战/结算、
 //                                        掉落、事件接线、逐帧驱动、顶部信息栏、共享工具）；
 //                                        不持有卡表/堆叠表/飘字表/战报行 —— 那些归各自组件私有。
+//   · Scripts/Game/UI/BattleClock.cs     —— **计时器与时间状态**（战斗节拍 / 结算推进 / 自动保存 /
+//                                        二次确认超时 / 大劫倒计时）；面板只订阅它的回调
 //   · Scripts/Game/UI/HeroCardLayer.cs    —— 侠客单位卡（挂 TCards 节点）
 //   · Scripts/Game/UI/SummonStackLayer.cs —— 召唤物堆叠卡（挂 TStacks 节点）
 //   · Scripts/Game/UI/FloatLayer.cs       —— 战斗飘字（挂 TFxLayer 节点）
@@ -35,12 +37,14 @@ using TinyFramework;
 public partial class BattlePanel : BasePanel
 {
     private const float SimDt = 0.15f;    // 每个 tick 推进的模拟秒数（~1.8x 观赏速度）
-    private const float TickSec = 0.1f;   // Timer 真实间隔
 
-    private Timer _timer;
-    private Timer _advanceTimer;
-    private Timer _autoSave;              // M2.6 自动保存主档（间隔见 SaveBackup.AutoSaveMinutes）
-    private Timer _nextArmTimer;          // 「转世 / 重开本世」二次确认的超时解除
+    /// <summary>
+    /// 全部计时器与时间状态都在这里（2026-11-05 从本类剥离）。
+    /// 面板只订阅回调（节拍 / 结算推进 / 自动保存 / 确认超时 / 大劫到点），
+    /// 不 new Timer、不算毫秒差 —— 调节奏改 BattleClock，不用翻这个 1800 行的文件。
+    /// </summary>
+    private readonly BattleClock _clock = new BattleClock();
+
     private bool _nextArmed;              // 已经点过第一下，等第二下确认
     private bool _needRestart;            // 载入存档后要按新进度重开一场（面板关掉后执行）
 
@@ -83,10 +87,16 @@ public partial class BattlePanel : BasePanel
     // —— M3 道行（永久货币；转世折算唯一来源，天赋树唯一出口）——
     private readonly Dao _dao = new Dao();
 
+    /// <summary>
+    /// 战斗规则层（`Scripts/Game/BattleRule/`）拿到的状态视图。
+    /// 面板只把**引用**交出去（Init 末尾绑一次），掉落 / 结算 / 大劫 / 转世怎么算账全在那边；
+    /// 本类剩下的只有"什么时候调"和"怎么显示"。
+    /// </summary>
+    private readonly BattleRuleContext _rule = new BattleRuleContext();
+
     // —— M3 大劫（定时上门的 Boss 战）——
-    private double _dajieClock;          // 距离上一场大劫累计的秒数（**打大劫期间不累加**）
-    private Timer _dajieTimer;           // 0.5s 心跳：BasePanel 不是 Node，没有 _Process 可用
-    private ulong _dajieLastMs;          // 上一跳的真实毫秒时间戳（算 dt 用）
+    // 计时全在 _clock：累计秒数读 DajieElapsed，暂停用 SetDajiePaused，
+    // 到点由 DajieDue 回调进来。这里只留玩法状态（是不是大劫战、打到第几场）。
     private bool _inDajie;               // 当前这场是不是大劫战
     private int _dajieWins;              // 本世已打赢几场（决定下一场强度档位）
     private List<BattleUnit> _dajieFoes;  // 大劫战的敌方阵容（StartBattle 里用它代替推图波次）
@@ -112,14 +122,8 @@ public partial class BattlePanel : BasePanel
     public override void OnHide()
     {
         // 面板被隐藏（如将来叠加其它全屏面板）时暂停战斗，避免后台空转
-        if (_timer != null)
-        {
-            _timer.Stop();
-        }
-        if (_advanceTimer != null)
-        {
-            _advanceTimer.Stop();
-        }
+        _clock.StopBeat();
+        _clock.StopAdvance();
         base.OnHide();
     }
 
@@ -225,6 +229,21 @@ public partial class BattlePanel : BasePanel
             _TExp.MouseFilter = Control.MouseFilterEnum.Stop;
             _TExp.GuiInput += OnDajieClockInput;
         }
+
+        // —— 战斗规则层的状态视图（必须等上面几个状态机都造好）——
+        // 只交引用，不交所有权：这些对象仍归面板持有，规则调用它们的方法改账。
+        _rule.Run = _run;
+        _rule.Cult = _cult;
+        _rule.Money = _silver;
+        _rule.Materials = _materials;
+        _rule.Equips = _equips;
+        _rule.Dao = _dao;
+        _rule.Rng = _rng;
+        _rule.EquipPool = _equipPool;
+        _rule.AffixPool = _equipAffixPool;
+        _rule.RosterIds = RosterIds;
+        _rule.EquipById = EquipById;
+        _rule.SetById = SetById;
     }
 
     /// <summary>
@@ -285,7 +304,7 @@ public partial class BattlePanel : BasePanel
         {
             // 大劫状态是表现层自己的字段（不在 GameProgress 的搬运清单里），单独补存
             data.DajieWins = _dajieWins;
-            data.DajieClock = _dajieClock;
+            data.DajieClock = _clock.DajieElapsed;
         }
         return data;
     }
@@ -300,14 +319,10 @@ public partial class BattlePanel : BasePanel
         if (data != null && data.Written)
         {
             _dajieWins = data.DajieWins;
-            _dajieClock = data.DajieClock;
+            _clock.DajieElapsed = data.DajieClock;   // 负值由时钟内部夹回 0
             if (_dajieWins < 0)
             {
                 _dajieWins = 0;
-            }
-            if (_dajieClock < 0)
-            {
-                _dajieClock = 0;
             }
         }
 
@@ -341,8 +356,8 @@ public partial class BattlePanel : BasePanel
     private void OnOpenSave()
     {
         AudioManager.PlayUISFX("ui_open");
-        _timer.Stop();
-        _advanceTimer.Stop();
+        _clock.StopBeat();
+        _clock.StopAdvance();
 
         SavePanel.BindData(CaptureProgress, ApplyProgress, SyncAutoSave, OnCloseSave);
         UIManager.ShowPanel<SavePanel>();
@@ -375,21 +390,12 @@ public partial class BattlePanel : BasePanel
         ResumeBattle();
     }
 
-    /// <summary>自动保存开关变了 → 启停计时器（设置本身由面板写盘）。</summary>
+    /// <summary>自动保存开关变了 → 交给时钟启停（设置本身由面板写盘）。</summary>
     private void SyncAutoSave()
     {
-        if (_autoSave == null)
-        {
-            return;
-        }
-
         SettingData settings = SettingManager.Data;
         bool on = settings != null && settings.AutoSave;
-        if (on)
-        {
-            _autoSave.Start();
-        }
-        else _autoSave.Stop();
+        _clock.SyncAutoSave(on);
     }
 
     /// <summary>M2.3 客栈：当前出战阵容 = 客栈编队（带当世资质）。编队为空即真正空编队（不再回退开局 4 名）。</summary>
@@ -595,33 +601,21 @@ public partial class BattlePanel : BasePanel
             _TSettingBtn.Pressed += OnOpenSettings;
         }
 
-        _timer = new Timer { WaitTime = TickSec, OneShot = false, Autostart = false };
-        GameObject.AddChild(_timer);
-        _timer.Timeout += OnTick;
+        // —— 计时器总装（2026-11-05 剥离到 BattleClock）——
+        // 时钟只负责"到点喊一声"，喊回来的是本面板的业务方法；节奏参数全在 BattleClock 里。
+        GameObject.AddChild(_clock);
+        _clock.Build(SaveBackup.AutoSaveMinutes * 60);
+        _clock.Ticked += OnBeat;
+        _clock.AdvanceDue += OnAdvance;
+        _clock.AutoSaveDue += SaveProgress;
+        _clock.ConfirmExpired += DisarmNext;
+        _clock.DajieDue += OnDajieDue;
 
-        _advanceTimer = new Timer { WaitTime = 1.1, OneShot = true, Autostart = false };
-        GameObject.AddChild(_advanceTimer);
-        _advanceTimer.Timeout += OnAdvance;
+        // 大劫间隔 = 配置 × 天赋乘区。交给时钟**每次自己问**（而不是缓存一个值），
+        // 天赋点了下一跳就生效，面板里不用到处同步缓存。
+        _clock.DajieIntervalProvider = () => DajieRule.Interval();
 
-        // 转世按钮的"二次确认"超时：3 秒内不再点就自动解除，避免误触状态一直挂着
-        _nextArmTimer = new Timer { WaitTime = 3.0, OneShot = true, Autostart = false };
-        GameObject.AddChild(_nextArmTimer);
-        _nextArmTimer.Timeout += DisarmNext;
-
-        // 自动保存：整 10 分钟一次主档。开关读 SettingData（玩家在存档面板里改）
-        _autoSave = new Timer { WaitTime = SaveBackup.AutoSaveMinutes * 60, OneShot = false, Autostart = false };
-        GameObject.AddChild(_autoSave);
-        _autoSave.Timeout += SaveProgress;
         SyncAutoSave();
-
-        // 大劫倒计时（2026-11-02）：BasePanel 不是 Node，**没有 _Process 可以 override**，
-        // 所以用独立 Timer + 真实毫秒差来推进。0.5s 一跳足够（倒计时按分钟显示），
-        // 也避免把每帧逻辑塞进战斗 tick —— 战斗 tick 在大劫期间是停的。
-        _dajieTimer = new Timer { WaitTime = 0.5, OneShot = false, Autostart = false };
-        GameObject.AddChild(_dajieTimer);
-        _dajieTimer.Timeout += TickDajie;
-        _dajieLastMs = Time.GetTicksMsec();
-        _dajieTimer.Start();
 
         UIThemeManager.ApplyTo(GameObject);
         ApplyThemeColors();
@@ -637,7 +631,7 @@ public partial class BattlePanel : BasePanel
 
     private string _galleryShotDir = "";
     private int _galleryShotPhase;
-    private double _galleryShotWait;
+    private double _galleryShotMark;   // 上一次阶段切换时的时钟刻度（不是自己累加的秒数）
 
     /// <summary>验证视差用的两个固定倾斜角（左右各满倾）。</summary>
     static readonly Vector2[] GalleryShotTilts =
@@ -653,21 +647,20 @@ public partial class BattlePanel : BasePanel
     /// </summary>
     private void TickGalleryShot()
     {
-        _galleryShotWait += TickSec;
-
+        // 时间刻度直接读时钟的累计节拍秒（本类不再自己累加 —— 计时归 BattleClock）
         if (_galleryShotPhase == 0)
         {
-            if (_galleryShotWait > 0.8)
+            if (_clock.Elapsed > 0.8)
             {
                 OnOpenGallery();
                 GalleryPanel.SetForcedTilt(true, GalleryShotTilts[0]);
                 _galleryShotPhase = 1;
-                _galleryShotWait = 0;
+                _galleryShotMark = _clock.Elapsed;
             }
             return;
         }
 
-        if (_galleryShotPhase == 1 && _galleryShotWait > 1.0)
+        if (_galleryShotPhase == 1 && _clock.Elapsed - _galleryShotMark > 1.0)
         {
             Image img = GameObject.GetViewport().GetTexture().GetImage();
             string path = _galleryShotDir.PathJoin("gallery_a.png");
@@ -676,11 +669,11 @@ public partial class BattlePanel : BasePanel
 
             GalleryPanel.SetForcedTilt(true, GalleryShotTilts[1]);
             _galleryShotPhase = 2;
-            _galleryShotWait = 0;
+            _galleryShotMark = _clock.Elapsed;
             return;
         }
 
-        if (_galleryShotPhase == 2 && _galleryShotWait > 1.0)
+        if (_galleryShotPhase == 2 && _clock.Elapsed - _galleryShotMark > 1.0)
         {
             Image img = GameObject.GetViewport().GetTexture().GetImage();
             string path = _galleryShotDir.PathJoin("gallery_b.png");
@@ -694,12 +687,10 @@ public partial class BattlePanel : BasePanel
     // ============ 开战 ============
     /// <summary>战斗画面导出钩子（BATTLE_SHOT 为空时不生效）。等 1.4s 是为了让双方都打出过伤害。</summary>
     private string _battleShotDir = "";
-    private double _battleShotWait;
 
     private void TickBattleShot()
     {
-        _battleShotWait += TickSec;
-        if (_battleShotWait < 1.4)
+        if (_clock.Elapsed < 1.4)
         {
             return;
         }
@@ -717,7 +708,7 @@ public partial class BattlePanel : BasePanel
     private void StartBattle()
     {
         ClearBattle();
-        _advanceTimer.Stop();
+        _clock.StopAdvance();
         if (_TNextBtn != null)
         {
             _TNextBtn.Visible = false;
@@ -747,13 +738,13 @@ public partial class BattlePanel : BasePanel
         _cards.Build(_engine.A, _engine.B, _areaX);
 
         _resultShown = false;
+        SyncClockPause();     // 结算展示结束 → 大劫计时恢复（若这场就是大劫，则继续停着）
         if (_TResult != null)
         {
             _TResult.Visible = false;
         }
         RefreshHeader();
-        _timer.Stop();
-        _timer.Start();
+        _clock.StartBeat();
         _cards.Refresh(_engine);
         _stacks.Sync(_engine, _areaX);
     }
@@ -762,21 +753,13 @@ public partial class BattlePanel : BasePanel
     /// 境界突破（**自动**）：清层后检查双门槛（银两 + 已达层数），满足就进一境。
     /// 为什么不做成按钮：挂机定位下"钱攒够了就自己破"不需要玩家守着点，
     /// 仪式感交给结算栏的提示与音效，而不是交给一次点击。
+    /// 判定本身在 `BattleSettle.TryBreakRealm`，这里只播音 + 拼提示。
     /// 返回结算栏提示（空串 = 没突破）。
     /// </summary>
     private string TryAutoBreakRealm()
     {
-        if (!Realm.CanBreak(_silver, _run.BestLayer))
-        {
-            return "";
-        }
-
-        RealmConfig nx = Realm.Next;
+        RealmConfig nx = BattleSettle.TryBreakRealm(_silver, _run.BestLayer);
         if (nx == null)
-        {
-            return "";
-        }
-        if (!Realm.TryBreak(_silver, _run.BestLayer))
         {
             return "";
         }
@@ -801,7 +784,7 @@ public partial class BattlePanel : BasePanel
             _nextArmed = true;
             AudioManager.PlayUISFX("ui_click");
             RefreshNextButtonText();
-            _nextArmTimer.Start();
+            _clock.StartConfirm();
             return;
         }
 
@@ -812,10 +795,7 @@ public partial class BattlePanel : BasePanel
     /// <summary>解除"等确认"状态（超时 / 已确认 / 结算刷新时都走这里）。</summary>
     private void DisarmNext()
     {
-        if (_nextArmTimer != null)
-        {
-            _nextArmTimer.Stop();
-        }
+        _clock.StopConfirm();
         if (!_nextArmed)
         {
             return;
@@ -844,9 +824,9 @@ public partial class BattlePanel : BasePanel
         }
 
         _TNextBtn.RemoveThemeColorOverride("font_color");
-        if (DaoConfig.CanRebirth(_run.BestLayer))
+        if (RebirthRule.CanRebirth(_run.BestLayer))
         {
-            double gain = DaoConfig.ForLayer(_run.BestLayer) * Talent.Bonus().DaoMul;
+            double gain = RebirthRule.DaoGain(_run.BestLayer);
             _TNextBtn.Text = "转世 · +" + gain.ToString("0.#") + " 道行";
         }
         else
@@ -857,9 +837,8 @@ public partial class BattlePanel : BasePanel
 
     /// <summary>
     /// 转世 / 重开本世。
-    /// 够门槛（<c>DaoConfig.MinLayer</c>）→ 按最高层数折道行，**道行不清零**；
-    /// 不够门槛 → 只是普通重开，不发道行（否则玩家会在第 3 层反复刷 sqrt(3) 点）。
-    /// 归零的是"此生资产"：层数 / 修为等级 / 银两 / 材料 / 装备 / 境界。
+    /// 折算与归零的**规则**在 `RebirthRule`（够不够门槛、发多少道行、清哪六本账），
+    /// 这里只做面板该做的事：关子界面、清大劫档位、落盘、重开一场。
     /// </summary>
     private void OnNext()
     {
@@ -874,22 +853,16 @@ public partial class BattlePanel : BasePanel
         // 所以先无条件关掉所有子界面，让玩家回到主界面看到"新的一世"。
         CloseAllSubPanels();
 
-        int best = _run.BestLayer;
-        if (DaoConfig.CanRebirth(best))
-        {
-            // 天赋「天机」放大转世道行 —— 乘法只在这里做，Dao 本身保持"按层数折算"的单一职责
-            double gain = DaoConfig.ForLayer(best) * Talent.Bonus().DaoMul;
-            _dao.Add(gain);
-        }
+        // ① 发道行（够门槛才有；天赋「天机」的乘区在规则里乘）
+        RebirthRule.GrantDao(_rule, _run.BestLayer);
 
-        _run.Reset();
-        _cult.Reset();
-        _silver.Reset();
-        _materials.Reset();         // 材料也是"此生"资产
-        _equips.Reset();            // 装备同样归零（GDD §3.3：装备不跨世）
-        Realm.Reset();              // 境界也是"此生纵向"（GDD §4.2 五乘区之②）→ 归零
-        _dajieWins = 0;             // 大劫强度档位也随之归零（新一世从第 1 档重爬）
-        _dajieClock = 0;
+        // ② 清零本世资产（层 / 修为 / 银两 / 材料 / 装备 / 境界）
+        RebirthRule.ResetLife(_rule);
+
+        // ③ 只有面板知道的两件事：大劫档位与倒计时
+        _dajieWins = 0;
+        _clock.ResetDajie();
+
         StatsPanel.InvalidateCurrent();   // 重开本世 → 下次开战强制清零统计
         SaveProgress();             // 归零结果立刻落盘，避免"重开了但没退游戏"的错位
         StartBattle();
@@ -911,6 +884,9 @@ public partial class BattlePanel : BasePanel
     {
         _inDajie = false;
         _dajieFoes = null;
+        // 大劫结束，但结算栏还在展示（_resultShown 仍为 true）→ 计时继续停着，
+        // 等下一场 StartBattle 把结算标记清掉才恢复
+        SyncClockPause();
 
         // 大劫打完了 → 选关面板如果还开着，把换层解锁（它可能是大劫前打开的）
         StagePanel.RefreshLockIfOpen(false);
@@ -920,7 +896,7 @@ public partial class BattlePanel : BasePanel
             // 奖励先发：道行（永久）+ 修为 / 银两 / 材料 / 装备（局内资源）
             string rewardTag = GrantDajieReward();
             _dajieWins++;
-            _dajieClock = 0;
+            _clock.ResetDajie();
 
             // 打赢也要说一声：玩家可能正开着面板，看不到主界面的结算栏
             DajieBanner.Flash("⚔ 大劫已过（第 " + _dajieWins + " 场）· 奖励已入账");
@@ -928,13 +904,13 @@ public partial class BattlePanel : BasePanel
             if (_TResult != null)
             {
                 _TResult.Text = "⚔ 大劫已过（第 " + _dajieWins + " 场）" + rewardTag
-                              + " · " + (DajieConfig.IntervalWith(DajieIntervalMul()) / 60).ToString("0.#") + " 分钟后再来";
+                              + " · " + (DajieRule.Interval() / 60).ToString("0.#") + " 分钟后再来";
                 _TResult.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.35f));
                 _TResult.Visible = true;
             }
             RefreshHeader();
             SaveProgress();
-            _advanceTimer.Start();   // 回推图
+            _clock.StartAdvance(BattleClock.AdvanceSec);   // 回推图
             return;
         }
 
@@ -945,109 +921,47 @@ public partial class BattlePanel : BasePanel
             _TResult.Visible = true;
         }
         _pendingRebirth = true;
-        _advanceTimer.WaitTime = 2.0;
-        _advanceTimer.Start();
+        _clock.StartAdvance(BattleClock.AdvanceSecLonger);
     }
 
     /// <summary>
-    /// 大劫打赢的奖励发放（用户 2026-11-01："打赢不单有道行，要有局内资源"）。
-    /// <para>
-    /// 核心是 <c>RewardKill</c> 这个"**等效击杀数**"：修为、银两、材料都按它 × **当前层的单杀产出**
-    /// 换算（`CultivationConfig.GainPerKill` / `SilverPerKill` / `MatMobDrop`）。
-    /// 为什么不给每档写死绝对值：普通产出本身是 2.5 × 1.16^层 的指数，写死的奖励在第 30 层
-    /// 就是零头（玩家还不如去刷两场小怪）。用"这一场相当于多少杀"表示，一个数字撑起三样资源，
-    /// 且永远按结算时的层换算 —— 不通胀也不贬值。
-    /// </para>
-    /// 返回结算栏用的文案片段（空串 = 这一档什么奖励都没配）。
+    /// 大劫悬赏的**文案**（发奖本身在 `DajieRule.Grant`）。
+    /// 规则算完只回一份读数，这里负责把它排成人话 —— 面板不该关心"道行乘了哪个乘区"。
+    /// 返回结算栏用的片段（空串 = 这一档什么奖励都没配）。
     /// </summary>
     private string GrantDajieReward()
     {
-        DajieBossConfig stage = _dajieStage;
-        if (stage == null)
+        int layer = _run != null ? _run.Layer : 1;
+        DajieReward reward = DajieRule.Grant(_rule, _dajieStage, layer);
+        if (!reward.Any)
         {
             return "";
         }
 
-        int layer = _run != null ? _run.Layer : 1;
-        if (layer < 1)
-        {
-            layer = 1;
-        }
-
-        // 天赋「天机」把整份悬赏放大（道行 / 资源 / 装备件数同享）——
-        // 放在悬赏结算的唯一入口，而不是散在三处乘，免得以后加奖励项又漏一个。
-        TalentBonus tb = Talent.Bonus();
-        double mul = tb.DajieRewardMul > 0 ? tb.DajieRewardMul : 1;
-
         var parts = new List<string>();
 
-        // ① 道行：唯一跨世资产（转世不清零），天赋树的唯一货币
-        if (stage.RewardDao > 0)
+        if (reward.Dao > 0)
         {
-            double dao = stage.RewardDao * mul;
-            _dao.Add(dao);
-            parts.Add("道行 +" + dao.ToString("0.#"));
+            parts.Add("道行 +" + reward.Dao.ToString("0.#"));
         }
 
-        int baseKills = stage.RewardKill > 0 ? stage.RewardKill : 0;
-        int kills = (int)Math.Round(baseKills * mul);
-        if (kills > 0)
+        if (reward.ExpPerHead > 0)
         {
-            // ② 修为（=经验）：每名参战者各一份，与普通击杀同一口径（进池不升级）
-            //    天赋「苦修」的修为乘区要一起乘 —— 悬赏只是"等效击杀数"，产出加成照样该吃
-            double perHead = CultivationConfig.GainPerKill(layer) * kills * tb.CultMul;
-            _cult.AddExp(RosterIds(), perHead);
-
-            // ③ 银两：整队共享一份账户（同样吃天赋「经营」的乘区）
-            double sil = CultivationConfig.SilverPerKill(layer) * kills * tb.SilverMul;
-            _silver.Add(sil);
-
-            // ④ 材料：品阶跟当前层段走，数量 = 等效击杀数 × 单杀掉落
-            int tier = MaterialCatalog.TierOf(layer);
-            int matCount = MaterialConfig.MatMobDrop * kills;
-            _materials.Add(tier, matCount);
-
-            parts.Add("修为 +" + perHead.ToString("0.#") + "/人");
-            parts.Add("银两 +" + BigNum.From(sil).ToString(2));
-            parts.Add(MaterialCatalog.NameOf(tier) + " +" + matCount);
+            parts.Add("修为 +" + reward.ExpPerHead.ToString("0.#") + "/人");
+            parts.Add("银两 +" + BigNum.From(reward.Silver).ToString(2));
+            parts.Add(MaterialCatalog.NameOf(reward.MatTier) + " +" + reward.MatCount);
         }
 
-        // ⑤ 装备：普通怪只有 8% 概率，大劫**必掉** —— 这是"打赢"最直接的实物反馈
-        //    件数用 ceil 而不是 round：+25% 加在 1 件上时，round 会回到 1（等于没加），
-        //    ceil 才会多给一件 —— 玩家点完「天机」要能立刻看到区别。
-        int equipCount = (int)Math.Ceiling(stage.RewardEquip * mul);
-        if (equipCount > 0)
+        if (reward.EquipCount == 1)
         {
-            int got = 0;
-            string lastName = "";
-            for (int i = 0; i < equipCount; i++)
-            {
-                EquipConfig drop = EquipDropper.Roll(layer, _rng, _equipPool, tb.RarityBoost);
-                if (drop == null)
-                {
-                    continue;
-                }
-
-                List<int> affixes = EquipDropper.RollAffixes(drop.Rarity, _rng, _equipAffixPool);
-                _equips.Add(drop.Id, affixes);
-                got++;
-                lastName = drop.Name;
-            }
-
-            if (got == 1)
-            {
-                parts.Add("得" + lastName);
-            }
-            else if (got > 1)
-            {
-                parts.Add("得装备 ×" + got);
-            }
+            parts.Add("得" + reward.EquipName);
+        }
+        else if (reward.EquipCount > 1)
+        {
+            parts.Add("得装备 ×" + reward.EquipCount);
         }
 
-        // 修为是即时进池、升级仍要"一场结束才结算"（中途升级会让已建好的单位与新等级脱节）。
-        // 大劫这一场到此就结束了，所以在发完奖后立刻结算一次，让玩家当场看到升级。
-        List<Cultivation.LevelUp> ups = _cult.SettleLevelUps(RosterIds());
-        foreach (Cultivation.LevelUp up in ups)
+        foreach (Cultivation.LevelUp up in reward.LevelUps)
         {
             parts.Add(HeroName(up.HeroId) + "↑L" + up.To);
         }
@@ -1066,10 +980,8 @@ public partial class BattlePanel : BasePanel
         if (_pendingRebirth)
         {
             _pendingRebirth = false;
-            _advanceTimer.WaitTime = 1.1;   // 恢复默认间隔
             _dajieWins = 0;                 // 新一世，大劫从第 1 档重新爬
-            _dajieClock = 0;
-            OnNext();
+            OnNext();                       // 计时清零在 OnNext 里一并做
             return;
         }
         StartBattle();
@@ -1282,9 +1194,12 @@ public partial class BattlePanel : BasePanel
     {
         if (_engine != null && !_engine.IsOver)
         {
-            _timer.Start();
+            _clock.StartBeat();
         }
-        else if (_resultShown) _advanceTimer.Start();
+        else if (_resultShown)
+        {
+            _clock.StartAdvance(BattleClock.AdvanceSec);
+        }
     }
 
     private void ClearBattle()
@@ -1354,7 +1269,7 @@ public partial class BattlePanel : BasePanel
         }
         else
         {
-            double remain = DajieConfig.RemainWith(_dajieClock, DajieIntervalMul());
+            double remain = DajieRule.Remain(_clock.DajieElapsed);
             realmTag = "大劫 " + ((int)(remain / 60)).ToString("00") + ":"
                      + ((int)(remain % 60)).ToString("00") + "（点此迎战）　｜　" + realmTag;
         }
@@ -1442,7 +1357,10 @@ public partial class BattlePanel : BasePanel
         return false;
     }
 
-    /// <summary>敌方单位被击杀 → 立刻发放修为（每人一份）与银两，并飘字反馈。</summary>
+    /// <summary>
+    /// 敌方单位被击杀 → 掉落（**规则在 DropRule**）+ 飘字（表现在这里）。
+    /// 面板对"掉多少、掉不掉装备"不做任何判断，只把规则算出的结果翻成人话。
+    /// </summary>
     private void OnUnitDied(BattleUnit u)
     {
         PlayDeathSound(u);   // 必须在移除锚点之前取位置
@@ -1454,49 +1372,33 @@ public partial class BattlePanel : BasePanel
             return;
         }
 
-        if (_engine?.B == null || !_engine.B.Contains(u)) return;   // 只结算敌方
-        int layer = _run.Layer;
-
-        // 天赋的经济乘区（2026-11-02）：修为 / 银两 / 装备掉率都在**玩家侧**乘，
-        // 不动 CultivationConfig / EquipDropper 的全局常量 —— 那些敌人也走。
-        TalentBonus tb = Talent.Bonus();
-
-        double perHead = CultivationConfig.GainPerKill(layer) * tb.CultMul;
-        _cult.AddExp(RosterIds(), perHead);             // 只累进池子，不升级
-        double sil = _silver.GainForKill(layer, tb.SilverMul);
-
-        // 材料：按当前层段掉对应品阶（确定性，不赌概率）
-        int matTier = MaterialCatalog.TierOf(layer);
-        _materials.Add(matTier, MaterialConfig.MatMobDrop);
-
-        // 装备：概率掉落。与材料刻意不同 —— 材料给"稳定感"（每杀必得），
-        // 装备给"惊喜"（偶发、且随层数变好），两种节奏并存才不会让掉落变成纯打卡。
-        if (EquipDropper.ShouldDrop(_rng, tb.DropAdd))
+        if (_engine?.B == null || !_engine.B.Contains(u))
         {
-            EquipConfig drop = EquipDropper.Roll(layer, _rng, _equipPool, tb.RarityBoost);
-            if (drop != null)
-            {
-                // P1：掉落时按稀有度掷 1~3 条随机词条（同件不出同类效果）
-                List<int> affixes = EquipDropper.RollAffixes(drop.Rarity, _rng, _equipAffixPool);
-                _equips.Add(drop.Id, affixes);
-
-                string setTag = "";
-                if (drop.SetId > 0)
-                {
-                    EquipSetConfig sc = SetById(drop.SetId);
-                    if (sc != null)
-                    {
-                        setTag = "〔" + sc.Name + "〕";
-                    }
-                }
-
-                SpawnFloat(u, "得 " + setTag + drop.Name + "（" + EquipRules.RarityName(drop.Rarity) + "）",
-                           UISignalColors.RarityOf(drop.Rarity));
-            }
+            return;   // 只结算敌方
         }
 
-        SpawnFloat(u, "修为+" + perHead.ToString("0.#") + " 银两+" + BigNum.From(sil).ToString(2)
-                      + " " + MaterialCatalog.NameOf(matTier) + "+" + MaterialConfig.MatMobDrop,
+        // 四本账（修为 / 银两 / 材料 / 装备）一次性入账，返回的只是一份读数
+        KillDrop drop = DropRule.GrantKill(_rule, _run.Layer);
+
+        // 装备单独飘一条：带稀有度色和套装名，它是"惊喜"，不该混在资源流水里
+        if (drop.Equip != null)
+        {
+            string setTag = "";
+            if (drop.Equip.SetId > 0)
+            {
+                EquipSetConfig sc = SetById(drop.Equip.SetId);
+                if (sc != null)
+                {
+                    setTag = "〔" + sc.Name + "〕";
+                }
+            }
+
+            SpawnFloat(u, "得 " + setTag + drop.Equip.Name + "（" + EquipRules.RarityName(drop.Equip.Rarity) + "）",
+                       UISignalColors.RarityOf(drop.Equip.Rarity));
+        }
+
+        SpawnFloat(u, "修为+" + drop.ExpPerHead.ToString("0.#") + " 银两+" + BigNum.From(drop.Silver).ToString(2)
+                      + " " + MaterialCatalog.NameOf(drop.MatTier) + "+" + drop.MatCount,
                    new Color(1f, 0.92f, 0.45f));
         RefreshHeader();
     }
@@ -1519,6 +1421,7 @@ public partial class BattlePanel : BasePanel
             return;
         }
         _resultShown = true;
+        SyncClockPause();   // 结算展示期间不计大劫时间（避免"结算中突然被大劫打断"）
 
         int layer = _run.Layer;
         int wave = _run.Wave;
@@ -1552,24 +1455,9 @@ public partial class BattlePanel : BasePanel
 
         _run.Settle(_engine);   // 胜→层内进下一波 / 打穿收尾波→进层；负→退回上一层并转入挂机
 
-        // 层内续战的血量提示（波间只回 10%，阵亡者不复生）
-        var survivors = new List<BattleUnit>();
-        foreach (var u in _engine.A)
-        {
-            if (!u.IsSummon && u.Slot >= 1)
-            {
-                survivors.Add(u);
-            }
-        }
-        int alive = 0;
-        foreach (var u in survivors)
-        {
-            if (u.Alive)
-            {
-                alive++;
-            }
-        }
-        string hpTag = alive + "/" + survivors.Count + " 人续战（回 10% 气血）";
+        // 层内续战的血量提示（波间只回 10%，阵亡者不复生）—— 人头统计归规则层
+        SurvivorCount left = BattleSettle.CountSurvivors(_engine);
+        string hpTag = left.Alive + "/" + left.Total + " 人续战（回 10% 气血）";
 
         if (win)
         {
@@ -1578,9 +1466,12 @@ public partial class BattlePanel : BasePanel
             string realmTag = "";
             if (_run.LastSettleClearedLayer)
             {
-                int tier = MaterialCatalog.TierOf(layer);
-                _materials.Add(tier, MaterialConfig.MatClearBonus);
-                matTag = " · " + MaterialCatalog.NameOf(tier) + "+" + MaterialConfig.MatClearBonus;
+                // 清层额外材料：规则层发，面板只报数
+                int bonus = DropRule.GrantClearBonus(_rule, layer);
+                if (bonus > 0)
+                {
+                    matTag = " · " + MaterialCatalog.NameOf(MaterialCatalog.TierOf(layer)) + "+" + bonus;
+                }
 
                 // 境界突破：门槛是"已达最高层数"，所以只可能在清层时满足
                 realmTag = TryAutoBreakRealm();
@@ -1601,7 +1492,7 @@ public partial class BattlePanel : BasePanel
                 _TResult.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.5f));
                 _TResult.Visible = true;
             }
-            _advanceTimer.Start();
+            _clock.StartAdvance(BattleClock.AdvanceSec);
         }
         else
         {
@@ -1614,7 +1505,7 @@ public partial class BattlePanel : BasePanel
             }
             if (_TPushBtn != null) _TPushBtn.Visible = true;    // 继续推图
             if (_TNextBtn != null) _TNextBtn.Visible = true;    // 重开本世
-            _advanceTimer.Start();      // 卡关不停机：退回上一层继续刷
+            _clock.StartAdvance(BattleClock.AdvanceSec);        // 卡关不停机：退回上一层继续刷
         }
         RefreshHeader();
         SaveProgress();   // 每场结算都落一次：场次 = 放置游戏的最小有意义进度单位
@@ -1646,60 +1537,36 @@ public partial class BattlePanel : BasePanel
 
     // ============ 逐帧驱动 ============
     /// <summary>
-    /// 大劫计时。用**真实毫秒差**累加（挂机游戏按"你离开多久"来算，不是按模拟秒），
-    /// **打大劫期间与结算展示期间不累加**（用户口径："Boss 战斗不算入时间"）。
-    /// <para>
-    /// 为什么不是 <c>_Process</c>：`BattlePanel : BasePanel`，而 `BasePanel` 是普通类不是 `Node`，
-    /// 没有 `_Process` 可以 override（曾写成 override 直接 CS0115）。所以这里用一个 0.5s 的
-    /// `Timer` + `Time.GetTicksMsec()` 差值驱动 —— 跳过的那几段也会先更新基准时间，不会被补算。
-    /// </para>
+    /// 大劫到点（时钟喊的，不是本类算的）。秒数累计与暂停判定都在 <see cref="BattleClock"/> 里：
+    /// 面板只回答"现在能不能开打" —— 时刻表是机制，前提条件才是玩法。
     /// </summary>
-    private void TickDajie()
+    private void OnDajieDue()
     {
-        ulong now = Time.GetTicksMsec();
-        double dt = (now - _dajieLastMs) / 1000.0;
-        _dajieLastMs = now;
-
         if (!_built)
         {
-            return;
+            return;   // Init/读档还没跑完，状态机不全
         }
-        if (_inDajie)
+        if (_run == null || _run.Layer <= 0)
         {
-            return;
-        }
-        if (_resultShown)
-        {
-            return;   // 结算展示的 1 秒不计时，避免"结算中突然被大劫打断"
-        }
-        if (dt <= 0)
-        {
-            return;
+            return;   // 层数没建立（新一世刚归零那一瞬），下一跳再试
         }
 
-        _dajieClock += dt;
-        if (_dajieClock >= DajieConfig.IntervalWith(DajieIntervalMul()))
-        {
-            StartDajie();
-        }
+        StartDajie();
     }
 
     /// <summary>
-    /// 大劫间隔乘区（第二棵树「阅历·沉着」）。
-    /// 为什么在玩家侧乘而不是改 Tuning 的 DajieInterval：那是全局静态，探针与敌方节奏也读它；
-    /// 天赋是玩家独有的加成，只能在玩家侧的调用点乘。
+    /// 暂停/恢复大劫计时：**打大劫期间与结算展示期间都不计**（用户："Boss 战斗不算入时间"）。
+    /// 两个条件合起来判断，避免在四处状态变更点各写一份布尔运算。
     /// </summary>
-    private static double DajieIntervalMul()
+    private void SyncClockPause()
     {
-        double m = Talent.Bonus().DajieIntervalMul;
-        if (m <= 0)
-        {
-            return 1;
-        }
-        return m;
+        _clock.SetDajiePaused(_inDajie || _resultShown);
     }
 
     /// <summary>
+    /// 大劫上门：这一场从哪档选、对手怎么造、给什么奖励，全在 <see cref="DajieRule"/>；
+    /// 面板只做"锁档 → 置状态 → 提示 → 开打"。
+    /// </summary>
     /// 大劫上门：从**独立表**（DajieBossConfig）选档造一个 Boss。
     /// 属性就是表里的绝对值（用户 2026-11-01："Boss 写死绝对值"）—— 不随推图层成长，也不乘 k^wins。
     /// 只造一个单位：大劫是"仇家上门"，不是一伙人围剿。
@@ -1720,34 +1587,17 @@ public partial class BattlePanel : BasePanel
         //   小怪池按 `EffectType <= 14` 过滤（EnemyFactory.BuildSkillPool），
         //   而大劫表的配招里有按盾加伤（26）、护盾保持率（19）这类高阶效果词 ——
         //   传小怪池会让这些卡被静默跳过，Boss 变成只会普攻的沙包。
-        BattleUnit boss = DajieFactory.Build(_run.Layer, _dajieWins, _skillPool);
-
-        if (boss != null)
+        //   回退规则（表没灌入时用当前层收尾波 × PowerOf）也在规则层里。
+        _dajieFoes = DajieRule.BuildFoes(_run.Layer, _dajieWins, _skillPool, BuildEnemyWave);
+        if (_dajieFoes == null)
         {
-            _dajieFoes = new List<BattleUnit>();
-            _dajieFoes.Add(boss);
-        }
-        else
-        {
-            List<BattleUnit> foes = BuildEnemyWave(_run.Layer, 1, true);
-            if (foes == null || foes.Count == 0)
-            {
-                _dajieClock = 0;
-                return;
-            }
-            double mul = DajieConfig.PowerOf(_dajieWins);
-            foreach (BattleUnit f in foes)
-            {
-                f.BaseHp *= mul;
-                f.Hp = f.BaseHp;
-                f.BaseAtk *= mul;
-                f.BaseDef *= mul;
-            }
-            _dajieFoes = foes;
+            _clock.ResetDajie();   // 造不出对手 → 这一场跳过，计时重新攒
+            return;
         }
 
         _inDajie = true;
-        _dajieClock = 0;
+        _clock.ResetDajie();
+        SyncClockPause();   // 打大劫期间不计时（大劫本身就是"暂停的这段"）
 
         AudioManager.PlayEventSFX("boss_down");   // 上门要有动静
 
@@ -1761,7 +1611,11 @@ public partial class BattlePanel : BasePanel
         StartBattle();
     }
 
-    private void OnTick()
+    /// <summary>
+    /// 战斗节拍（时钟 0.1s 喊一次）。本类只做"推一步 + 刷新表现"，
+    /// 没有任何时间判断 —— 什么时候该喊是 <see cref="BattleClock"/> 的事。
+    /// </summary>
+    private void OnBeat()
     {
         if (_galleryShotDir.Length > 0)
         {
@@ -1782,7 +1636,7 @@ public partial class BattlePanel : BasePanel
         }
         _cards.Refresh(_engine);
         _stacks.Sync(_engine, _areaX);
-        _floats.Update(TickSec);
+        _floats.Update(BattleClock.TickSec);
         StatsPanel.RefreshCurrent();   // 面板隐藏时内部直接返回
     }
 
