@@ -1,5 +1,5 @@
 // 文件：FloatLayer.cs
-// 《轮回大侠》表现层 —— **战斗飘字**组件（Godot 节点：Control 子类，挂在 BattlePanel.tscn 的 TFxLayer 上）
+// 《轮回大侠》表现层 —— **战斗飘字**组件（Godot 节点：Control 子类，挂在 MainPanel.tscn 的 TFxLayer 上）
 // 职责：在本层内生成 / 上浮 / 淡出 伤害·治疗·护盾·掉落 文字；自持飘字列表与寿命。
 // 解耦边界：只接收**已解析好的锚点坐标**，不认识侠客卡 / 召唤物堆叠卡（锚点由 BattlePanel 编排解析）。
 

@@ -25,8 +25,10 @@ public partial class GameRoot : SingletonNode<GameRoot>
         // 必须在任何建队 / 开战之前调用（表缺失时引擎退回代码兜底值，诊断见 Tuning.Errors）。
         Tuning.Load(ConfigManager.GetAll<TuningConfig>());
 
-        // M1 入口：战斗原型（ATB 发动机可视化，复用 M0 同款数学）
+        // 入口：战斗显示面板（全屏底层，含背景与卡牌）→ 主面板（顶部 HUD 与全局状态）。
+        // 顺序即层级：后者 AddChild 更晚，画在上层。主面板创建 BattleManager 时反向接上显示面板。
         UIManager.ShowPanel<BattlePanel>();
+        UIManager.ShowPanel<MainPanel>();
 
         //UIManager.ShowPanel<StartPanel>();
     }

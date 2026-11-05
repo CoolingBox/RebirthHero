@@ -17,7 +17,7 @@
 //   · `BasePanel` 是普通类不是 Node，**没有 `_Process` 可重写**（曾写 override 直接 CS0115），
 //     所以这里仍然是 Timer。但大劫用**真实毫秒差**累加 —— 挂机按"你离开多久"算，
 //     不能按模拟秒（战斗 tick 在大劫期间是停的，用 tick 数迟早会算歪）。
-//   · Timer 一律挂在**本节点**下（本节点挂在 BattlePanel 的 GameObject 下），
+//   · Timer 一律挂在**本节点**下（本节点挂在 MainPanel 的 GameObject 下），
 //     继承面板的 ProcessMode=Always，子界面盖上来也不会被冻结。
 
 using System;

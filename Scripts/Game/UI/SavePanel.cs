@@ -11,7 +11,7 @@
 //   ② 备份：默认名 = 版本号_日期，可改；桌面版弹出文件对话框选路径（同时留一份进载入列表），
 //            移动端沙盒不能浏览路径 → 只改名、存进游戏自己的存档夹
 //   ③ 载入：列出主档与全部备份，点一条即覆盖当前进度并重开一场；可删除备份（主档不可删）
-//   ④ 启动默认载入主档：由 BattlePanel.LoadProgress 负责（本面板只是让玩家能换档）
+//   ④ 启动默认载入主档：由 MainPanel.LoadProgress 负责（本面板只是让玩家能换档）
 //
 // 边界：文件读写/序列化走 TinyFramework 的 SaveManager；本面板不碰 JSON、不拼路径。
 
@@ -39,7 +39,7 @@ public partial class SavePanel : BasePanel
         _ctxOnClose = onClose;
     }
 
-    /// <summary>主题变更后由 BattlePanel 调用：面板正开着才刷新。</summary>
+    /// <summary>主题变更后由 MainPanel 调用：面板正开着才刷新。</summary>
     public static void ApplyThemeCurrent()
     {
         if (_current == null)

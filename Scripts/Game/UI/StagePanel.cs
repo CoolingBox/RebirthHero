@@ -39,7 +39,7 @@ public partial class StagePanel : BasePanel
         _ctxLocked = locked;
     }
 
-    /// <summary>主题变更后由 BattlePanel 调用。</summary>
+    /// <summary>主题变更后由 MainPanel 调用。</summary>
     public static void ApplyThemeCurrent()
     {
         if (_current == null)

@@ -43,7 +43,7 @@ public partial class EquipPanel : BasePanel
         _ctxOnClose = onClose;
     }
 
-    /// <summary>主题变更后由 BattlePanel 调用。</summary>
+    /// <summary>主题变更后由 MainPanel 调用。</summary>
     public static void ApplyThemeCurrent()
     {
         if (_current == null)

@@ -1,5 +1,5 @@
 // 文件：HeroCardLayer.cs
-// 《轮回大侠》表现层 —— **侠客单位卡**层（Godot 节点：Control 子类，挂在 BattlePanel.tscn 的 TCards 上）
+// 《轮回大侠》表现层 —— **侠客单位卡**层（Godot 节点：Control 子类，挂在 MainPanel.tscn 的 TCards 上）
 //
 // 2026-11-04：卡牌从 500×176 横条换成 **7:9 竖版 4 层视差卡**（BattleParallaxCard）。
 // 2026-11-05：站位改 **1 前 3 后 · 左右对战**；卡的显示尺寸再按**受击权重**微调。

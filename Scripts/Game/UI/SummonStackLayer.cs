@@ -1,5 +1,5 @@
 // 文件：SummonStackLayer.cs
-// 《轮回大侠》表现层 —— **召唤物堆叠卡**组件（Godot 节点：Control 子类，挂在 BattlePanel.tscn 的 TStacks 上）
+// 《轮回大侠》表现层 —— **召唤物堆叠卡**组件（Godot 节点：Control 子类，挂在 MainPanel.tscn 的 TStacks 上）
 // 口径（2026-10-16）："同一召唤物显示上可堆叠" —— 一个类型一张卡，显示【名字 ×N】+ 聚合血条 + 最快到期 TTL。
 // 状态自持：堆叠表 _stacks / 顺序 _stackOrder 私有；面板只经 Sync / TryGetAnchor / Clear 调用。
 // 解耦边界：只读 BattleUnit 数据渲染；召唤物的"多只"由引擎决定，本层只做归组显示。

@@ -31,18 +31,20 @@ Scripts/
 └── Game/
     ├── Battle/
     │   ├── Engine/           # 纯 C# 战斗引擎（无 Godot 依赖）
+    │   ├── BattleRule/       # 战斗规则：掉落 / 结算 / 大劫 / 转世（纯 C#，不碰 Godot）
     │   └── StatsTracker.cs   # 战报统计（订阅事件总线，按侠客/武学聚合）
     ├── Config/
     │   ├── ConfigEnums.cs    # 配置枚举
     │   ├── Generate/         # xlsx 生成的强类型 POCO（勿手改）
     │   └── Adapter/          # 配置 → 引擎 的装配层
-    ├── BattleRule/           # 战斗规则：掉落 / 结算 / 大劫 / 转世（纯 C#，不碰 Godot）
     ├── Stage/                # 推图：StageRun / EnemyFactory
     ├── Progression/          # 修为（经验）/ 银两（货币）
     ├── Materials/            # 材料：品阶目录 / 库存 / 掉落常数
     ├── Inn/                  # 客栈：资质 / 词条 / 编队
     └── UI/                   # 表现层（Godot Control）
-        ├── BattlePanel.cs    # 纯编排层（战斗循环 / 事件 / 音效 / 打开子界面）
+        ├── MainPanel.cs      # 主面板（顶部 HUD）：全局状态 / 存档 / 子界面开关 / 导航 / 顶栏
+        ├── BattlePanel.cs    # 战斗显示面板：背景 / 卡牌 / 飘字 / 结算栏 / 两个按钮
+        ├── BattleManager.cs  # 战斗逻辑：引擎推进 / 事件 / 掉落 / 大劫 / 转世
         ├── BattleClock.cs    # 计时器与时间状态（节拍 / 推进 / 自动保存 / 确认超时 / 大劫沙漏）
         ├── StagePanel.cs     # 选关（BasePanel，UIManager 开关）
         ├── SkillsPanel.cs    # 武学装配（同）
@@ -402,7 +404,7 @@ addons/TinyTools/             # 配置生成 / UI 代码生成（编辑器插件
      - 桌面：弹文件对话框选路径，同时复制一份进存档夹（否则玩家选了路径却在载入列表里找不到）
      - **移动端：只能改名**，存进 `user://Backups/`（沙盒内不能浏览外部路径）
   3. **载入**：列表展示主档 + 全部备份（层、最高层、银两、时间），点「载入」覆盖当前进度并重开一场；备份可删，主档不可删
-  4. **启动默认载入主档**：`BattlePanel.LoadProgress` 在首次显示时执行
+  4. **启动默认载入主档**：`MainPanel.LoadProgress` 在首次显示时执行
 - ⚠️ **判别"有没有存档"不能靠 `File.Exists`**：`SaveManager.Load<T>` 无文件时返回 `new T()`（全默认值），直接灌会把初始编队和已掷好的客栈栏位清空。判据是数据自带的 `GameSave.Written`（`Capture` 时置 true）
 - **账本口径（GDD §3.3）**：
   - 跨世（重开本世不清）：武学装配
@@ -519,7 +521,7 @@ TExp（战况行，独立一行 y 78~106，居中）
 | 层 | 字号 | 位置 |
 |---|---|---|
 | 面板大标题 | **31**（客栈主标题 42） | 各面板 `THeading` / InnPanel `TTitle` |
-| 战斗标题 / 结算 | **34 / 35** | `BattlePanel` `TTitle` / `TResult` |
+| 战斗标题 / 结算 | **34 / 35** | `MainPanel` `TTitle` / `TResult` |
 | 正文 | **22** | 面板行文本、装备行、存档行 |
 | 弱提示 / 副信息 | **19~21** | `THint`、词条行、状态行 |
 | 飘字 | **27** | `FloatLayer` |
@@ -593,7 +595,7 @@ Resources/Theme/wuxia_*.tres  ←──(唯一真值，编辑器双击可视化�
 
 | variation | 色值来源 | 用于 | 出现在 |
 |---|---|---|---|
-| `BgFull` | `bg_base` | 主屏最底层背景 | BattlePanel / InnPanel 的 `TBg` |
+| `BgFull` | `bg_base` | 主屏最底层背景 | MainPanel / InnPanel 的 `TBg` |
 | `BgPanel` | `panel_fill` | 子面板背景（**不透明，alpha = 1.0**） | SettingPanel / SkillsPanel / StagePanel / StatsPanel / EquipPanel / SavePanel 的 `TBg` |
 
 ⚠️ **子面板背景必须完全不透明**（2026-10-20 用户反馈："面板不要半透，被后方面板干扰严重"）。曾经试过 0.94 让战场透出 6%，观感上"层次更好"，但战斗界面的卡牌、飘字、战报侧栏会透到面板文字底下，读起来很吵。现在弹窗不铺山水图（图会裁切放大），底也不透 —— 靠 `panel_fill` 的实色 + 边框 + 暗角承担层次。
@@ -687,7 +689,7 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 
 - **显示与逻辑分离**：引擎纯 C#、不 `using Godot`；表现层只读数据渲染，经 `BattleEventBus` 解耦
 - **表现层按组件拆分**：面板膨胀时拆成独立 Godot 节点组件（`Control` 子类脚本 + `.tscn` 挂载），不用 partial 把一个类摊成多文件
-- **战斗规则不进面板**（`Scripts/Game/BattleRule/`）：凡是"数值怎么算、状态怎么改"的，都放这里；面板只负责"什么时候调"和"怎么显示"。
+- **战斗规则不进面板**（`Scripts/Game/Battle/BattleRule/`）：凡是"数值怎么算、状态怎么改"的，都放这里；面板只负责"什么时候调"和"怎么显示"。
   - `DropRule`（击杀掉落 / 清层奖励）、`BattleSettle`（续战人头 / 境界突破）、`DajieRule`（大劫选档造对手 / 悬赏 / 间隔）、`RebirthRule`（转世折算与归零）
   - 状态引用由 `BattleRuleContext` 收拢：面板在 `Init` 末尾**显式绑定**一次（不交所有权），规则只调用其上的方法改账。这样规则的签名不会膨胀成十来个位置参数（少传一个乘区编译器也不报，是"某个乘区没生效"最常见的形状）
   - 规则**返回读数**（`KillDrop` / `DajieReward` / `SurvivorCount`），不返回文案 —— 拼"修为+12 银两+345"是表现层的事
@@ -695,7 +697,13 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 - **时间与计时器不进面板**：`Timer`、累计秒数、"到点该做什么"的判断一律归 `BattleClock`。面板只订阅它的回调（`Ticked` / `AdvanceDue` / `AutoSaveDue` / `ConfirmExpired` / `DajieDue`）并写业务。调节奏改 `BattleClock` 的常量，不用在 1800 行的面板里找 `Timer`。
   - 时钟**不认识任何玩法**：大劫间隔是一个 `Func<double>` 委托（面板塞 `DajieConfig.IntervalWith(天赋乘区)`），所以天赋改间隔时时钟下一跳就拿到新值，不需要在面板里同步缓存
   - 暂停用状态表达而不是四散判断：`SyncClockPause()` 一个式子 `_inDajie || _resultShown` 决定"算不算时间"，避免每加一种"不计时"的场景就要改一遍比较逻辑
-- **子界面一律做成 `BasePanel`**：`XxxPanel.tscn`（根节点不挂脚本）+ `XxxPanel.cs`（BasePanel 子类）+ `Generate/XxxPanelBind.cs`（`_T*` 字段）。由 `UIManager.ShowPanel<T>()` 开关，依赖用静态 `BindData(...)` 注入。**不要写成 `XxxView` 塞进父场景**——那样 BattlePanel 会越养越胖，且子界面无法独立复用
+- **三层：主面板 HUD / 战斗显示 / 战斗逻辑**（2026-11-05）：
+  - `MainPanel`（BasePanel，`MainPanel.tscn`）—— 全局状态机、存档、子界面开关、导航条、顶部状态栏、主题。是**顶部 HUD**：`mouse_filter = Ignore`，只有导航条与顶栏可点，不做全屏拦截。
+  - `BattlePanel`（BasePanel，`BattlePanel.tscn`）—— **全屏战斗区**：背景、卡牌层、飘字层、结算栏与两个结算按钮。按钮只把事件转给 `BattleManager`，自己不做任何判断。
+  - `BattleManager`（普通类，**不 `using Godot`**）—— 引擎推进、事件结算、掉落发放、大劫、转世。状态由 `Bind(main, view)` 注入同一批实例（不持有、不拷贝）。
+  - 层级靠 `GameRoot` 的 Show 顺序：先 `BattlePanel`（全屏底层，含背景）再 `MainPanel`（顶部 HUD）。
+  - 判据：**"这件事在战斗结束后还有意义吗？"** 有 → `MainPanel`；只是这一场的手感 → `BattleManager`；只是这一场长什么样 → `BattlePanel`。
+- **子界面一律做成 `BasePanel`**：`XxxPanel.tscn`（根节点不挂脚本）+ `XxxPanel.cs`（BasePanel 子类）+ `Generate/XxxPanelBind.cs`（`_T*` 字段）。由 `UIManager.ShowPanel<T>()` 开关，依赖用静态 `BindData(...)` 注入。**不要写成 `XxxView` 塞进父场景**——那样 MainPanel 会越养越胖，且子界面无法独立复用
   - 常驻型（战报）用 `ShowPanel`/`HidePanel` 切换（不销毁、复用实例），模态型用 `ClosePanel`（销毁重建）
   - 静态入口（如 `RefreshCurrent`）必须判 `GameObject` 是否 `IsInstanceValid` —— `ClosePanel` 会 `QueueFree`，静态引用不清就会在下一次调用抛 `ObjectDisposedException`
 - **静态 UI 进 `.tscn`**：位置 / 尺寸 / 锚点 / 字号写在场景里，可在编辑器直接调；代码只管动态内容与事件接线

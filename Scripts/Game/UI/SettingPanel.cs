@@ -26,7 +26,7 @@ public partial class SettingPanel : BasePanel
         _ctxOnClose = onClose;
     }
 
-    /// <summary>主题变更后由 BattlePanel 调用：面板正开着才重建。</summary>
+    /// <summary>主题变更后由 MainPanel 调用：面板正开着才重建。</summary>
     public static void ApplyThemeCurrent()
     {
         if (_current == null)
