@@ -24,7 +24,7 @@ public partial class BattleParallaxCard : Control
     public BattleUnit Unit;
 
     // —— 视差参数（战斗卡比卡册小，位移等比收小）——
-    public float ShiftPx = 12f;
+    public float ShiftPx = 8f;
     public float FollowSpeed = 6f;
     public float SwayAmount = 0.16f;
     public float GlowStrength = 0.09f;
@@ -36,11 +36,13 @@ public partial class BattleParallaxCard : Control
     const float PadSize = 10f;
 
     // —— 信息带尺寸 ——
-    const float PanelH = 114f;
-    const float PanelInset = 6f;
-    const float PanelPad = 8f;
-    const float BarH = 18f;
-    const float GaugeH = 6f;
+    // 左右对战把卡压到 203×261，信息带只剩 84（占卡高 32%）。
+    // 再高就把整幅画压到 60% 以下，"这是张卡"的感觉会没掉；再矮则血条数字读不出。
+    const float PanelH = 84f;
+    const float PanelInset = 5f;
+    const float PanelPad = 7f;
+    const float BarH = 14f;
+    const float GaugeH = 5f;
 
     // —— 血条拖尾节奏（秒）：先变色"停住"让人看见掉了多少，再滑过去 ——
     const float TrailFlashHold = 0.12f;
@@ -227,7 +229,7 @@ public partial class BattleParallaxCard : Control
         bg.AddThemeStyleboxOverride("panel", sb);
         _panel.AddChild(bg);
 
-        _nameText = MakeLabel(20, HorizontalAlignment.Center);
+        _nameText = MakeLabel(14, HorizontalAlignment.Center);
         _nameText.AddThemeColorOverride("font_color", UIThemeManager.TextPrimary);
         _nameText.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.9f));
         _nameText.AddThemeConstantOverride("outline_size", 4);
@@ -246,7 +248,7 @@ public partial class BattleParallaxCard : Control
         _panel.AddChild(_hpShield);
         _panel.AddChild(_hpLock);
 
-        _hpText = MakeLabel(15, HorizontalAlignment.Center);
+        _hpText = MakeLabel(12, HorizontalAlignment.Center);
         _hpText.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.95f));
         _hpText.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.85f));
         _hpText.AddThemeConstantOverride("outline_size", 4);
@@ -257,15 +259,15 @@ public partial class BattleParallaxCard : Control
         _panel.AddChild(_gaugeBack);
         _panel.AddChild(_gaugeFill);
 
-        _statText = MakeLabel(14, HorizontalAlignment.Left);
+        _statText = MakeLabel(12, HorizontalAlignment.Left);
         _statText.AddThemeColorOverride("font_color", new Color(0.80f, 0.84f, 0.90f));
         _panel.AddChild(_statText);
 
-        _stateText = MakeLabel(14, HorizontalAlignment.Right);
+        _stateText = MakeLabel(12, HorizontalAlignment.Right);
         _stateText.AddThemeColorOverride("font_color", UISignalColors.Shield);
         _panel.AddChild(_stateText);
 
-        _skillText = MakeLabel(14, HorizontalAlignment.Left);
+        _skillText = MakeLabel(12, HorizontalAlignment.Left);
         _skillText.AddThemeColorOverride("font_color", new Color(0.78f, 0.74f, 0.66f));
         _skillText.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         _skillText.ClipText = true;
@@ -450,22 +452,22 @@ public partial class BattleParallaxCard : Control
         float px = PanelPad;
         float pw = panelW - PanelPad * 2f;
 
-        SetRect(_nameText, px, 8f, pw, 24f);
+        SetRect(_nameText, px, 4f, pw, 16f);
 
-        SetRect(_hpBack, px, 34f, pw, BarH);
-        SetRect(_hpFill, px, 34f, 0f, BarH);
-        SetRect(_hpTrail, px, 34f, 0f, BarH);
-        SetRect(_hpShield, px, 34f, 0f, BarH);
-        SetRect(_hpLock, px, 34f, 0f, BarH);
-        SetRect(_hpText, px, 34f, pw, BarH);
+        SetRect(_hpBack, px, 21f, pw, BarH);
+        SetRect(_hpFill, px, 21f, 0f, BarH);
+        SetRect(_hpTrail, px, 21f, 0f, BarH);
+        SetRect(_hpShield, px, 21f, 0f, BarH);
+        SetRect(_hpLock, px, 21f, 0f, BarH);
+        SetRect(_hpText, px, 21f, pw, BarH);
 
-        SetRect(_gaugeBack, px, 55f, pw, GaugeH);
-        SetRect(_gaugeFill, px, 55f, 0f, GaugeH);
+        SetRect(_gaugeBack, px, 37f, pw, GaugeH);
+        SetRect(_gaugeFill, px, 37f, 0f, GaugeH);
 
-        SetRect(_statText, px, 64f, pw * 0.54f, 20f);
-        SetRect(_stateText, px + pw * 0.44f, 64f, pw * 0.56f, 20f);
+        SetRect(_statText, px, 44f, pw * 0.58f, 16f);
+        SetRect(_stateText, px + pw * 0.42f, 44f, pw * 0.58f, 16f);
 
-        SetRect(_skillText, px, 86f, pw, 20f);
+        SetRect(_skillText, px, 61f, pw, 16f);
     }
 
     static void SetRect(Control c, float x, float y, float w, float h)

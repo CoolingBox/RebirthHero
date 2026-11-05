@@ -90,12 +90,14 @@ public partial class SummonStackLayer : Control
             float y;
             if (isRight)
             {
-                y = BattleLayout.EnemyRowY + rightCount * (StackH + StackGap);
+                y = BattleLayout.RowTopY + rightCount * (StackH + StackGap);
                 rightCount++;
             }
             else
             {
-                y = BattleLayout.AllyRowY + BattleLayout.CardH - StackH - leftCount * (StackH + StackGap);
+                // 我方堆叠自下而上贴在左栏：底边对齐 3 行网格的最后一行
+                float bottom = BattleLayout.RowY(2) + BattleLayout.CardH;
+                y = bottom - StackH - leftCount * (StackH + StackGap);
                 leftCount++;
             }
 
@@ -108,7 +110,7 @@ public partial class SummonStackLayer : Control
     private StackCard BuildOne(string key, string name, bool right, float areaX)
     {
         float x = right ? areaX - StackMargin - StackW : StackMargin;
-        var root = new Control { Position = new Vector2(x, BattleLayout.EnemyRowY), Size = new Vector2(StackW, StackH) };
+        var root = new Control { Position = new Vector2(x, BattleLayout.RowTopY), Size = new Vector2(StackW, StackH) };
         var bg = new ColorRect
         {
             Color = right ? new Color(0.16f, 0.09f, 0.11f) : new Color(0.10f, 0.12f, 0.16f),
@@ -135,7 +137,7 @@ public partial class SummonStackLayer : Control
         {
             Key = key, Name = name, Root = root,
             TitleText = title, HpFill = hpfill, HpText = hptext,
-            Pos = new Vector2(x, BattleLayout.EnemyRowY),
+            Pos = new Vector2(x, BattleLayout.RowTopY),
         };
         _stacks[key] = st;
         _stackOrder.Add(key);
