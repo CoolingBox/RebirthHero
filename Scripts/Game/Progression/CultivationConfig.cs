@@ -27,6 +27,9 @@
 // 注意：**即时制下没有"败北折扣"** —— 打不动就杀不掉，收入自然变少；
 //   这比原来"固定给 50%"更精确（打赢一半就拿一半，团灭就拿不到）。
 
+using System;
+using TinyFramework;
+
 public static class CultivationConfig
 {
     // ═══ 一、修为（= 经验，击杀即时掉落；升级延迟到战斗结束）═══
@@ -42,17 +45,50 @@ public static class CultivationConfig
     public static double KillSilverC = 2.5; // 每个击杀的银两（×4 个敌人 = 10）
     public static double SilverA = 1.16;    // 与敌方 HP 同底数
 
+    // ═══ 产出与代价的出口一律返回 BigNum（2026-11-06）═══
+    // 层数上千时 1.16^n 会超出 double 的 1e308，Math.Pow 直接返回 Infinity，
+    // 而 BigNum.From(Infinity) 会**静默归零** —— 掉落变 0 是最难查的一类 bug。
+    // 所以统一走"取 10 的对数再拆尾数/指数"，永不溢出。
+
     /// <summary>单次击杀、每名参战者获得的修为。</summary>
-    public static double GainPerKill(int layer)
-        => KillGainC * System.Math.Pow(GainA, System.Math.Max(1, layer));
+    public static BigNum GainPerKill(int layer)
+    {
+        return ScalePow(KillGainC, GainA, Math.Max(1, layer));
+    }
 
     /// <summary>单次击杀掉落的银两（整队共享一份）。</summary>
-    public static double SilverPerKill(int layer)
-        => KillSilverC * System.Math.Pow(SilverA, System.Math.Max(1, layer));
+    public static BigNum SilverPerKill(int layer)
+    {
+        return ScalePow(KillSilverC, SilverA, Math.Max(1, layer));
+    }
 
     /// <summary>从 level 升到 level+1 所需修为（框架 §4：d^k，k = 已升次数 = level−1）。</summary>
-    public static double LevelCost(int level)
-        => level >= MaxLevel
-            ? double.PositiveInfinity
-            : LevelBase * System.Math.Pow(LevelD, level - 1);
+    public static BigNum LevelCost(int level)
+    {
+        if (level >= MaxLevel)
+        {
+            return MaxCost;
+        }
+        return ScalePow(LevelBase, LevelD, level - 1);
+    }
+
+    /// <summary>
+    /// 满级时的代价。**不能返回 double.PositiveInfinity**：BigNum.From 对非有限值直接归零，
+    /// 那样"满级"会被读成"免费升级"。这里给一个远超任何池子的有限值兜底。
+    /// </summary>
+    static readonly BigNum MaxCost = BigNum.FromParts(9.99, 300);
+
+    /// <summary>C × A^n，用 10 的对数拆分构造（避免 double 溢出，见上方说明）。</summary>
+    static BigNum ScalePow(double c, double a, int n)
+    {
+        if (c <= 0 || a <= 0)
+        {
+            return BigNum.Zero;
+        }
+
+        double log10 = Math.Log10(c) + Math.Log10(a) * n;
+        long exp = (long)Math.Floor(log10);
+        double mant = Math.Pow(10, log10 - exp);
+        return BigNum.FromParts(mant, exp);
+    }
 }

@@ -100,7 +100,7 @@ public static class DajieFactory
             BaseAtk = t.BaseAtk * BattleConfig.AtkScale,
             BaseDef = t.BaseDef * BattleConfig.DefScale,
             BaseSpd = t.Spd,
-            BaseW = t.BaseW > 0 ? t.BaseW : BattleConfig.OtherW,
+            BaseAggro = t.BaseAggro > 0 ? t.BaseAggro : BattleConfig.OtherAggro,
             IsSummon = false,
         };
         u.Hp = u.BaseHp;

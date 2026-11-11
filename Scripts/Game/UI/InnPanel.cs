@@ -479,11 +479,16 @@ public partial class InnPanel : BasePanel
 
     // ================= 小工具 =================
 
+    /// <summary>
+    /// 当前银两（**只用于显示与招募门槛比较**）。
+    /// 账户本身是 BigNum，这里显式转 double：客栈的价目仍是表里的 double，
+    /// 二者比较足够用；真到 1e308 以上的层数，招募早已不是瓶颈。
+    /// </summary>
     double CurrentSilver()
     {
         if (_silver != null)
         {
-            return _silver.Amount;
+            return (double)_silver.Amount;
         }
         return 0;
     }

@@ -40,7 +40,7 @@ public sealed class SummonSpec
     /// <summary>速度跟随召唤者的倍率（0 = 不吃召唤者速度）。</summary>
     public double SpdRatio = 0;
 
-    public double Weight = 10;          // 基础受击权重（10 基准）
+    public double Aggro = 10;          // 基础仇恨（10 基准）
     public double Ttl = 20;             // 存在时间（秒）
 
     /// <summary>
@@ -67,7 +67,7 @@ public sealed class SummonSpec
         c.AtkRatio = AtkRatio;
         c.SpdFloor = SpdFloor;
         c.SpdRatio = SpdRatio;
-        c.Weight = Weight;
+        c.Aggro = Aggro;
         c.Max = Max;
         c.Ttl = ttl;
         return c;
@@ -82,7 +82,7 @@ public sealed class SummonSpec
         AtkRatio = kind switch { "tank" => 0.30, "dps" => 0.60, "sub" => 0.10, _ => 0.80 },
         SpdFloor = kind switch { "sword" => 0, _ => 60 },
         SpdRatio = kind switch { "dps" => 1.2, "sword" => 1.5, _ => 0 },
-        Weight = kind switch { "tank" => 20, "sub" => 25, _ => 10 },
+        Aggro = kind switch { "tank" => 20, "sub" => 25, _ => 10 },
         Ttl = BattleConfig.SummonTtl,
         Max = 0,
     };

@@ -120,7 +120,7 @@ public sealed class BattleEngine
         var c = new BattleUnit
         {
             Name = u.Name, Slot = u.Slot, BaseHp = u.BaseHp, BaseAtk = u.BaseAtk, BaseSpd = u.BaseSpd,
-            BaseDef = u.BaseDef, BaseW = u.BaseW, IsSummon = u.IsSummon, Ttl = u.Ttl,
+            BaseDef = u.BaseDef, BaseAggro = u.BaseAggro, IsSummon = u.IsSummon, Ttl = u.Ttl,
             DmgPerHit = u.DmgPerHit,
             SummonHpMul = u.SummonHpMul, DmgTakenMul = u.DmgTakenMul,   // 装配期属性，跨波延续时要带上
             DotMul = u.DotMul, DotStackBonus = u.DotStackBonus,         // 百淬套：装配期写入，不带上就等于套装没生效
@@ -1199,7 +1199,7 @@ public sealed class BattleEngine
             Slot = 0,
             IsSummon = true,
             Ttl = spec.Ttl,
-            BaseW = spec.Weight,
+            BaseAggro = spec.Aggro,
             BaseHp = hp,
             BaseAtk = owner.BaseAtk * spec.AtkRatio,   // 血攻随召唤者（"和武侠相关"）
             BaseSpd = spec.Speed(owner.EffSpd(T)),

@@ -18,7 +18,7 @@ public enum SkillEff
     Heal,        // 治疗
     Shield,      // 护盾
     Summon,      // 召唤
-    Weight,      // 受击权重修正（嘲讽/隐身）
+    Weight,      // 仇恨修正（嘲讽/隐身）
     SpdMod,      // 速度修正（减速）
     AtkMod,      // 攻击修正（减攻）
     Poison,      // 叠毒（DoT，不吃武学倍率）
@@ -56,7 +56,7 @@ public enum SkillTgt
     Random,        // 随机单体（普攻按权重）
     LowestHpAlly,  // 血最少友方
     LowestHpFoe,   // 血最少敌方
-    HighestW,      // 受击权重最高敌方
+    HighestW,      // 仇恨最高敌方
     All,           // 全体敌方
     Self,          // 自身
     Attacker,      // 「刚才打我的人」—— 只对受击链路有意义，见 BattleEngine._attacker

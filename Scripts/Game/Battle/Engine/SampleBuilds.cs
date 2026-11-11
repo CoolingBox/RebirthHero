@@ -33,8 +33,8 @@ public static class SampleBuilds
     static BattleUnit U(string name, int slot, double hp, double atk, double spd, params BattleSkill[] skills)
     {
         double bonus = slot == 1 ? BattleConfig.Slot1HpBonus : 1.0;
-        double w = slot == 1 ? BattleConfig.Slot1W : BattleConfig.OtherW;
-        return new() { Name = name, Slot = slot, BaseHp = hp * bonus * BattleConfig.HpScale, BaseAtk = atk * BattleConfig.AtkScale, BaseSpd = spd, BaseW = w, Skills = skills.ToList() };
+        double w = slot == 1 ? BattleConfig.Slot1Aggro : BattleConfig.OtherAggro;
+        return new() { Name = name, Slot = slot, BaseHp = hp * bonus * BattleConfig.HpScale, BaseAtk = atk * BattleConfig.AtkScale, BaseSpd = spd, BaseAggro = w, Skills = skills.ToList() };
     }
 
     public static List<(string, BattleUnit[])> All()

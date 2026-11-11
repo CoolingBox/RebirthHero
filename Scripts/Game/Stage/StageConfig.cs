@@ -41,7 +41,7 @@ public static class StageConfig
 public static class StageRules
 {
     /// <summary>
-    /// 敌方不享受玩家侧的"1 号位机制"（×3 受击权重 + ×1.3 气血）——那是"布阵"这一玩家决策的回报；
+    /// 敌方不享受玩家侧的"1 号位机制"（×3 仇恨 + ×1.3 气血）——那是"布阵"这一玩家决策的回报；
     /// 敌方全员等权重、无加成，层主的强度只来自 EnemyConfig 模板的数值列。
     /// </summary>
     public static bool EnemyHasSlot1Bonus = false;

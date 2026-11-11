@@ -44,17 +44,17 @@ public sealed class GameSave : SaveData
     public int BestLayer = 1;
     public bool AutoPush = true;
 
-    // ---------- 银两 ----------
-    public double SilverAmount;
-    public double SilverTotal;
+    // ---------- 银两（BigNum：尾数+指数，避免指数产出把 double 打爆）----------
+    public BigNum SilverAmount;
+    public BigNum SilverTotal;
 
     // ---------- 境界（本世纵向乘区，转世归零）----------
     /// <summary>当前境界 Id（1 = 初入江湖）。缺省 1 —— 老存档没有这个字段，读回来就是第一档。</summary>
     public int RealmId = 1;
 
-    // ---------- 道行（跨世永久货币，转世不清零）----------
-    public double DaoAmount;
-    public double DaoTotal;
+    // ---------- 道行（跨世永久货币，转世不清零；同样用 BigNum）----------
+    public BigNum DaoAmount;
+    public BigNum DaoTotal;
 
     // ---------- 天赋树（跨世永久，转世不清零）----------
     /// <summary>已点节点（只存点过的；等级为 0 的不入库）。</summary>
@@ -82,12 +82,12 @@ public sealed class GameSave : SaveData
     public List<int> Roster = new List<int>();
 }
 
-/// <summary>某侠客的修为：等级 + 当前级内池子。</summary>
+/// <summary>某侠客的修为：等级 + 当前级内池子（池子用 BigNum，见 Cultivation 顶部说明）。</summary>
 public sealed class HeroExpSave
 {
     public int HeroId;
     public int Level = 1;
-    public double Pool;
+    public BigNum Pool;
 }
 
 /// <summary>某品阶材料的持有量。</summary>

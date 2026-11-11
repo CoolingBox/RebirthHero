@@ -178,7 +178,7 @@ public partial class EquipPanel : BasePanel
             _THint.Text = "换装与强化在**下一场战斗**生效　·　当前加成："
                           + "攻击 +" + bonus.Atk.ToString("0") + "　生命 +" + bonus.Hp.ToString("0")
                           + "　速度 +" + bonus.Spd.ToString("0")
-                          + "　（银两 " + BigNum.From(_silver != null ? _silver.Amount : 0).ToString(2) + "）"
+                          + "　（银两 " + (_silver != null ? _silver.Amount : BigNum.Zero).ToString(2) + "）"
                           + "　｜　" + SetSummary(hero.Id);
         }
 
@@ -819,7 +819,7 @@ public partial class EquipPanel : BasePanel
             case EquipAffixEffect.ReplayPct: return "重放+" + a.Value.ToString("0.#") + "%";
             case EquipAffixEffect.ReplayLimit: return "重放上限+" + a.Value.ToString("0.#");
             case EquipAffixEffect.ShieldPct: return "护盾+" + a.Value.ToString("0.#") + "%";
-            case EquipAffixEffect.WeightDelta: return "受击权重" + a.Value.ToString("0.#");
+            case EquipAffixEffect.AggroDelta: return "仇恨" + a.Value.ToString("0.#");
             case EquipAffixEffect.CounterUp: return "开战计数+" + a.Value.ToString("0.#");
             default: return a.Value.ToString("0.#");
         }

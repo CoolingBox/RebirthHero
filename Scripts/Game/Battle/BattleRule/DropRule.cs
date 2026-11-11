@@ -16,14 +16,15 @@
 
 using System;
 using System.Collections.Generic;
+using TinyFramework;
 
 /// <summary>一次击杀的产出（已入账）。面板拿它拼飘字，不参与任何计算。</summary>
 public struct KillDrop
 {
     /// <summary>本场击杀给**每名**参战者的修为。</summary>
-    public double ExpPerHead;
+    public BigNum ExpPerHead;
     /// <summary>整队共享一份的银两。</summary>
-    public double Silver;
+    public BigNum Silver;
     /// <summary>材料品阶（跟层段走）。</summary>
     public int MatTier;
     /// <summary>材料数量。</summary>

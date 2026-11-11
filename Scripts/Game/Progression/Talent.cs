@@ -20,6 +20,7 @@
 // 纯 C#，无 Godot 依赖 → 无头探针可直接编译验证。
 
 using System;
+using TinyFramework;
 using System.Collections.Generic;
 
 /// <summary>天赋效果类型（与 TalentConfig.EffectType 一一对应）。</summary>
@@ -36,7 +37,7 @@ public enum TalentEff
     SpdPct = 4,
     /// <summary>护盾保持率 +Value 点（每级）</summary>
     ShieldKeepPts = 5,
-    /// <summary>全队受击权重 +Value（每级；负数 = 更难被打）</summary>
+    /// <summary>全队仇恨 +Value（每级；负数 = 更难被打）</summary>
     WeightPts = 6,
     /// <summary>银两产出 +Value%（每级）</summary>
     SilverPct = 7,
@@ -94,8 +95,8 @@ public struct TalentBonus
     /// <summary>护盾保持率的**加点数**（0.05 = +5 点），直接加到 BattleUnit.ShieldKeep 上。</summary>
     public double ShieldKeepAdd;
 
-    /// <summary>受击权重的**加绝对值**（-3 = 权重减 3），直接加到 BattleUnit.BaseW 上。</summary>
-    public double WeightAdd;
+    /// <summary>仇恨的**加绝对值**（-3 = 权重减 3），直接加到 BattleUnit.BaseAggro 上。</summary>
+    public double AggroAdd;
 
     public double SilverMul;
     public double CultMul;
@@ -374,7 +375,7 @@ public static class Talent
     }
 
     /// <summary>道行是否够点下一级（不考虑前置）。</summary>
-    public static bool CanAfford(int id, double daoAmount)
+    public static bool CanAfford(int id, BigNum daoAmount)
     {
         if (IsMaxed(id))
         {
@@ -384,7 +385,7 @@ public static class Talent
     }
 
     /// <summary>能否点：未满级 + 前置满足 + 道行够。</summary>
-    public static bool CanLearn(int id, double daoAmount)
+    public static bool CanLearn(int id, BigNum daoAmount)
     {
         if (IsMaxed(id))
         {
@@ -464,7 +465,7 @@ public static class Talent
     /// 汇总当前天赋提供的全部加成。
     /// <para>
     /// 两遍：先算每支的 BranchBoost（第 6 层），再把该支的百分比效果乘上去。
-    /// **点数类效果（护盾保持率 / 受击权重 / 掉率 / 召唤上限）不参与 boost** ——
+    /// **点数类效果（护盾保持率 / 仇恨 / 掉率 / 召唤上限）不参与 boost** ——
     /// "护盾保持率 +5 点 × 1.3 = 6.5 点"这种数字既难读又难调，百分比加成天然适合叠乘。
     /// </para>
     /// 两棵树的节点都会汇总进来（第 2 棵点不了时它的等级本来就是 0，不影响结果）。
@@ -659,7 +660,7 @@ public static class Talent
         b.InnFreeAdd = innFreeAdd;
         b.RarityBoost = rarityBoost / 100.0;
         b.ShieldKeepAdd = shieldAdd / 100.0;
-        b.WeightAdd = weightAdd;
+        b.AggroAdd = weightAdd;
         b.DropAdd = dropAdd / 100.0;
         b.SummonCapAdd = summonAdd;
         b.SkillSlotAdd = skillSlotAdd;

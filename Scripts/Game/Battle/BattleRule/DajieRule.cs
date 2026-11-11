@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using TinyFramework;
 
 /// <summary>一场大劫的悬赏清单（已入账）。面板只负责把它翻成结算栏文案。</summary>
 public struct DajieReward
@@ -22,11 +23,11 @@ public struct DajieReward
     /// <summary>这一档是否有奖励入账（false = 表里这一行什么都没配）。</summary>
     public bool Any;
     /// <summary>道行（唯一跨世货币）。</summary>
-    public double Dao;
+    public BigNum Dao;
     /// <summary>给每名参战者的修为。</summary>
-    public double ExpPerHead;
+    public BigNum ExpPerHead;
     /// <summary>整队共享的银两。</summary>
-    public double Silver;
+    public BigNum Silver;
     public int MatTier;
     public int MatCount;
     /// <summary>实发装备件数（模板没配 / 池为空时会少发）。</summary>

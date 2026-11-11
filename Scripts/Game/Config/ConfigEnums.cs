@@ -39,19 +39,19 @@
 //                     FixedHp>0 时气血用固定值（不乘召唤者、不吃 HpScale）；DmgPerHit>0 时**无视伤害量**，
 //                     一次命中只扣该值。飞剑 = 2 层计数体 → 免疫一发大伤害秒杀，怕高频多次命中（AoE/连击/多段）
 //                   · SpdFloor/SpdRatio → 速度 = max(SpdFloor, 召唤者速度×SpdRatio)
-//                   · BaseW=基础受击权重；Ttl=存在时间(秒)
+//                   · BaseAggro=基础仇恨；Ttl=存在时间(秒)
 //                   · SummonMax = **该类型同时存活上限**（tank 1 / dps 2 / sub 3 / sword 2）
 //                   分档原则：总量守恒（单卡总血量 0.40~0.80）＋ 上限越低单体越厚（"限1的补更多"）
 //                   ＋ 权重与血量分工（tank 靠血厚活着，sub 靠权重吸伤害然后死掉）。
 //   EnemyConfig : Kind(1小怪/2精英/3层主)。**模板自带属性与成长**（2026-10-15 v5.0）：
 //                   BaseHp/BaseAtk/BaseDef = 第1层基础属性；HpRate/AtkRate/DefRate = 每层成长倍率
 //                   → 属性(层) = Base × Rate^(层−1)（不再有"全局曲线 × 模板倍率"两层）；
-//                   Spd=速度(不随层成长)；BaseW=基础受击权重(10基准,敌方无 1 号位加成)；
+//                   Spd=速度(不随层成长)；BaseAggro=基础仇恨(10基准,敌方无 1 号位加成)；
 //                   SkillCount=武学数基数、SkillTier=每多少层+1个武学(**仅小怪用**)；
 //                   MinLayer=最早出现层【档位】(抽取取 MinLayer ≤ 当前层中最大的一档)；
 //                   Skills=**固定技能组**(精英/层主必填；小怪留空 = 从"已实装全池"按层随机抽，受品阶上限约束)。
 //                   编成：普通层 = 1 精英 + 3 小怪；层主层 = 1 层主 + 1 精英 + 2 小怪。
-//   HeroConfig  : Rarity(1普通/2精良/3史诗/4传说/5神话)；BaseW=基础受击权重(10基准;1号位×3)；
+//   HeroConfig  : Rarity(1普通/2精良/3史诗/4传说/5神话)；BaseAggro=基础仇恨(10基准;1号位×3)；
 //                 HpGrowth/AtkGrowth/DefGrowth = 三属性**各自独立**的【每级成长绝对值】(直接加算,均不为0；
 //                   标准 100 / 5 / 2；属性(L) = Base + 本值×(L−1))；
 //                 GrowthType(1早熟/2均衡/3晚成/4技巧) = 【事后分类标签】(先按基础随机 b±40% + 三条独立成长随机
@@ -174,7 +174,7 @@ public enum AffixEffect
     AtkPct = 1,        // 攻击 +Value1%
     HpPct = 2,         // 气血 +Value1%
     SpdPct = 3,        // 速度 +Value1%
-    Weight = 4,        // 受击权重 +Value1（10 基准的**绝对值**增量，可负）
+    Weight = 4,        // 仇恨 +Value1（10 基准的**绝对值**增量，可负）
     MulPct = 5,        // 武学倍率 +Value1%（按 School 匹配流派；School 空 = 全部武学）—— 装配期乘进武学倍率
     HealPct = 6,       // 治疗量 +Value1%（装配期乘进治疗类武学）
     SummonHpPct = 7,   // 召唤物气血 +Value1%（比例血型召唤物；计数体飞剑不吃）
@@ -266,7 +266,7 @@ public enum EquipAffixEffect
     ReplayPct = 7,        // 重放概率 +Value 个百分点（同类合计封顶 +10）
     ReplayLimit = 8,      // 重放上限 +Value（同类合计封顶 +4）
     ShieldPct = 9,        // 护盾效果 +Value%
-    WeightDelta = 10,     // 受击权重 +Value（10 基准的绝对值增量，可负）
+    AggroDelta = 10,     // 仇恨 +Value（10 基准的绝对值增量，可负）
     CounterUp = 11,       // 开战时武学当前计数 +Value
     ShieldKeepPct = 12,   // 护盾保持率 +Value 个百分点（同类合计封顶 +20）
 }

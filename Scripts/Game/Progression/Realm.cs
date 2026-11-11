@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using TinyFramework;
 
 public sealed class Realm
 {
@@ -143,6 +144,7 @@ public sealed class Realm
     }
 
     /// <summary>还差多少银两才够门槛（够了返回 0）。</summary>
+    /// <summary>还差多少银两才够门槛（够了返回 0）。返回值仍是 double —— 它只用于 UI 显示。</summary>
     public static double SilverGap(Silver silver)
     {
         RealmConfig nx = Next;
@@ -150,8 +152,12 @@ public sealed class Realm
         {
             return 0;
         }
-        double gap = nx.ReqSilver - silver.Amount;
-        return gap > 0 ? gap : 0;
+        BigNum gap = nx.ReqSilver - silver.Amount;
+        if (gap <= BigNum.Zero)
+        {
+            return 0;
+        }
+        return (double)gap;
     }
 
     /// <summary>

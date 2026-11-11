@@ -165,7 +165,7 @@ public static class SkillConfigMapper
                 u.BaseSpd *= 1 + v / 100.0;
                 break;
             case SkillEffect.Weight:
-                u.BaseW = Math.Max(BattleConfig.WFloor, u.BaseW + v);
+                u.BaseAggro = Math.Max(BattleConfig.AggroFloor, u.BaseAggro + v);
                 break;
             case SkillEffect.ShieldKeep:
                 u.ShieldKeep += v / 100.0;

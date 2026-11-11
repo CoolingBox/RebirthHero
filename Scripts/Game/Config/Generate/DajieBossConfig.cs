@@ -47,8 +47,8 @@ public class DajieBossConfig : BaseConfig
 	public float BaseDef;
 	/// <summary> 速度(比玩家 55 快 → 先手压制) </summary>
 	public float Spd;
-	/// <summary> 基础受击权重(单体目标，实际影响很小) </summary>
-	public int BaseW;
+	/// <summary> 基础仇恨(单体目标，实际影响很小) </summary>
+	public int BaseAggro;
 	/// <summary> 打赢这一档给多少道行 </summary>
 	public double RewardDao;
 	/// <summary> 打赢相当于多少次普通击杀的**局内资源**（修为/银两/材料都按它换算） </summary>

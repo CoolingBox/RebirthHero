@@ -157,7 +157,7 @@ public static class UIThemeManager
 
         if (!theme.HasColor(key, PaletteType))
         {
-            GD.PrintErr("[UIThemeManager] .tres 缺少色板项: " + key + " @ " + InfoOf(themeId).ResPath);
+            TinyLog.Error("Theme", ".tres 缺少色板项: " + key + " @ " + InfoOf(themeId).ResPath);
             return Colors.Magenta;
         }
 
@@ -255,14 +255,14 @@ public static class UIThemeManager
 
         if (!ResourceLoader.Exists(path))
         {
-            GD.PrintErr("[UIThemeManager] 主题资源不存在: " + path);
+            TinyLog.Error("Theme", "主题资源不存在: " + path);
             return null;
         }
 
         Theme theme = ResourceLoader.Load<Theme>(path, "");
         if (theme == null)
         {
-            GD.PrintErr("[UIThemeManager] 主题资源损坏: " + path);
+            TinyLog.Error("Theme", "主题资源损坏: " + path);
         }
 
         return theme;

@@ -25,17 +25,14 @@ public partial class SavePanel : BasePanel
     // UIManager.ShowPanel<T>() 不带参，依赖用静态上下文在打开前注入
     static Func<GameSave> _ctxCapture;        // 抓当前进度（给"保存/备份/导出"用）
     static Func<GameSave, bool> _ctxApply;    // 灌回当前进度（给"载入"用），返回 false = 版本不兼容
-    static Action _ctxAutoSaveChanged;        // 自动保存开关变了 → 让 BattlePanel 启停计时器
     static Action _ctxOnClose;
 
     static SavePanel _current;
 
-    public static void BindData(Func<GameSave> capture, Func<GameSave, bool> apply,
-                                Action autoSaveChanged, Action onClose)
+    public static void BindData(Func<GameSave> capture, Func<GameSave, bool> apply, Action onClose)
     {
         _ctxCapture = capture;
         _ctxApply = apply;
-        _ctxAutoSaveChanged = autoSaveChanged;
         _ctxOnClose = onClose;
     }
 
@@ -169,10 +166,9 @@ public partial class SavePanel : BasePanel
         settings.AutoSave = pressed;
         SaveManager.Save(settings);
 
-        if (_ctxAutoSaveChanged != null)
-        {
-            _ctxAutoSaveChanged();
-        }
+        // 广播出去，谁关心谁自己订阅（主面板的自动保存计时器就靠这个启停）。
+        // 本面板不需要知道外面有谁 —— 这正是把"静态回调字段"换成事件总线的理由。
+        TinyEventBus.Global.Emit(new AutoSaveToggled(pressed));
         SetStatus(pressed
             ? "已开启：每 " + SaveBackup.AutoSaveMinutes + " 分钟自动保存主存档。"
             : "已关闭自动保存：记得手动保存或退出（退出时仍会兜底存一次）。");
@@ -390,7 +386,7 @@ public partial class SavePanel : BasePanel
 
         Label meta = new Label();
         meta.Text = "第 " + entry.Layer + " 层（最高 " + entry.BestLayer + "） · 银两 "
-                    + BigNum.From(entry.Silver).ToString(2) + " · " + entry.TimeText;
+                    + entry.Silver.ToString(2) + " · " + entry.TimeText;
         meta.CustomMinimumSize = new Vector2(700, 44);
         meta.AddThemeFontSizeOverride("font_size", 21);
         meta.AddThemeColorOverride("font_color", UIThemeManager.TextMuted);

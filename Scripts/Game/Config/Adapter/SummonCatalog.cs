@@ -56,7 +56,7 @@ public static class SummonCatalog
             AtkRatio = cfg.AtkRatio,
             SpdFloor = cfg.SpdFloor,
             SpdRatio = cfg.SpdRatio,
-            Weight = cfg.BaseW > 0 ? cfg.BaseW : BattleConfig.OtherW,
+            Aggro = cfg.BaseAggro > 0 ? cfg.BaseAggro : BattleConfig.OtherAggro,
             Ttl = cfg.Ttl > 0 ? cfg.Ttl : BattleConfig.SummonTtl,
             Max = cfg.SummonMax,
         };

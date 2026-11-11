@@ -25,7 +25,7 @@ public sealed class SaveEntry
     public string DisplayName;
     public int Layer;
     public int BestLayer;
-    public double Silver;
+    public BigNum Silver;
     public string TimeText;
     public bool IsMain;
 }
@@ -113,7 +113,7 @@ public static class SaveBackup
         }
         catch (Exception e)
         {
-            GD.Print("[Save] 导出失败：" + absolutePath + " → " + e.Message);
+            TinyLog.Error("Save", "导出失败：" + absolutePath + " → " + e.Message);
             return false;
         }
         finally
@@ -141,7 +141,7 @@ public static class SaveBackup
         }
         catch (Exception e)
         {
-            GD.Print("[Save] 导入失败：" + absolutePath + " → " + e.Message);
+            TinyLog.Error("Save", "导入失败：" + absolutePath + " → " + e.Message);
             return null;
         }
 
@@ -177,7 +177,7 @@ public static class SaveBackup
         }
         catch (Exception e)
         {
-            GD.Print("[Save] 读取失败：" + internalName + " → " + e.Message);
+            TinyLog.Error("Save", "读取失败：" + internalName + " → " + e.Message);
             return null;
         }
     }
@@ -343,7 +343,7 @@ public static class SaveBackup
         }
         catch (Exception e)
         {
-            GD.Print("[Save] 删除失败：" + path + " → " + e.Message);
+            TinyLog.Error("Save", "删除失败：" + path + " → " + e.Message);
         }
     }
 }

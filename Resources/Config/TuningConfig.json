@@ -100,7 +100,7 @@
   },
   {
     "Id": 12,
-    "Key": "Slot1W",
+    "Key": "Slot1Aggro",
     "Value": 30,
     "Group": "\u5e03\u9635",
     "Runtime": true,
@@ -109,7 +109,7 @@
   },
   {
     "Id": 13,
-    "Key": "OtherW",
+    "Key": "OtherAggro",
     "Value": 10,
     "Group": "\u5e03\u9635",
     "Runtime": true,
@@ -118,7 +118,7 @@
   },
   {
     "Id": 14,
-    "Key": "WFloor",
+    "Key": "AggroFloor",
     "Value": 1,
     "Group": "\u5e03\u9635",
     "Runtime": true,
@@ -811,7 +811,7 @@
   },
   {
     "Id": 98,
-    "Key": "SummonerWeightPerSkill",
+    "Key": "SummonerAggroPerSkill",
     "Value": 2,
     "Group": "\u53ec\u5524",
     "Runtime": true,

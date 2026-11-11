@@ -13,6 +13,8 @@
 //
 // 本文件不引用 Godot（无头探针可直接编译）。
 
+using TinyFramework;
+
 public static class RebirthRule
 {
     /// <summary>够不够转世门槛（按本世最高层数）。</summary>
@@ -22,11 +24,11 @@ public static class RebirthRule
     }
 
     /// <summary>这一次转世能换多少道行（含天赋「天机」的乘区）。不够门槛返回 0。</summary>
-    public static double DaoGain(int bestLayer)
+    public static BigNum DaoGain(int bestLayer)
     {
         if (!CanRebirth(bestLayer))
         {
-            return 0;
+            return BigNum.Zero;
         }
 
         double mul = Talent.Bonus().DaoMul;
@@ -41,17 +43,17 @@ public static class RebirthRule
     /// 发放转世道行并返回实发数额（0 = 不够门槛，什么也没发）。
     /// 只碰 Dao 一本账 —— 归零走 <see cref="ResetLife"/>。
     /// </summary>
-    public static double GrantDao(BattleRuleContext ctx, int bestLayer)
+    public static BigNum GrantDao(BattleRuleContext ctx, int bestLayer)
     {
         if (ctx == null || ctx.Dao == null)
         {
-            return 0;
+            return BigNum.Zero;
         }
 
-        double gain = DaoGain(bestLayer);
-        if (gain <= 0)
+        BigNum gain = DaoGain(bestLayer);
+        if (gain <= BigNum.Zero)
         {
-            return 0;
+            return BigNum.Zero;
         }
 
         ctx.Dao.Add(gain);

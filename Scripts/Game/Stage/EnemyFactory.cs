@@ -177,7 +177,7 @@ public static class EnemyFactory
             BaseAtk = atk * BattleConfig.AtkScale,
             BaseDef = def * BattleConfig.DefScale,
             BaseSpd = t.Spd,
-            BaseW = t.BaseW > 0 ? t.BaseW : BattleConfig.OtherW,   // 敌方无 1 号位偏置（见 StageRules）
+            BaseAggro = t.BaseAggro > 0 ? t.BaseAggro : BattleConfig.OtherAggro,   // 敌方无 1 号位偏置（见 StageRules）
             IsSummon = false,
         };
         u.Hp = u.BaseHp;

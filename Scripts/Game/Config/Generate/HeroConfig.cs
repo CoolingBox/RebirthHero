@@ -26,8 +26,8 @@ public class HeroConfig : BaseConfig
 	public bool IsSummon;
 	/// <summary> 行动条阈值(0=用全局100) </summary>
 	public int BaseThreshold;
-	/// <summary> 基础受击权重(10基准;1号位×3) </summary>
-	public int BaseW;
+	/// <summary> 基础仇恨(10基准;1号位×3) </summary>
+	public int BaseAggro;
 	/// <summary> 每级气血成长(绝对值;直接加算 HP(L)=BaseHP+本值×(L−1);标准100) </summary>
 	public float HpGrowth;
 	/// <summary> 每级攻击成长(绝对值;直接加算 ATK(L)=BaseATK+本值×(L−1);标准5) </summary>

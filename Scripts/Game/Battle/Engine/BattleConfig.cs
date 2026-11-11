@@ -52,11 +52,11 @@ public static class BattleConfig
     public static double HpScale = 1;
     public static double DefScale = 1;
 
-    // —— 受击权重基础（概率仇恨，M0.2 验证 1号位≈50%） ——
+    // —— 仇恨基础（概率仇恨，M0.2 验证 1号位≈50%） ——
     // 2026-10-15：权重轴整体改为 10 基准（原 1.0 基准的 ×10；纯单位换算，比例不变，平衡不变）
-    public static double Slot1W = 30;        // 1 号位基础权重（10 × 3.0 系数）
-    public static double OtherW = 10;        // 2~4 号位基础权重
-    public static double WFloor = 1.0;       // 权重下限（原 0.1 的 ×10；不能归零隐身）
+    public static double Slot1Aggro = 30;        // 1 号位基础权重（10 × 3.0 系数）
+    public static double OtherAggro = 10;        // 2~4 号位基础权重
+    public static double AggroFloor = 1.0;       // 权重下限（原 0.1 的 ×10；不能归零隐身）
     public static double Slot1HpBonus = 1.3; // 1 号位血量加成
 
     // —— DoT / HoT（2026-10-24 最终定稿：**每层每跳 1 点**，强度靠叠层效率） ——
@@ -144,18 +144,18 @@ public static class BattleConfig
     // 锁死部分记入 BattleUnit.LockedHp，在血条 UI 上以银灰色显示。
     public static double SummonHpPenaltyPerSkill = 0.15;   // 每个召唤武学 −15% 最大生命（用户指定）
 
-    // 携带召唤类武学的代价·其二（2026-10-24 用户："携带召唤技能的侠客受击概率提高"）：
-    // 每带 1 个召唤武学，**受击权重 +本值**（10 基准的绝对增量，与资质"受击权重"同一口径）。
+    // 携带召唤类武学的代价·其二（2026-10-24 用户："携带召唤技能的侠客仇恨提高"）：
+    // 每带 1 个召唤武学，**仇恨 +本值**（10 基准的绝对增量，与资质"仇恨"同一口径）。
     // 为什么要它：召唤流在头模拟里第 11 层 98%（直伤 77%），削 Ttl / AtkRatio / HpRatio / SummonCap
     //   全都无感 —— 它强在"召唤物替队伍挨打"（剩余血 52% vs 25%），不在输出。
-    // 为什么权重有效：召不召唤物**自身的 BaseW 不跟着涨**，所以召唤师的权重占比被抬高，
+    // 为什么权重有效：召不召唤物**自身的 BaseAggro 不跟着涨**，所以召唤师的权重占比被抬高，
     //   火力会从"全打在召唤物身上"回到"人也得挨" —— 纯召唤队和混编队都成立。
     // ⚠️ 权重只在"同队内分配仇恨"，所以它惩罚的是**召唤师本人**，不是整支队伍。
     // 定值 2 的依据（斜率很陡，约 -8 点胜率 / 1 点权重，200 场 B 口径第 11 层）：
     //   0 → 74%（与直伤 77% 齐平）｜2 → 65.5%｜3 → 57.5%｜5 → 53%｜10 → 36%
     // 叠加原有的"-15% 最大生命/个"之后，召唤师一个人要扛 ~35% 的火力还少 30% 血，
     // 所以不敢给大值；2 的定位是"明确低于直伤一档"，而不是"废掉召唤流"。
-    public static double SummonerWeightPerSkill = 2;
+    public static double SummonerAggroPerSkill = 2;
     // 2026-10-16 v5.7：4 → 8（口径"全队召唤上限提高"）。
     //   理由：4 侠客 × 2 = 8，让"召唤流"（每人带一张以上召唤卡）真能同时铺开；
     //   同时它仍是**外层闸** —— 单张召唤卡还受类型档位（1/2/3/2）与武学覆盖约束，

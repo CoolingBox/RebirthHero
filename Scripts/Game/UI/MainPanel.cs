@@ -169,6 +169,17 @@ public partial class MainPanel : BasePanel
         {
             _battleMgr.RestoreDajie(_pendingDajieWins);
         }
+
+        // 调试钩子：BATTLE_SPEED=3 直接看倍速效果（倍速 UI 还没做，先用它验证与调参）
+        string speedEnv = OS.GetEnvironment("BATTLE_SPEED");
+        if (speedEnv.Length > 0)
+        {
+            double speed;
+            if (double.TryParse(speedEnv, out speed))
+            {
+                _battleMgr.BattleSpeed = speed;
+            }
+        }
     }
 
     public override void OnHide()
@@ -329,6 +340,10 @@ public partial class MainPanel : BasePanel
         _clock.DajieIntervalProvider = () => DajieRule.Interval();
 
         SyncAutoSave();
+
+        // 设置面板里切换"自动保存"时只发一个事件，本面板自己接住去启停计时器 ——
+        // 这样 SavePanel 不必知道"外面谁关心这个开关"（原来是靠传进去的 Action）
+        TinyEventBus.Global.On<AutoSaveToggled>(OnAutoSaveToggled);
 
         UIThemeManager.ApplyTo(GameObject);
         ApplyThemeColors();
@@ -492,7 +507,7 @@ public partial class MainPanel : BasePanel
         _clock.StopBeat();
         _clock.StopAdvance();
 
-        SavePanel.BindData(CaptureProgress, ApplyProgress, SyncAutoSave, OnCloseSave);
+        SavePanel.BindData(CaptureProgress, ApplyProgress, OnCloseSave);
         UIManager.ShowPanel<SavePanel>();
     }
 
@@ -531,6 +546,12 @@ public partial class MainPanel : BasePanel
         SettingData settings = SettingManager.Data;
         bool on = settings != null && settings.AutoSave;
         _clock.SyncAutoSave(on);
+    }
+
+    /// <summary>存档面板切换了自动保存开关（事件来自 `TinyEventBus`）。</summary>
+    private void OnAutoSaveToggled(AutoSaveToggled evt)
+    {
+        _clock.SyncAutoSave(evt.On);
     }
 
     // ============ 阵容查询 ============
@@ -877,8 +898,8 @@ public partial class MainPanel : BasePanel
 
         if (RebirthRule.CanRebirth(_run.BestLayer))
         {
-            double gain = RebirthRule.DaoGain(_run.BestLayer);
-            view.SetNextButtonText("转世 · +" + gain.ToString("0.#") + " 道行", false);
+            BigNum gain = RebirthRule.DaoGain(_run.BestLayer);
+            view.SetNextButtonText("转世 · +" + gain.ToString(1) + " 道行", false);
         }
         else
         {
@@ -938,7 +959,7 @@ public partial class MainPanel : BasePanel
         }
         if (_dao.TotalGained > 0)
         {
-            realmTag += "道行 " + _dao.Amount.ToString("0.#") + "　｜　";
+            realmTag += "道行 " + _dao.Amount.ToString(1) + "　｜　";
         }
 
         if (InDajie)
@@ -958,8 +979,8 @@ public partial class MainPanel : BasePanel
         {
             _TExp.Text = realmTag
                        + "最高 " + _run.BestLayer + " 层 · 已战 " + _run.Battles + " 场　｜　"
-                       + "银两 " + BigNum.From(_silver.Amount).ToString(2) + "（本世累计 " + BigNum.From(_silver.TotalGained).ToString(2) + "）"
-                       + "　修为累计 " + BigNum.From(_cult.TotalGained).ToString(2) + "　｜　" + lv;
+                       + "银两 " + _silver.Amount.ToString(2) + "（本世累计 " + _silver.TotalGained.ToString(2) + "）"
+                       + "　修为累计 " + _cult.TotalGained.ToString(2) + "　｜　" + lv;
         }
     }
 
@@ -1034,7 +1055,7 @@ public partial class MainPanel : BasePanel
         SaveViewportShot(path);
 
         double vram = Performance.GetMonitor(Performance.Monitor.RenderVideoMemUsed);
-        GD.Print("[Shot] " + path + " · 显存 " + (vram / 1048576.0).ToString("0") + " MB");
+        TinyLog.Info("Shot", path + " · 显存 " + (vram / 1048576.0).ToString("0") + " MB");
         GameObject.GetTree().Quit();
     }
 
@@ -1060,7 +1081,7 @@ public partial class MainPanel : BasePanel
         {
             string path = _galleryShotDir.PathJoin("gallery_a.png");
             SaveViewportShot(path);
-            GD.Print("[Shot] " + path);
+            TinyLog.Info("Shot", path);
 
             GalleryPanel.SetForcedTilt(true, GalleryShotTilts[1]);
             _galleryShotPhase = 2;
@@ -1072,7 +1093,7 @@ public partial class MainPanel : BasePanel
         {
             string path = _galleryShotDir.PathJoin("gallery_b.png");
             SaveViewportShot(path);
-            GD.Print("[Shot] " + path);
+            TinyLog.Info("Shot", path);
             GameObject.GetTree().Quit();
         }
     }

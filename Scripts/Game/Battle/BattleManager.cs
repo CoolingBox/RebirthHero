@@ -22,7 +22,52 @@ using TinyFramework;   // BigNum（大数格式化工具，纯数值，没有 Go
 
 public sealed class BattleManager
 {
-    private const float SimDt = 0.15f;   // 每个 tick 推进的模拟秒数（~1.8x 观赏速度）
+    /// <summary>
+    /// 每拍推进的**模拟秒数**（1x 时）。节拍是真实 0.1s，所以 0.15 = 1.5 倍速观赏。
+    /// 这一项只决定"世界走多快"，不决定"多久刷一次画面"。
+    /// </summary>
+    private const double SimDtPerBeat = 0.15;
+
+    /// <summary>
+    /// 引擎推进的**固定步长**（2026-11-12）。
+    /// <para>
+    /// 为什么要有它：`BattleEngine.Step(dt)` 是"把整个 dt 一次性吃掉"的 ——
+    /// 蓄力条、DoT、护盾衰减都按 dt 一次算，行动点会被量化到帧边界。
+    /// 于是"一大步 0.15"和"三小步 0.05"跑出来的结果不同（行动顺序、DoT 跳数都可能差），
+    /// 倍速一改，同一场战斗的胜负就跟着变 —— 玩家会觉得"3 倍速的敌人更强"。
+    /// </para>
+    /// <para>
+    /// 统一成 0.05 后：倍速只改变"每拍跑几个 0.05"，每步长度恒定，结果与倍速无关。
+    /// 代价是 1x 的战斗结果与旧版（一大步 0.15）略有差异 —— 量化误差从 0.15 降到 0.05，
+    /// 更接近无头探针 `Run()` 的精确推进（它是按"到下一次行动的时间"切片的）。
+    /// </para>
+    /// </summary>
+    private const double FixedStep = 0.05;
+
+    private double _battleSpeed = 1.0;
+    private double _stepAcc;   // 未消耗的模拟时间（累加器）
+
+    /// <summary>
+    /// 战斗倍速。1 = 标称速度（每拍 0.15 模拟秒），2/3 = 快进。
+    /// 只影响模拟推进，**不影响**节拍频率、UI 刷新、大劫倒计时、自动保存。
+    /// 夹在 0.25~4 之间：低于 0.25 是慢放（调试用），高于 4 会让敌我行动挤在同一帧。
+    /// </summary>
+    public double BattleSpeed
+    {
+        get { return _battleSpeed; }
+        set
+        {
+            if (value < 0.25)
+            {
+                value = 0.25;
+            }
+            if (value > 4.0)
+            {
+                value = 4.0;
+            }
+            _battleSpeed = value;
+        }
+    }
 
     private MainPanel _main;
     private BattlePanel _view;
@@ -93,6 +138,7 @@ public sealed class BattleManager
     // ============ 开战 ============
     public void StartBattle()
     {
+        _stepAcc = 0;   // 新一场从干净的累加器开始
         _view.ClearAll();
         _clock.StopAdvance();
         _view.HideResult();
@@ -138,15 +184,41 @@ public sealed class BattleManager
         {
             return;
         }
-        if (!_engine.IsOver)
-        {
-            _engine.Step(SimDt);
-        }
+
+        AdvanceSimulation();
 
         _view.RefreshCards(_engine);
         _view.SyncStacks(_engine);
         _view.UpdateFloats(BattleClock.TickSec);
         StatsPanel.RefreshCurrent();   // 面板隐藏时内部直接返回
+    }
+
+    /// <summary>
+    /// 固定步长推进：把"这一拍该走的模拟时间"按 <see cref="FixedStep"/> 切片消耗。
+    /// 累加器保证跨拍的余数不丢 —— 否则 0.15 / 0.05 这类整除关系一改就漏时间。
+    /// </summary>
+    private void AdvanceSimulation()
+    {
+        if (_engine.IsOver)
+        {
+            _stepAcc = 0;   // 打完了就别再攒，否则下一场第一拍会多推一截
+            return;
+        }
+
+        _stepAcc += SimDtPerBeat * _battleSpeed;
+
+        int guard = 0;
+        while (_stepAcc >= FixedStep && guard++ < 4096)
+        {
+            _engine.Step(FixedStep);
+            _stepAcc -= FixedStep;
+
+            if (_engine.IsOver)
+            {
+                _stepAcc = 0;
+                break;
+            }
+        }
     }
 
     /// <summary>结算后开下一场（推图模式：胜则已进层 / 挂机模式：原地重复刷）。</summary>
@@ -283,8 +355,12 @@ public sealed class BattleManager
         }
 
         int headCount = _main.RosterIds().Count;
-        double perHeadTotal = headCount > 0 ? _cult.BattleGained / headCount : 0;
-        string dropTag = "修为 +" + perHeadTotal.ToString("0.#") + "/人 · 银两 +" + BigNum.From(_silver.BattleGained).ToString(2);
+        BigNum perHeadTotal = BigNum.Zero;
+        if (headCount > 0)
+        {
+            perHeadTotal = _cult.BattleGained / headCount;
+        }
+        string dropTag = "修为 +" + perHeadTotal.ToString(1) + "/人 · 银两 +" + _silver.BattleGained.ToString(2);
 
         // 大劫战：不推进图状态（不改层/波），直接走自己的结算
         if (_inDajie)
@@ -504,15 +580,15 @@ public sealed class BattleManager
 
         var parts = new List<string>();
 
-        if (reward.Dao > 0)
+        if (reward.Dao > BigNum.Zero)
         {
-            parts.Add("道行 +" + reward.Dao.ToString("0.#"));
+            parts.Add("道行 +" + reward.Dao.ToString(1));
         }
 
-        if (reward.ExpPerHead > 0)
+        if (reward.ExpPerHead > BigNum.Zero)
         {
-            parts.Add("修为 +" + reward.ExpPerHead.ToString("0.#") + "/人");
-            parts.Add("银两 +" + BigNum.From(reward.Silver).ToString(2));
+            parts.Add("修为 +" + reward.ExpPerHead.ToString(1) + "/人");
+            parts.Add("银两 +" + reward.Silver.ToString(2));
             parts.Add(MaterialCatalog.NameOf(reward.MatTier) + " +" + reward.MatCount);
         }
 

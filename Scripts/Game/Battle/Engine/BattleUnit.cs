@@ -123,7 +123,7 @@ public sealed class BattleUnit
     public BattleUnit BreakDecayOwner;
     public HashSet<BattleSkill> FiredOnce = new();
     public double AccumDmg;            // 累计承伤（反伤用）
-    public double BaseW;               // 基础受击权重
+    public double BaseAggro;               // 基础仇恨
     public List<(double amt, double until)> WBuf = new(), SpdBuf = new(), AtkBuf = new();
 
     /// <summary>
@@ -163,7 +163,7 @@ public sealed class BattleUnit
 
     public double EffW(double t)
     {
-        double w = BaseW;
+        double w = BaseAggro;
         foreach (var b in WBuf)
         {
             if (b.until > t)
@@ -171,7 +171,7 @@ public sealed class BattleUnit
                 w += b.amt;
             }
         }
-        return Math.Max(BattleConfig.WFloor, w);
+        return Math.Max(BattleConfig.AggroFloor, w);
     }
 
     public int Counter(SkillSrc s) => s == SkillSrc.OnAction ? Actions : Hits;

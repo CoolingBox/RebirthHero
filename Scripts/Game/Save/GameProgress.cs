@@ -14,6 +14,7 @@
 
 using System.Collections.Generic;
 using Godot;
+using TinyFramework;
 
 public static class GameProgress
 {
@@ -189,11 +190,21 @@ public static class GameProgress
             return false;
         }
 
-        if (save.Version != GameSave.CurrentVersion)
+        if (save.Version > GameSave.CurrentVersion)
         {
-            // 不认识的版本：整份丢弃。读半份脏数据比从第 1 层重开更糟（症状会散落在各处）
-            GD.Print("[Save] 存档版本 " + save.Version + " 与当前 " + GameSave.CurrentVersion
-                     + " 不符，已忽略（从新一局开始）");
+            // 比当前程序还新：玩家用新版本存过档又回退了。字段可能缺失，读半份脏数据
+            // 比从第 1 层重开更糟（症状会散落在各处），所以宁可丢。
+            TinyLog.Warn("Save", "存档版本 v" + save.Version + " 高于当前 v" + GameSave.CurrentVersion
+                                + "，已忽略（从新一局开始）");
+            return false;
+        }
+
+        if (save.Version < GameSave.CurrentVersion)
+        {
+            // 旧档走到这里 = **没有登记对应迁移**（SaveMigrationRegistry 那条链没接上）。
+            // 不是"读不了"，是"没人告诉框架怎么读"—— 报出来，别静默丢。
+            TinyLog.Warn("Save", "存档 v" + save.Version + " 缺迁到 v" + GameSave.CurrentVersion
+                                + " 的迁移，已忽略（去 SaveMigrationRegistry 注册一条）");
             return false;
         }
 
@@ -260,8 +271,8 @@ public static class GameProgress
             inn.Restore(save.InnRefreshUsed, slots, recruited, save.Roster);
         }
 
-        GD.Print("[Save] 已读取：第 " + save.Layer + " 层 第 " + save.Wave + " 波"
-                 + " · 最高 " + save.BestLayer + " 层 · 银两 " + save.SilverAmount
+        TinyLog.Info("Save", "已读取：第 " + save.Layer + " 层 第 " + save.Wave + " 波"
+                 + " · 最高 " + save.BestLayer + " 层 · 银两 " + save.SilverAmount.ToString(2)
                  + " · 装备 " + save.Equips.Count + " 件 · 已招 " + save.InnRecruited.Count + " 人");
         return true;
     }

@@ -12,6 +12,7 @@
 // ⚠️ 字段名必须与 TuningConfig 的 Key 完全一致（Tuning 按字段名反射注入 + 双向校验）。
 
 using System;
+using TinyFramework;
 
 public static class DaoConfig
 {
@@ -24,14 +25,25 @@ public static class DaoConfig
     /// <summary>整体倍率（调全局收益用；默认 1.0 不改公式形状）。Tuning: DaoRebirthCoef</summary>
     public static double DaoRebirthCoef = 1.0;
 
-    /// <summary>某个最高层数能换多少道行（不到门槛返回 0）。</summary>
-    public static double ForLayer(int bestLayer)
+    /// <summary>
+    /// 某个最高层数能换多少道行（不到门槛返回 0）。
+    /// 返回 BigNum：1.5^(层−3) 在层数破千时会超出 double 上限，
+    /// 直接 Math.Pow 会得到 Infinity，而 BigNum.From(Infinity) 会静默归零 ——
+    /// 于是用"取 10 的对数再拆尾数/指数"，永不溢出。
+    /// </summary>
+    public static BigNum ForLayer(int bestLayer)
     {
         if (bestLayer < DaoMinLayer)
         {
-            return 0;
+            return BigNum.Zero;
         }
-        return Math.Pow(DaoPerLayer, bestLayer - DaoMinLayer) * DaoRebirthCoef;
+
+        int n = bestLayer - DaoMinLayer;
+        double coef = DaoRebirthCoef > 0 ? DaoRebirthCoef : 1.0;
+        double log10 = Math.Log10(DaoPerLayer) * n + Math.Log10(coef);
+        long exp = (long)Math.Floor(log10);
+        double mant = Math.Pow(10, log10 - exp);
+        return BigNum.FromParts(mant, exp);
     }
 
     /// <summary>够不够格转世（门槛只看层数，不看别的）。</summary>

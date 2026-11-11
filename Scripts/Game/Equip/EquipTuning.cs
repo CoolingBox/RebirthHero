@@ -52,7 +52,7 @@ public sealed class EquipTuning
     public double DotPct;            // DoT 伤害 +%
     public int DotStackUp;           // 叠毒层数上限 +N
     public double SummonTtl;         // 召唤物存在时间 +秒
-    public double WeightDelta;       // 受击权重增量
+    public double AggroDelta;       // 仇恨增量
 
     public readonly List<SetState> Sets = new List<SetState>();
 
@@ -170,7 +170,7 @@ public static class EquipSets
                     case EquipAffixEffect.ReplayPct: replayP += a.Value; break;
                     case EquipAffixEffect.ReplayLimit: replayC += (int)a.Value; break;
                     case EquipAffixEffect.ShieldPct: shield += a.Value; break;
-                    case EquipAffixEffect.WeightDelta: weight += a.Value; break;
+                    case EquipAffixEffect.AggroDelta: weight += a.Value; break;
                     case EquipAffixEffect.CounterUp: counter += (int)a.Value; break;
                     case EquipAffixEffect.ShieldKeepPct: shieldKeep += a.Value; break;
                     default: break;
@@ -215,7 +215,7 @@ public static class EquipSets
         t.ReplayLimit += ClampInt(replayC, 0, CapReplayLimit);
         t.ShieldPct += Clamp(shield, 0, CapShieldPct);
         t.ShieldKeepPct += Clamp(shieldKeep, 0, CapShieldKeepPct);
-        t.WeightDelta += weight;
+        t.AggroDelta += weight;
         t.CounterUp += ClampInt(counter, 0, CapCounterUp);
         t.CondDownAction += ClampInt(condA, 0, CapCondDown);
         t.CondDownHit += ClampInt(condH, 0, CapCondDown);
@@ -272,9 +272,9 @@ public static class EquipSets
         {
             u.BaseSpd *= 1 + t.SpdPct / 100.0;
         }
-        if (t.WeightDelta != 0)
+        if (t.AggroDelta != 0)
         {
-            u.BaseW = Math.Max(BattleConfig.WFloor, u.BaseW + t.WeightDelta);
+            u.BaseAggro = Math.Max(BattleConfig.AggroFloor, u.BaseAggro + t.AggroDelta);
         }
 
         if (t.DotPct != 0)
@@ -429,6 +429,6 @@ public static class EquipSets
             || t.ReplayPct != 0 || t.ReplayLimit != 0
             || t.ShieldPct != 0 || t.ShieldKeepPct != 0 || t.CannotAtkPct != 0 || t.CounterUp != 0
             || t.DotPct != 0 || t.DotStackUp != 0 || t.SummonTtl != 0
-            || t.WeightDelta != 0;
+            || t.AggroDelta != 0;
     }
 }

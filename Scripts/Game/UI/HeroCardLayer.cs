@@ -2,7 +2,7 @@
 // 《轮回大侠》表现层 —— **侠客单位卡**层（Godot 节点：Control 子类，挂在 MainPanel.tscn 的 TCards 上）
 //
 // 2026-11-04：卡牌从 500×176 横条换成 **7:9 竖版 4 层视差卡**（BattleParallaxCard）。
-// 2026-11-05：站位改 **1 前 3 后 · 左右对战**；卡的显示尺寸再按**受击权重**微调。
+// 2026-11-05：站位改 **1 前 3 后 · 左右对战**；卡的显示尺寸再按**仇恨**微调。
 //
 // 本类只做三件事，**不含任何绘制细节**：
 //   ① 按阵营与位次算坐标并建卡；
@@ -17,13 +17,13 @@ using Godot;
 public partial class HeroCardLayer : Control
 {
     /// <summary>
-    /// 受击权重 → 卡面尺寸的映射强度。
+    /// 仇恨 → 卡面尺寸的映射强度。
     /// 权重是隐藏数值（1 号位 30 / 其余 10），玩家看不到"谁更容易挨打"；
     /// 用尺寸把它变成能一眼读出的线索 —— 大一号的那张就是对面在集火的那张。
     /// 0.10 配 clamp −7% / +8%：标称 4 人队实际落在 **前排 1.08 / 后排 0.967**（差 11.3%），
     /// 一眼能看出但不破坏网格 —— 后排三张同权重同尺寸，不会互相挤到（行距只对同列生效）。
     /// </summary>
-    const double WeightScaleK = 0.10;
+    const double AggroScaleK = 0.10;
     const float ScaleMin = 0.93f;
     const float ScaleMax = 1.08f;
 
@@ -44,7 +44,7 @@ public partial class HeroCardLayer : Control
     /// <summary>
     /// A 队（我方，左）/ B 队（敌方，右）按队内顺序摆位；召唤物跳过（归 SummonStackLayer）。
     /// 双方都是 **1 前 3 后**：1 号位独占前排，2~4 号位在后排一列（格位见 BattleLayout.PosOf）。
-    /// 卡的尺寸再按队内受击权重微调 —— 权重高的卡略大。
+    /// 卡的尺寸再按队内仇恨微调 —— 权重高的卡略大。
     /// </summary>
     public void Build(List<BattleUnit> a, List<BattleUnit> b, float areaX)
     {
@@ -62,7 +62,7 @@ public partial class HeroCardLayer : Control
     }
 
     /// <summary>
-    /// 队内受击权重 → 显示倍率。
+    /// 队内仇恨 → 显示倍率。
     /// 用**队内平均权重**做基准而不是绝对值：队伍构成变了（少人 / 带召唤武学加权重）也不用改参数，
     /// "谁比队友更容易挨打"自动反映在尺寸上。
     /// 队伍只剩 1 人时返回 1（没有比较对象，不该凭空变大）。
@@ -78,7 +78,7 @@ public partial class HeroCardLayer : Control
             {
                 continue;
             }
-            sum += Math.Max(1.0, t.BaseW);
+            sum += Math.Max(1.0, t.BaseAggro);
             n++;
         }
 
@@ -88,8 +88,8 @@ public partial class HeroCardLayer : Control
         }
 
         double avg = sum / n;
-        double r = Math.Max(1.0, u.BaseW) / avg;
-        double s = 1.0 + (r - 1.0) * WeightScaleK;
+        double r = Math.Max(1.0, u.BaseAggro) / avg;
+        double s = 1.0 + (r - 1.0) * AggroScaleK;
         return (float)Math.Clamp(s, ScaleMin, ScaleMax);
     }
 
@@ -124,7 +124,7 @@ public partial class HeroCardLayer : Control
         BattleParallaxCard c;
         if (_cards.TryGetValue(u, out c))
         {
-            // 用卡的实际尺寸算中心（卡会按受击权重缩放，写死 CardW 会让飘字偏）
+            // 用卡的实际尺寸算中心（卡会按仇恨缩放，写死 CardW 会让飘字偏）
             pos = c.Position + new Vector2(c.Size.X * 0.5f - 60f, 40f);
             return true;
         }

@@ -20,8 +20,8 @@ public class EnemyConfig : BaseConfig
 	public float DefRate;
 	/// <summary> 基础速度(蓄速;不随层成长) </summary>
 	public float Spd;
-	/// <summary> 基础受击权重(10基准) </summary>
-	public int BaseW;
+	/// <summary> 基础仇恨(10基准) </summary>
+	public int BaseAggro;
 	/// <summary> 携带武学数基数(小怪用;精英/层主由 Skills 固定组决定) </summary>
 	public int SkillCount;
 	/// <summary> 每多少层+1个武学(小怪用;0=不增) </summary>

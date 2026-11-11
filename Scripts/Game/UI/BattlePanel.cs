@@ -202,8 +202,8 @@ public partial class BattlePanel : BasePanel
     /// <summary>击杀的常规产出：修为 / 银两 / 材料合成一条。</summary>
     public void ShowKillGain(BattleUnit tgt, KillDrop drop)
     {
-        SpawnFloat(tgt, "修为+" + drop.ExpPerHead.ToString("0.#")
-                      + " 银两+" + BigNum.From(drop.Silver).ToString(2)
+        SpawnFloat(tgt, "修为+" + drop.ExpPerHead.ToString(1)
+                      + " 银两+" + drop.Silver.ToString(2)
                       + " " + MaterialCatalog.NameOf(drop.MatTier) + "+" + drop.MatCount,
                    GainColor);
     }

@@ -20,8 +20,8 @@ public class SummonConfig : BaseConfig
 	public float SpdFloor;
 	/// <summary> 速度=召唤者速度×本值(与下限取大;0=不吃召唤者速度) </summary>
 	public float SpdRatio;
-	/// <summary> 基础受击权重(10基准) </summary>
-	public int BaseW;
+	/// <summary> 基础仇恨(10基准) </summary>
+	public int BaseAggro;
 	/// <summary> 存在时间(秒) </summary>
 	public float Ttl;
 	/// <summary> 该类型同时存活上限(0=不限,只受全队 SummonCap 约束) </summary>

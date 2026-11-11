@@ -1,6 +1,6 @@
 // 文件：HeroBuilder.cs
 // 《轮回大侠》配置接入层 —— HeroConfig(配置表) → BattleUnit(引擎)
-// 全局预算（Slot1W/OtherW/Slot1HpBonus）与 1~40 级成长在此统一应用；
+// 全局预算（Slot1Aggro/OtherAggro/Slot1HpBonus）与 1~40 级成长在此统一应用；
 // 三只全局 Scale（AtkScale/HpScale/DefScale）已于 2026-10-16 全部归 1（恒等）——
 // 即建出来的单位属性 = HeroConfig 表里的值（顶多再乘 1 号位 1.3 气血），没有别的乘数。
 
@@ -61,9 +61,9 @@ public static class HeroBuilder
         }
 
         double hpBonus = slot == 1 ? BattleConfig.Slot1HpBonus : 1.0;
-        double slotW = slot == 1 ? BattleConfig.Slot1W : BattleConfig.OtherW;
-        // BaseW 是"10 基准"的单体基础权重；1 号位按 Slot1W/OtherW 的比例（=3）放大
-        double w = hero.BaseW > 0 ? hero.BaseW * (slotW / BattleConfig.OtherW) : slotW;
+        double slotW = slot == 1 ? BattleConfig.Slot1Aggro : BattleConfig.OtherAggro;
+        // BaseAggro 是"10 基准"的单体基础权重；1 号位按 Slot1Aggro/OtherAggro 的比例（=3）放大
+        double w = hero.BaseAggro > 0 ? hero.BaseAggro * (slotW / BattleConfig.OtherAggro) : slotW;
 
         // 纯加算成长：基础值(L1) + 每级成长 × (L−1)，三属性各自独立
         // 装备加成同为加算，接在成长结果之后（"生命+120"就是实打实的 120 点上限）
@@ -85,7 +85,7 @@ public static class HeroBuilder
             BaseAtk = atk * BattleConfig.AtkScale * realmMult * talent.AtkMul,
             BaseDef = def * BattleConfig.DefScale * realmMult * talent.DefMul,
             BaseSpd = (hero.BaseSPD + eqSpd) * talent.SpdMul,  // SPD 不随等级成长（境界也不加），装备 + 天赋是它的两个来源
-            BaseW = w + talent.WeightAdd,
+            BaseAggro = w + talent.AggroAdd,
             IsSummon = hero.IsSummon,
         };
         u.Hp = u.BaseHp;
@@ -147,13 +147,13 @@ public static class HeroBuilder
             u.Hp = u.BaseHp;
         }
 
-        // —— 召唤武学代价·其二（2026-10-24 用户："携带召唤技能的侠客受击概率提高"）——
-        // 与上面的最大生命惩罚同源（nSummon），但打在**受击权重**上：召唤物自身的 BaseW 不涨，
+        // —— 召唤武学代价·其二（2026-10-24 用户："携带召唤技能的侠客仇恨提高"）——
+        // 与上面的最大生命惩罚同源（nSummon），但打在**仇恨**上：召唤物自身的 BaseAggro 不涨，
         // 所以召唤师在全队仇恨里的占比被抬高 —— 从"召唤物替你挨"变成"你也得挨"。
         // 这是对召唤流"高生存"的直接定价（头模拟：召唤 98% vs 直伤 77%，且剩余血最高）。
-        if (nSummon > 0 && BattleConfig.SummonerWeightPerSkill > 0)
+        if (nSummon > 0 && BattleConfig.SummonerAggroPerSkill > 0)
         {
-            u.BaseW += BattleConfig.SummonerWeightPerSkill * nSummon;
+            u.BaseAggro += BattleConfig.SummonerAggroPerSkill * nSummon;
         }
 
         u.Skills = new List<BattleSkill>();

@@ -453,7 +453,7 @@ public partial class TalentPanel : BasePanel
             _nodeBtn[c.Id] = b;
         }
 
-        GD.Print("[Talent] 建树完成：" + _nodeBtn.Count + " 节点 · 画布 " + _TTree.Size
+        TinyLog.Debug("Talent", "建树完成：" + _nodeBtn.Count + " 节点 · 画布 " + _TTree.Size
                  + " · 视口 " + (_TView != null ? _TView.Size.ToString() : "null"));
     }
 
@@ -602,7 +602,7 @@ public partial class TalentPanel : BasePanel
         if (_dao == null || _dao.Amount < cost)
         {
             AudioManager.PlayUISFX("ui_click");
-            SetHint("道行不足：需要 " + cost.ToString("0.#") + "，当前 " + (_dao != null ? _dao.Amount.ToString("0.#") : "0"));
+            SetHint("道行不足：需要 " + cost.ToString("0.#") + "，当前 " + (_dao != null ? _dao.Amount.ToString(1) : "0"));
             Refresh();
             return;
         }
@@ -628,7 +628,7 @@ public partial class TalentPanel : BasePanel
         if (_dao != null && _TTitle != null)
         {
             string tag = _tree == 1 ? "武学" : "江湖";
-            _TTitle.Text = "天赋 · " + tag + " · 道行 " + _dao.Amount.ToString("0.#");
+            _TTitle.Text = "天赋 · " + tag + " · 道行 " + _dao.Amount.ToString(1);
         }
 
         RefreshTabs();
@@ -804,7 +804,7 @@ public partial class TalentPanel : BasePanel
 
         if (_dao != null)
         {
-            lines.Add("道行 " + _dao.Amount.ToString("0.#"));
+            lines.Add("道行 " + _dao.Amount.ToString(1));
         }
         lines.Add("已投入 " + CostShort(Talent.TotalSpent()) + " 点");
         lines.Add("");
@@ -818,9 +818,9 @@ public partial class TalentPanel : BasePanel
         {
             lines.Add("　　　 护盾保持率 +" + (b.ShieldKeepAdd * 100).ToString("0") + " 点");
         }
-        if (b.WeightAdd < 0)
+        if (b.AggroAdd < 0)
         {
-            lines.Add("　　　 受击权重 " + b.WeightAdd.ToString("0") + "（更难被打）");
+            lines.Add("　　　 仇恨 " + b.AggroAdd.ToString("0") + "（更难被打）");
         }
         lines.Add("　　　 装备属性 " + Pct(b.EquipStatMul));
 
