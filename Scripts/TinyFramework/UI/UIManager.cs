@@ -41,7 +41,7 @@ public partial class UIManager : SingletonNode<UIManager>
         PackedScene scene = ResManager.Load<PackedScene>(path);
         if (scene == null)
         {
-            GD.PrintErr($"面板文件加载失败: {path}");
+            TinyLog.Error("UI", "面板文件加载失败: " + path);
             return;
         }
 
@@ -52,7 +52,7 @@ public partial class UIManager : SingletonNode<UIManager>
         // 添加到字典中并显示
         Instance._panelDict.Add(panelName, panel);
         Instance.AddChild(panel.GameObject);
-        panel?.OnShow();
+        panel.OnShow();
     }
 
     public static void HidePanel<T>(string panelName = null) where T : BasePanel

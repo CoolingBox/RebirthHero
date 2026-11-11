@@ -42,7 +42,7 @@ public class ConfigManager : Singleton<ConfigManager>
         if (index.TryGetValue(id, out T config))
             return config;
 
-        GD.PrintErr($"[ConfigManager] 找不到ID为 {id} 的配置项: {name}");
+        TinyLog.Error("Config", "找不到ID为 " + id + " 的配置项: " + name);
         return null;
     }
 
@@ -59,14 +59,14 @@ public class ConfigManager : Singleton<ConfigManager>
         string fullName = PathDefine.ConfigPath + name + ".json";
         if (!FileAccess.FileExists(fullName))
         {
-            GD.PrintErr($"[ConfigManager] 配置文件不存在: {fullName}");
+            TinyLog.Error("Config", "配置文件不存在: " + fullName);
             return null;
         }
 
         using (FileAccess fileAccess = FileAccess.Open(fullName, FileAccess.ModeFlags.Read))
         {
             configs = JsonSerializer.Deserialize<List<T>>(fileAccess.GetAsText(), ConfigOptions);
-            GD.PrintRich($"[color=Green]已加载配置: {name} (共 {(configs as List<T>).Count} 条)[/color]");
+            TinyLog.Info("Config", "已加载配置: " + name + " (共 " + (configs as List<T>).Count + " 条)");
             _configDict.Add(name, configs);
         }
 

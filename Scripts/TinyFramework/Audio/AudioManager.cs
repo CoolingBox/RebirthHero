@@ -156,13 +156,13 @@ public partial class AudioManager : SingletonNode<AudioManager>
 
             if (!ResourceLoader.Exists(path, ""))
             {
-                GD.PrintErr("[AudioManager] 音效缺失: " + path);
+                TinyLog.Warn("Audio", "音效缺失: " + path);
                 continue;
             }
 
             AudioStream stream = ResourceLoader.Load<AudioStream>(path);
             if (stream == null)
-                GD.PrintErr("[AudioManager] 音效加载失败: " + path);
+                TinyLog.Error("Audio", "音效加载失败: " + path);
         }
     }
 
@@ -179,12 +179,12 @@ public partial class AudioManager : SingletonNode<AudioManager>
             int index = AudioServer.GetBusIndex(buses[i]);
             if (index < 0)
             {
-                GD.PrintErr("[AudioManager] 总线缺失: " + buses[i] + " —— 检查 default_bus_layout.tres");
+                TinyLog.Error("Audio", "总线缺失: " + buses[i] + " —— 检查 default_bus_layout.tres");
                 continue;
             }
 
             int fxCount = AudioServer.GetBusEffectCount(index);
-            GD.Print("[AudioManager] 总线 " + buses[i] + " #" + index + " 效果器 " + fxCount);
+            TinyLog.Debug("Audio", "总线 " + buses[i] + " #" + index + " 效果器 " + fxCount);
         }
     }
 

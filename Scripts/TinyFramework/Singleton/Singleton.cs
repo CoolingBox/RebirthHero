@@ -37,12 +37,12 @@ public class Singleton<T> where T : new()
 
     public virtual void Init()
     {
-        GD.PrintRich($"[color=Cyan]{this.GetType().Name} 启动[/color]");
+        TinyLog.Debug("Boot", this.GetType().Name + " 启动");
     }
 
     public virtual void UnInit()
     {
-        GD.PrintRich($"[color=Cyan]{this.GetType().Name} 关闭[/color]");
+        TinyLog.Debug("Boot", this.GetType().Name + " 关闭");
     }
 }
 
@@ -83,12 +83,12 @@ public partial class SingletonNode<T> : Node where T :Node, new()
 
     public virtual void Init()
     {
-        GD.PrintRich($"[color=Cyan]{this.GetType().Name} 启动[/color]");
+        TinyLog.Debug("Boot", this.GetType().Name + " 启动");
     }
 
     public virtual void UnInit()
     {
-        GD.PrintRich($"[color=Cyan]{this.GetType().Name} 关闭[/color]");
+        TinyLog.Debug("Boot", this.GetType().Name + " 关闭");
     }
 
     /// <summary>

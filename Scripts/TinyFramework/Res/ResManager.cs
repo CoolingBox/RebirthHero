@@ -22,7 +22,7 @@ public class ResManager : Singleton<ResManager>
         var res = ResourceLoader.Load(path);
         if (res == null)
         {
-            GD.PrintErr($"[ResManager] 加载资源失败: {path}");
+            TinyLog.Error("Res", "加载资源失败: " + path);
             return null;
         }
 
@@ -36,18 +36,18 @@ public class ResManager : Singleton<ResManager>
     {
         if (GameRoot.Instance == null)
         {
-            GD.PrintErr($"[ResManager] 异步加载失败(尚未运行时): {path}");
+            TinyLog.Error("Res", "异步加载失败(尚未运行时): " + path);
             return null;
         }
         if (!ResourceLoader.Exists(path))
         {
-            GD.PrintErr($"[ResManager] 资源不存在: {path}");
+            TinyLog.Error("Res", "资源不存在: " + path);
             return null;
         }
 
         if (ResourceLoader.LoadThreadedRequest(path) != Error.Ok)
         {
-            GD.PrintErr($"[ResManager] 异步加载请求失败: {path}");
+            TinyLog.Error("Res", "异步加载请求失败: " + path);
             return null;
         }
 
@@ -59,7 +59,7 @@ public class ResManager : Singleton<ResManager>
                 return ResourceLoader.LoadThreadedGet(path) as T;
             if (status == ResourceLoader.ThreadLoadStatus.Failed)
             {
-                GD.PrintErr($"[ResManager] 异步加载失败: {path}");
+                TinyLog.Error("Res", "异步加载失败: " + path);
                 return null;
             }
             await tree.ToSignal(tree, "process_frame");
