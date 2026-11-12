@@ -88,6 +88,13 @@ layout_mode = 2
 size_flags_vertical = 4
 text = "存档 ⌸"
 
+[node name="TSpeedBtn" type="Button" parent="TNavBar/TNavRow"]
+custom_minimum_size = Vector2(76, 38)
+layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "战斗倍速：点击切换 1x / 2x / 3x（只加快战斗推进，不影响倒计时与自动保存）"
+text = "×1"
+
 [node name="TSettingBtn" type="Button" parent="TNavBar/TNavRow"]
 custom_minimum_size = Vector2(112, 38)
 layout_mode = 2

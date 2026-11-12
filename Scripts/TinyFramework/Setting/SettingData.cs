@@ -22,4 +22,9 @@ public class SettingData:SaveData
     /// <summary>自动保存主档（间隔见 SaveBackup.AutoSaveMinutes，默认 10 分钟）。
     /// 默认开启：放置游戏没有"手动存档"的习惯动作，玩家直接关窗口丢进度是致命的。</summary>
     public bool AutoSave = true;
+
+    /// <summary>战斗倍速（1 = 正常，2/3 = 快进）。放在设置里而不是存档里：
+    /// 它是"玩家怎么看"的偏好，跟这一世的进度无关，转世也不该被重置。
+    /// 只影响 BattleManager 的模拟推进，不影响倒计时、自动保存与 UI 动效。</summary>
+    public float BattleSpeed = 1f;
 }

@@ -14,6 +14,7 @@ public partial class MainPanel : BasePanel
 	private Button _TStageBtn;
 	private Button _TStatsBtn;
 	private Button _TSaveBtn;
+	private Button _TSpeedBtn;
 	private Button _TSettingBtn;
 	private Label _TExp;
 	public override void OnBind(Control control)
@@ -30,6 +31,7 @@ public partial class MainPanel : BasePanel
 		_TStageBtn = GameObject.FindChild("TStageBtn") as Button;
 		_TStatsBtn = GameObject.FindChild("TStatsBtn") as Button;
 		_TSaveBtn = GameObject.FindChild("TSaveBtn") as Button;
+		_TSpeedBtn = GameObject.FindChild("TSpeedBtn") as Button;
 		_TSettingBtn = GameObject.FindChild("TSettingBtn") as Button;
 		_TExp = GameObject.FindChild("TExp") as Label;
 	}
