@@ -60,6 +60,15 @@ public partial class MainPanel : BasePanel
     // ============ 战斗逻辑（普通类；画面与节点全归 BattlePanel） ============
     private BattleManager _battleMgr;
 
+    // ============ 战斗倍速（导航条「×N」按钮，选择记进设置） ============
+    /// <summary>可选档位。数组顺序就是点击循环顺序，也是"非法存档值退回 1x"的白名单。</summary>
+    private static readonly double[] SpeedSteps = { 1.0, 2.0, 3.0 };
+    private double _battleSpeed = 1.0;
+
+    // ============ 卡牌详情浮层（点战斗卡打开；显示层，数据在这里装配） ============
+    private UnitDetailView _detail;
+    private BattleUnit _detailUnit;
+
     // 读档时先把大劫进度存这里 —— BattleManager 要在状态机就位之后才能创建
     private int _pendingDajieWins;
 
@@ -164,20 +173,26 @@ public partial class MainPanel : BasePanel
         if (view != null)
         {
             view.AttachManager(_battleMgr);
+            if (view.Cards != null)
+            {
+                view.Cards.OnCardClicked = ShowUnitDetail;   // 点卡 → 开详情
+            }
         }
         if (_pendingDajieWins > 0)
         {
             _battleMgr.RestoreDajie(_pendingDajieWins);
         }
 
-        // 调试钩子：BATTLE_SPEED=3 直接看倍速效果（倍速 UI 还没做，先用它验证与调参）
+        // 倍速：先取玩家上次的选择；BATTLE_SPEED 环境变量优先（自动化测试与调参用）
+        ApplyBattleSpeed(SpeedFromSetting(), false);
+
         string speedEnv = OS.GetEnvironment("BATTLE_SPEED");
         if (speedEnv.Length > 0)
         {
             double speed;
             if (double.TryParse(speedEnv, out speed))
             {
-                _battleMgr.BattleSpeed = speed;
+                ApplyBattleSpeed(speed, false);
             }
         }
     }
@@ -195,7 +210,10 @@ public partial class MainPanel : BasePanel
     // ============ 一次性初始化 ============
     private void Init()
     {
-        GameObject.MouseFilter = Control.MouseFilterEnum.Stop;
+        // HUD 根节点**必须 Ignore**：它铺满全屏又盖在 BattlePanel 之上，
+        // 设成 Stop 会把整个战斗区的点击全部吞掉（卡牌点不开详情就是这么来的）。
+        // 需要接收点击的是它的两个子节点：TNavBar（Panel，mouse_filter = Stop）与 TExp（下面显式设 Stop）。
+        GameObject.MouseFilter = Control.MouseFilterEnum.Ignore;
         GameObject.ProcessMode = Node.ProcessModeEnum.Always;
 
         var heroes = ConfigManager.GetAll<HeroConfig>();
@@ -320,6 +338,11 @@ public partial class MainPanel : BasePanel
         {
             _TSettingBtn.Pressed += OnOpenSettings;
         }
+        if (_TSpeedBtn != null)
+        {
+            _TSpeedBtn.Pressed += OnCycleSpeed;
+        }
+
 
         // 点顶部"大劫 mm:ss"提前迎战（不加控件、不改 .tscn）
         if (_TExp != null)
@@ -365,6 +388,338 @@ public partial class MainPanel : BasePanel
         {
             _battleMgr.OnBeat();
         }
+
+        RefreshUnitDetail();
+    }
+
+    // ============ 卡牌详情 ============
+    /// <summary>
+    /// 点战斗卡 → 打开详情浮层。再点同一张不会重复打开（浮层铺满全屏，卡点不到）。
+    /// 详情**不暂停**战斗：行动条与释放进度只有动起来才读得懂。
+    /// </summary>
+    private void ShowUnitDetail(BattleUnit u)
+    {
+        if (u == null)
+        {
+            return;
+        }
+
+        EnsureDetailView();
+        if (_detail == null)
+        {
+            return;
+        }
+
+        _detailUnit = u;
+        _detail.Open(BuildUnitDetail(u));
+        AudioManager.PlayUISFX("ui_open");
+    }
+
+    /// <summary>浮层每拍跟着刷（10Hz）。单位已不在场上（换波 / 重开）就自己收起来。</summary>
+    private void RefreshUnitDetail()
+    {
+        if (_detail == null || !_detail.IsOpen)
+        {
+            return;
+        }
+        if (_detailUnit == null)
+        {
+            _detail.Close();
+            return;
+        }
+
+        BattleEngine eng = _battleMgr != null ? _battleMgr.Engine : null;
+        if (eng == null || (!eng.A.Contains(_detailUnit) && !eng.B.Contains(_detailUnit)))
+        {
+            _detail.Close();
+            return;
+        }
+
+        _detail.Apply(BuildUnitDetail(_detailUnit));
+    }
+
+    private void EnsureDetailView()
+    {
+        if (_detail != null && GodotObject.IsInstanceValid(_detail))
+        {
+            return;
+        }
+
+        _detail = new UnitDetailView();
+        _detail.OnClosed = OnDetailClosed;
+        GameObject.AddChild(_detail);
+        _detail.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+    }
+
+    private void OnDetailClosed()
+    {
+        _detailUnit = null;
+    }
+
+    private void CloseUnitDetail()
+    {
+        _detailUnit = null;
+        if (_detail != null && GodotObject.IsInstanceValid(_detail))
+        {
+            _detail.Close();
+        }
+    }
+
+    /// <summary>
+    /// 把某一刻的读数装成详情数据。
+    /// 等级只对**侠客本体**有意义（召唤物与敌人没有修为），所以走 HeroIdOf 再查 Cultivation。
+    /// </summary>
+    private UnitDetailData BuildUnitDetail(BattleUnit u)
+    {
+        UnitDetailData d = new UnitDetailData();
+        BattleEngine eng = _battleMgr != null ? _battleMgr.Engine : null;
+        bool ally = eng != null && eng.InA(u);
+
+        d.Name = u.Name;
+        d.Enemy = !ally;
+        d.ArtKey = BattleArt.KeyOf(u.Name);
+
+        if (!ally)
+        {
+            if (InDajie)
+            {
+                d.Subtitle = "敌方 · 大劫（第 " + (DajieWins + 1) + " 场）";
+            }
+            else
+            {
+                d.Subtitle = "敌方 · 第 " + _run.Layer + " 层";
+            }
+        }
+        else if (u.IsSummon)
+        {
+            d.Subtitle = "我方 · 召唤物";
+        }
+        else
+        {
+            d.Subtitle = "我方 · " + u.Slot + " 号位";
+        }
+        if (!u.Alive)
+        {
+            d.Subtitle += " · 已阵亡";
+        }
+
+        d.LevelText = "";
+        if (ally && !u.IsSummon && u.Slot >= 1)
+        {
+            int heroId = HeroIdOf(u.Name);
+            if (heroId > 0)
+            {
+                int lv = _cult.LevelOf(heroId);
+                if (lv >= CultivationConfig.MaxLevel)
+                {
+                    d.LevelText = "等级 " + lv + "（满级）";
+                }
+                else
+                {
+                    double pct = Math.Min(1.0, _cult.ProgressOf(heroId)) * 100;
+                    d.LevelText = "等级 " + lv + "　·　修为进度 " + pct.ToString("0") + "%";
+                }
+            }
+        }
+        else if (ally)
+        {
+            d.LevelText = "召唤物 · 无修为（强度随召唤者）";
+        }
+        else d.LevelText = "敌方单位 · 强度随层数成长，无修为";
+
+        double t = eng != null ? eng.T : 0;
+        d.Hp = u.Hp;
+        d.MaxHp = u.BaseHp;
+        d.LockedHp = u.LockedHp;
+        d.Shield = u.Shield;
+        d.Atk = u.EffAtk(t);
+        d.Spd = u.EffSpd(t);
+        d.Def = u.BaseDef;
+        d.Aggro = u.EffW(t);
+        d.StatusText = StatusTextOf(u, t);
+
+        double gmax = BattleEngine.GaugeMax > 0 ? BattleEngine.GaugeMax : 1;
+        d.Gauge = u.Gauge;
+        d.GaugeMax = gmax;
+        d.SecondsToAct = 0;
+        if (d.Spd > 0.01 && u.Gauge < gmax)
+        {
+            d.SecondsToAct = (gmax - u.Gauge) / d.Spd;
+        }
+
+        // 战果只有我方侠客本体有（StatsTracker 只归账玩家，召唤物记在其召唤者名下）
+        d.ShowStats = ally && !u.IsSummon;
+        d.Actions = u.Actions;
+        d.Triggers = 0;
+
+        StatsTracker stats = _battleMgr != null ? _battleMgr.Stats : null;
+        if (d.ShowStats && stats != null)
+        {
+            StatsTracker.HeroStat hs;
+            if (stats.TryHero(u.Name, out hs))
+            {
+                d.Damage = hs.Damage;
+                d.Taken = hs.Taken;
+                d.Heal = hs.Heal;
+                d.Triggers = hs.Triggers;
+                d.Actions = hs.Actions;
+            }
+        }
+
+        foreach (BattleSkill sk in u.Skills)
+        {
+            UnitSkillRow row = new UnitSkillRow();
+            row.Name = sk.Name;
+            row.Cond = SkillCondText(sk);
+            row.Progress = SkillCondProgress(sk, u);
+            row.Fires = sk.Fires;
+            row.MaxFires = sk.MaxFires;
+
+            if (d.ShowStats && stats != null)
+            {
+                StatsTracker.SkillStat ss;
+                if (stats.TrySkill(StatsTracker.SkillKey(u.Name, sk.Name), out ss))
+                {
+                    row.Triggers = ss.Triggers;
+                    row.Damage = ss.Damage;
+                }
+            }
+
+            d.Skills.Add(row);
+        }
+
+        return d;
+    }
+
+    /// <summary>武学触发条件的短文案（详情里空间金贵，只留"什么时候、多大概率"）。</summary>
+    private static string SkillCondText(BattleSkill sk)
+    {
+        if (sk.Src == SkillSrc.OnStart)
+        {
+            return "开局光环";
+        }
+        if (sk.Src == SkillSrc.OnHpBelow)
+        {
+            return "血量低于 " + (sk.CondP * 100).ToString("0") + "%";
+        }
+
+        string when = sk.Src == SkillSrc.OnHit ? "受击" : "行动";
+        if (sk.Cond == "count")
+        {
+            return "每 " + sk.CondN + " 次" + when;
+        }
+        if (sk.Cond == "combo")
+        {
+            return when + "连击 " + (sk.CondP * 100).ToString("0") + "%";
+        }
+        return when + " " + (sk.CondP * 100).ToString("0") + "%";
+    }
+
+    /// <summary>次数型条件的进度（"3/4" 读作"再攒 1 次就放"）。概率型没有进度。</summary>
+    private static string SkillCondProgress(BattleSkill sk, BattleUnit u)
+    {
+        if (sk.Cond != "count" || sk.CondN <= 0)
+        {
+            return "";
+        }
+
+        int c = u.Counter(sk.Src) + sk.CounterOffset;
+        int mod = c % sk.CondN;
+        return mod + "/" + sk.CondN;
+    }
+
+    /// <summary>侠客名 → HeroConfig.Id（详情要查修为等级，而 BattleUnit 只有名字）。</summary>
+    private int HeroIdOf(string name)
+    {
+        List<HeroConfig> heroes = ConfigManager.GetAll<HeroConfig>();
+        if (heroes == null)
+        {
+            return 0;
+        }
+
+        for (int i = 0; i < heroes.Count; i++)
+        {
+            HeroConfig h = heroes[i];
+            if (h != null && h.Name == name)
+            {
+                return h.Id;
+            }
+        }
+        return 0;
+    }
+
+    /// <summary>
+    /// 状态一行：中毒 / 灼烧 / 续治 / 破绽 / 沉默 / 护盾 / 攻速仇恨加成。
+    /// 挂机时玩家看到的是"血在掉"，但不知道为什么掉 —— 这一行给的是**原因**。
+    /// 空状态也明说"干净"，而不是留空（留空读起来像没读到数据）。
+    /// </summary>
+    private static string StatusTextOf(BattleUnit u, double t)
+    {
+        List<string> parts = new List<string>();
+
+        if (u.PoisonStacks > 0)
+        {
+            parts.Add("毒 " + u.PoisonStacks.ToString("0") + " 层");
+        }
+        if (u.BurnStacks > 0)
+        {
+            double left = u.BurnUntil - t;
+            if (left < 0)
+            {
+                left = 0;
+            }
+            parts.Add("火 " + u.BurnStacks.ToString("0") + " 层（剩 " + left.ToString("0.0") + "s）");
+        }
+        if (u.HotStacks > 0)
+        {
+            parts.Add("续治 " + u.HotStacks.ToString("0") + " 层");
+        }
+        if (u.BreakStacks > 0)
+        {
+            parts.Add("破绽 " + u.BreakStacks + " 层（挨打更痛）");
+        }
+        if (u.Silenced(t))
+        {
+            parts.Add("沉默 " + (u.SilenceUntil - t).ToString("0.0") + "s");
+        }
+        // 护盾不在这里列：血条上已有金色蒙层与文字，重复一次只是噪音
+
+        double atk = ActiveBuffSum(u.AtkBuf, t);
+        if (atk > 0.0001)
+        {
+            parts.Add("攻 +" + (atk * 100).ToString("0") + "%");
+        }
+        double spd = ActiveBuffSum(u.SpdBuf, t);
+        if (spd > 0.0001)
+        {
+            parts.Add("速 +" + (spd * 100).ToString("0") + "%");
+        }
+        double agg = ActiveBuffSum(u.WBuf, t);
+        if (Math.Abs(agg) > 0.0001)
+        {
+            string sign = agg > 0 ? "+" : "";
+            parts.Add("仇恨 " + sign + agg.ToString("0"));
+        }
+
+        if (parts.Count == 0)
+        {
+            return "状态 · 干净（无中毒 / 灼烧 / 减益）";
+        }
+        return "状态 · " + string.Join("　｜　", parts);
+    }
+
+    /// <summary>某类临时加成的当前合计（只算还没到期的）。</summary>
+    private static double ActiveBuffSum(List<(double amt, double until)> buffs, double t)
+    {
+        double sum = 0;
+        for (int i = 0; i < buffs.Count; i++)
+        {
+            if (buffs[i].until > t)
+            {
+                sum += buffs[i].amt;
+            }
+        }
+        return sum;
     }
 
     private void OnAdvanceDue()
@@ -821,7 +1176,7 @@ public partial class MainPanel : BasePanel
         StatsPanel.ToggleCurrent();
         if (_battleMgr != null && _battleMgr.HasEngine)
         {
-            StatsPanel.BindBattle(_battleMgr.Engine, _battleMgr.Engine.A, _run.Layer);
+            StatsPanel.BindBattle(_battleMgr.Engine, _battleMgr.Engine.A, _run.Layer, _battleMgr.Stats);
         }
     }
 
@@ -837,6 +1192,81 @@ public partial class MainPanel : BasePanel
         SyncAutoSave();   // 自动保存开关可能改了
         SaveProgress();
         RefreshHeader();
+    }
+
+    // ============ 战斗倍速 ============
+    /// <summary>
+    /// 点导航条「×N」：1x → 2x → 3x → 1x 循环。
+    /// <para>
+    /// 为什么不做成三选一的下拉/滑块：这是挂机游戏的**高频**操作（刷得快就调高，
+    /// 想看细节就调回来），一次点击比"展开 → 选 → 收起"少两步。代价是当前档位必须
+    /// 直接写在按钮上（`×2`），否则玩家不知道自己点到了第几档。
+    /// </para>
+    /// </summary>
+    private void OnCycleSpeed()
+    {
+        AudioManager.PlayUISFX("ui_click");
+
+        // 取"下一个比当前大的档位"；已经最大就回到第一档。
+        // 这样即使存档里是 2.5（手动改的设置）也能顺着往上走，不会卡住。
+        double next = SpeedSteps[0];
+        for (int i = 0; i < SpeedSteps.Length; i++)
+        {
+            if (SpeedSteps[i] > _battleSpeed + 0.001)
+            {
+                next = SpeedSteps[i];
+                break;
+            }
+        }
+
+        ApplyBattleSpeed(next, true);
+    }
+
+    /// <summary>套用倍速：改战斗逻辑、改按钮文案；<paramref name="save"/> 为真时写进设置。</summary>
+    private void ApplyBattleSpeed(double speed, bool save)
+    {
+        _battleSpeed = speed;
+
+        if (_battleMgr != null)
+        {
+            _battleMgr.BattleSpeed = speed;
+        }
+        if (_TSpeedBtn != null)
+        {
+            _TSpeedBtn.Text = "×" + speed.ToString("0.#");
+        }
+
+        if (!save)
+        {
+            return;
+        }
+
+        SettingData data = SettingManager.Data;
+        if (data == null)
+        {
+            return;
+        }
+        data.BattleSpeed = (float)speed;
+        SaveManager.Save(data);
+    }
+
+    /// <summary>读设置里的倍速。不在档位表里的值（旧档、手改）一律退回 1x。</summary>
+    private static double SpeedFromSetting()
+    {
+        SettingData data = SettingManager.Data;
+        if (data == null)
+        {
+            return 1.0;
+        }
+
+        for (int i = 0; i < SpeedSteps.Length; i++)
+        {
+            if (Math.Abs(SpeedSteps[i] - data.BattleSpeed) < 0.001)
+            {
+                return SpeedSteps[i];
+            }
+        }
+        return 1.0;
     }
 
     /// <summary>
@@ -858,6 +1288,9 @@ public partial class MainPanel : BasePanel
         {
             _TInnBtn.Disabled = false;
         }
+
+        // 详情浮层指着某个 BattleUnit，转世/读档后那些单位已经不存在了
+        CloseUnitDetail();
     }
 
     /// <summary>恢复战斗节奏 —— 只有存档面板还在用它（读档会整份替换状态机）。</summary>
@@ -932,25 +1365,9 @@ public partial class MainPanel : BasePanel
             }
         }
 
-        // 修为池是"每侠客各一份"，绝对值不如进度直观；战斗中途未结算升级 → 进度可超 100%，clamp
-        var lvParts = new List<string>();
-        foreach (HeroConfig h in ActiveRoster())
-        {
-            int l = _cult.LevelOf(h.Id);
-            string s;
-            if (l >= CultivationConfig.MaxLevel)
-            {
-                s = h.Name + "L" + l + "满";
-            }
-            else
-            {
-                double pct = Math.Min(1.0, _cult.ProgressOf(h.Id)) * 100;
-                s = h.Name + "L" + l + "·" + pct.ToString("0") + "%";
-            }
-            lvParts.Add(s);
-        }
-        string lv = string.Join(" · ", lvParts);
-
+        // 2026-11-12：顶栏不再列「某某L8·18%」这一串。
+        // 两个原因：① 4~6 名侠客一列排下来必然超出 1920 宽（实测右侧被屏幕切掉）；
+        // ② 等级是"点开看"的信息，不是"挂着看"的信息 —— 它挪进了卡牌详情（点卡即见）。
         string realmTag = "";
         RealmConfig realmCur = Realm.Current;
         if (realmCur != null)
@@ -980,7 +1397,7 @@ public partial class MainPanel : BasePanel
             _TExp.Text = realmTag
                        + "最高 " + _run.BestLayer + " 层 · 已战 " + _run.Battles + " 场　｜　"
                        + "银两 " + _silver.Amount.ToString(2) + "（本世累计 " + _silver.TotalGained.ToString(2) + "）"
-                       + "　修为累计 " + _cult.TotalGained.ToString(2) + "　｜　" + lv;
+                       + "　修为累计 " + _cult.TotalGained.ToString(2);
         }
     }
 

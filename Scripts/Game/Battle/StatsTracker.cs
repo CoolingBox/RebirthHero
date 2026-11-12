@@ -55,10 +55,22 @@ public sealed class StatsTracker
     public bool TrySkill(string key, out SkillStat s) => _skills.TryGetValue(key, out s);
     public static string SkillKey(string hero, string skill) => hero + "|" + skill;
 
-    /// <summary>挂到某场引擎的事件总线上。每场（含层内续战的新引擎）都重新挂一次。</summary>
+    /// <summary>
+    /// 挂到某场引擎的事件总线上。每场（含层内续战的新引擎）都重新挂一次。
+    /// <para>
+    /// 2026-11-12：改为**幂等** —— 先退订再订阅。同一份统计现在有两个读者
+    /// （战报面板与卡牌详情），谁都可以再挂一次；若只 += 不做 -=，重复挂载会让
+    /// 每一次事件被记两遍（伤害翻倍，且查不出是哪来的）。
+    /// </para>
+    /// </summary>
     public void Attach(BattleEngine eng)
     {
         _isPlayerHero = u => eng.InA(u) && !u.IsSummon;
+        eng.Bus.OnAction -= OnAction;
+        eng.Bus.OnSkill -= OnSkill;
+        eng.Bus.OnDamage -= OnDamage;
+        eng.Bus.OnHeal -= OnHeal;
+
         eng.Bus.OnAction += OnAction;
         eng.Bus.OnSkill += OnSkill;
         eng.Bus.OnDamage += OnDamage;
@@ -112,13 +124,15 @@ public sealed class StatsTracker
         Hero(h).Actions++;
     }
 
-    void OnSkill(BattleUnit u, string name)
+    void OnSkill(BattleUnit u, string name, int hits)
     {
         var h = ResolveHero(u);
         if (h == null || string.IsNullOrEmpty(name))
         {
             return;
         }
+        // 触发次数 = 放了几次，**不是**打了几段：重放（hits > 1）算同一门武学的同一次释放，
+        // 否则"每 3 次行动触发"这类卡的战报数字会虚高成两倍。
         Hero(h).Triggers++;
         Skill(h, name).Triggers++;
     }

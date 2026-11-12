@@ -29,6 +29,9 @@ public partial class HeroCardLayer : Control
 
     readonly Dictionary<BattleUnit, BattleParallaxCard> _cards = new Dictionary<BattleUnit, BattleParallaxCard>();
 
+    /// <summary>点某张卡（交给主面板开详情）。本层不知道详情长什么样。</summary>
+    public Action<BattleUnit> OnCardClicked;
+
     public void Clear()
     {
         foreach (KeyValuePair<BattleUnit, BattleParallaxCard> kv in _cards)
@@ -106,7 +109,17 @@ public partial class HeroCardLayer : Control
 
         // Setup 必须在 AddChild 之后：卡面节点是在 _Ready 里建的
         card.Setup(u, enemy, BattleArt.KeyOf(u.Name));
+        card.Clicked += OnCardClickedInternal;
         _cards[u] = card;
+    }
+
+    /// <summary>卡的点击回调 → 转给面板（本层只是"转发"，不判断点开之后做什么）。</summary>
+    void OnCardClickedInternal(BattleUnit u)
+    {
+        if (OnCardClicked != null)
+        {
+            OnCardClicked(u);
+        }
     }
 
     /// <summary>把引擎数据推给每张卡（10Hz，由面板的 Tick 调用）。</summary>
@@ -116,6 +129,30 @@ public partial class HeroCardLayer : Control
         {
             kv.Value.Refresh(engine);
         }
+    }
+
+    /// <summary>
+    /// 某单位出手：把武学名（含段数）报到它的卡牌头部。
+    /// 没有卡的单位（召唤物归堆叠层、已清场的单位）直接忽略 —— 不给它们凭空造一个锚点。
+    /// </summary>
+    public void ShowCast(BattleUnit u, string skill, int hits)
+    {
+        if (u == null)
+        {
+            return;
+        }
+
+        BattleParallaxCard c;
+        if (!_cards.TryGetValue(u, out c))
+        {
+            return;
+        }
+        if (c == null || !IsInstanceValid(c))
+        {
+            return;
+        }
+
+        c.ShowCast(skill, hits);
     }
 
     /// <summary>飘字锚点：卡面上部（人物头顶一带）。</summary>

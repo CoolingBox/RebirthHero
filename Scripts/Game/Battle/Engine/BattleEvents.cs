@@ -13,8 +13,8 @@ public sealed class BattleEventBus
 {
     // 单位行动（comboNow = 上一行动者为友方，连击条件成立）
     public event Action<BattleUnit, bool> OnAction;
-    // 武学触发（含普攻：skillName=null）
-    public event Action<BattleUnit, string> OnSkill;
+    // 武学打完一次（hits = 本次实际结算段数，含重放；1 = 没触发重放）
+    public event Action<BattleUnit, string, int> OnSkill;
     // 伤害（attacker 当前恒非 null；skillName=null=普攻）
     public event Action<BattleUnit, BattleUnit, double, string> OnDamage;
     // 治疗（skillName=null=吸血/其它非武学治疗）
@@ -29,7 +29,7 @@ public sealed class BattleEventBus
     public event Action<int> OnEnd;
 
     public void RaiseAction(BattleUnit u, bool combo) => OnAction?.Invoke(u, combo);
-    public void RaiseSkill(BattleUnit u, string name) => OnSkill?.Invoke(u, name);
+    public void RaiseSkill(BattleUnit u, string name, int hits) => OnSkill?.Invoke(u, name, hits);
     public void RaiseDamage(BattleUnit a, BattleUnit t, double amt, string skill) => OnDamage?.Invoke(a, t, amt, skill);
     public void RaiseHeal(BattleUnit a, BattleUnit t, double amt, string skill = null) => OnHeal?.Invoke(a, t, amt, skill);
     public void RaiseShield(BattleUnit a, BattleUnit t, double amt) => OnShield?.Invoke(a, t, amt);

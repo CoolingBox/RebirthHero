@@ -695,7 +695,6 @@ public sealed class BattleEngine
         }
         s.Fires++;
 
-        Bus.RaiseSkill(u, s.Name);
         List<BattleUnit> locked = null;
         Apply(u, s, ref locked);
         int hits = 1;
@@ -707,6 +706,11 @@ public sealed class BattleEngine
             Apply(u, s, ref locked);
             hits++;
         }
+
+        // 事件放在重放循环**之后**：段数要打完才知道。
+        // 表现层拿它写"斩妖诀 ×3"，而不是让玩家去数飘字。
+        Bus.RaiseSkill(u, s.Name, hits);
+
         if (hits > St.MaxChainSeen)
         {
             St.MaxChainSeen = hits;

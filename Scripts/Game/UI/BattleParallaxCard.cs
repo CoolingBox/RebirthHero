@@ -3,7 +3,8 @@
 //
 // 与卡册（Gallery/GalleryCard.cs）同源，但两者关注点不同：
 //   · 卡册卡：大、可点，只负责好看；
-//   · 战斗卡：小、不可点，**同时是一块信息面板**（名字 / 血条 / 行动条 / 攻速 / 武学 / 死亡态）。
+//   · 战斗卡：小，**同时是一块信息面板**（名字 / 血条 / 行动条 / 攻速 / 武学 / 死亡态），
+//     点一下打开详情（2026-11-12）。
 //   所以信息带**不参与视差** —— 文字跟着倾斜滑来滑去，血量就读不出来了。
 //
 // 四条与卡册一致的硬规则（都有过踩坑记录）：
@@ -16,12 +17,18 @@
 // 死亡态：整卡压到 0.35 透明度（与旧横条卡一致），不做灰化 —— 玩家要能认出"死的是谁"。
 
 using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class BattleParallaxCard : Control
 {
     /// <summary>本卡对应的战斗单位（HeroCardLayer 用它做刷新与锚点）。</summary>
     public BattleUnit Unit;
+
+    /// <summary>
+    /// 点卡面（打开详情）。由 HeroCardLayer 逐卡挂上 —— 卡自己不知道该找谁要详情。
+    /// </summary>
+    public event Action<BattleUnit> Clicked;
 
     // —— 视差参数（战斗卡比卡册小，位移等比收小）——
     public float ShiftPx = 8f;
@@ -43,6 +50,15 @@ public partial class BattleParallaxCard : Control
     const float PanelPad = 7f;
     const float BarH = 14f;
     const float GaugeH = 5f;
+
+    // —— 出手横幅：显示 1.2s，最后 0.35s 淡出 ——
+    // 短于最短的行动周期（速度 60 时也要 1.6s 才轮一次），所以两条不会叠着读；
+    // 同一行动里连放两门武学的情况由 ShowCast 合并成一行。
+    const float CastShowSec = 1.20f;
+    const float CastFadeSec = 0.35f;
+    const float CastBarH = 26f;
+    const float CastTop = 8f;
+    const float CastInset = 10f;
 
     // —— 血条拖尾节奏（秒）：先变色"停住"让人看见掉了多少，再滑过去 ——
     const float TrailFlashHold = 0.12f;
@@ -70,6 +86,21 @@ public partial class BattleParallaxCard : Control
     Label _stateText;
     Label _skillText;
 
+    // —— 出手横幅（2026-11-12）：这一手放了什么武学，直接写在卡牌头部 ——
+    Panel _castBar;
+    StyleBoxFlat _castStyle;
+    Label _castText;
+    float _castLeft;
+
+    /// <summary>同一手放出的武学（一般 1 门，主 + 副效果时 2 门），各自累计段数用于"×N"。</summary>
+    sealed class CastEntry
+    {
+        public string Name;
+        public int Hits;
+    }
+
+    readonly List<CastEntry> _castEntries = new List<CastEntry>();
+
     Vector2 _tilt = Vector2.Zero;
     Vector2 _target = Vector2.Zero;
     float _t;
@@ -88,11 +119,32 @@ public partial class BattleParallaxCard : Control
 
     public override void _Ready()
     {
-        MouseFilter = MouseFilterEnum.Ignore;
+        // Stop：卡要能接点击（点在卡上 = 看这张卡的详情）。
+        // 背景层与信息带里的子节点全是 Ignore，不会把点击抢走。
+        MouseFilter = MouseFilterEnum.Stop;
         ClipContents = true;
 
         EnsureBuilt();
         SetProcess(true);
+    }
+
+    /// <summary>
+    /// 左键按下 = 看详情。只认 Pressed 不认 Released：鼠标在卡上划过时视差会跟着动，
+    /// 若按 Released 判定，按住拖到别处松手也会弹一次详情。
+    /// </summary>
+    public override void _GuiInput(InputEvent @event)
+    {
+        InputEventMouseButton mb = @event as InputEventMouseButton;
+        if (mb == null || !mb.Pressed || mb.ButtonIndex != MouseButton.Left)
+        {
+            return;
+        }
+
+        AcceptEvent();
+        if (Clicked != null && Unit != null)
+        {
+            Clicked(Unit);
+        }
     }
 
     /// <summary>
@@ -109,13 +161,14 @@ public partial class BattleParallaxCard : Control
         }
         _built = true;
 
-        MouseFilter = MouseFilterEnum.Ignore;
+        MouseFilter = MouseFilterEnum.Stop;
         ClipContents = true;
 
         BuildBoard();
         BuildArt();
         BuildBorder();
         BuildPanel();
+        BuildCast();
 
         Resized += LayoutAll;
         LayoutAll();
@@ -274,6 +327,43 @@ public partial class BattleParallaxCard : Control
         _panel.AddChild(_skillText);
     }
 
+    /// <summary>
+    /// 出手横幅：卡牌头部一条暗底金字，写"这一手放了什么武学"。
+    /// <para>
+    /// 为什么要它：信息带里的武学名是 12px 的常驻列表，**看得到名字但看不到"正在放哪个"** ——
+    /// 玩家只能靠飘字伤害去猜。挂机时最想确认的恰恰是"我的毒爆到底放出来了没有"。
+    /// </para>
+    /// <para>
+    /// 为什么只有 26px 高、贴在顶部：卡面顶部是留白（人物头肩之上），不压信息带；
+    /// 再高就会盖住立绘的脸 —— 那是玩家认出"这是谁"的关键区域。
+    /// </para>
+    /// </summary>
+    void BuildCast()
+    {
+        // 圆角标签而不是通栏色块：通栏会把卡框的顶边整条切掉，读起来像"卡被贴了封条"。
+        // 左右各留 10px，卡框的转角就能露出来，标签是"落在卡上"，不是"盖住卡"。
+        _castStyle = new StyleBoxFlat();
+        _castStyle.BgColor = new Color(0.04f, 0.03f, 0.02f, 0.86f);
+        _castStyle.BorderColor = new Color(1f, 0.85f, 0.45f, 0.55f);
+        _castStyle.SetBorderWidthAll(1);
+        _castStyle.SetCornerRadiusAll(7);
+
+        _castBar = new Panel();
+        _castBar.Name = "Cast";
+        _castBar.MouseFilter = MouseFilterEnum.Ignore;
+        _castBar.Visible = false;
+        _castBar.AddThemeStyleboxOverride("panel", _castStyle);
+        AddChild(_castBar);
+
+        _castText = MakeLabel(14, HorizontalAlignment.Center);
+        _castText.AddThemeColorOverride("font_color", new Color(1f, 0.88f, 0.45f));
+        _castText.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.85f));
+        _castText.AddThemeConstantOverride("outline_size", 4);
+        _castText.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        _castText.ClipText = true;
+        _castBar.AddChild(_castText);
+    }
+
     static ColorRect MakeRect(Color c)
     {
         ColorRect r = new ColorRect();
@@ -303,6 +393,9 @@ public partial class BattleParallaxCard : Control
     {
         EnsureBuilt();
         Unit = u;
+
+        // 悬停提示：没有它没人会猜"卡能点"
+        TooltipText = u.Name + " · 点击查看详情";
 
         if (_board != null)
         {
@@ -412,6 +505,7 @@ public partial class BattleParallaxCard : Control
 
         LayoutBorder();
         LayoutPanel();
+        LayoutCast();
     }
 
     void LayoutBorder()
@@ -470,6 +564,18 @@ public partial class BattleParallaxCard : Control
         SetRect(_skillText, px, 61f, pw, 16f);
     }
 
+    void LayoutCast()
+    {
+        if (_castBar == null)
+        {
+            return;
+        }
+
+        float w = Size.X - CastInset * 2f;
+        _castBar.Position = new Vector2(CastInset, CastTop);
+        _castBar.Size = new Vector2(w, CastBarH);
+        SetRect(_castText, 4f, 0f, w - 8f, CastBarH);
+    }
     static void SetRect(Control c, float x, float y, float w, float h)
     {
         if (c == null)
@@ -492,6 +598,112 @@ public partial class BattleParallaxCard : Control
         _t += (float)delta;
         UpdateTrail((float)delta);
         UpdateTilt((float)delta);
+        UpdateCast((float)delta);
+    }
+
+    // ============ 出手横幅 ============
+
+    /// <summary>
+    /// 报出这一手放的武学名与段数。<paramref name="hits"/> 是引擎结算出的实际段数（含重放），
+    /// 大于 1 时写成「斩妖诀 ×3」—— 玩家不用去数飘字，一眼知道这一手打了几下。
+    /// 同一行动里连放两门（主效果 + 副效果）时并排显示。
+    /// </summary>
+    public void ShowCast(string name, int hits)
+    {
+        if (string.IsNullOrEmpty(name) || _castBar == null)
+        {
+            return;
+        }
+        if (hits < 1)
+        {
+            hits = 1;
+        }
+
+        // 上一手已经过去（超过 0.3s）→ 重新开一条；0.3s 内的都算同一次行动
+        if (_castLeft <= CastShowSec - 0.30f)
+        {
+            _castEntries.Clear();
+        }
+        AddCastEntry(name, hits);
+
+        _castText.Text = BuildCastLine();
+        _castLeft = CastShowSec;
+        _castBar.Visible = true;
+        ApplyCastAlpha(1f);
+    }
+
+    void AddCastEntry(string name, int hits)
+    {
+        for (int i = 0; i < _castEntries.Count; i++)
+        {
+            if (_castEntries[i].Name == name)
+            {
+                _castEntries[i].Hits += hits;
+                return;
+            }
+        }
+
+        // 卡面只放得下两门；第三门起不显示 —— 写了也读不出来，不如不加
+        if (_castEntries.Count >= 2)
+        {
+            return;
+        }
+
+        CastEntry e = new CastEntry();
+        e.Name = name;
+        e.Hits = hits;
+        _castEntries.Add(e);
+    }
+
+    string BuildCastLine()
+    {
+        string line = "";
+        for (int i = 0; i < _castEntries.Count; i++)
+        {
+            if (i > 0)
+            {
+                line += " · ";
+            }
+
+            CastEntry e = _castEntries[i];
+            line += e.Name;
+            if (e.Hits > 1)
+            {
+                line += " ×" + e.Hits;
+            }
+        }
+        return line;
+    }
+
+    void UpdateCast(float dt)
+    {
+        if (_castLeft <= 0f || _castBar == null)
+        {
+            return;
+        }
+
+        _castLeft -= dt;
+        if (_castLeft <= 0f)
+        {
+            _castLeft = 0f;
+            _castEntries.Clear();
+            _castBar.Visible = false;
+            return;
+        }
+
+        float alpha = 1f;
+        if (_castLeft < CastFadeSec)
+        {
+            alpha = _castLeft / CastFadeSec;
+        }
+        ApplyCastAlpha(alpha);
+    }
+
+    void ApplyCastAlpha(float alpha)
+    {
+        Color c = _castBar.Modulate;
+        c.A = alpha;
+        _castBar.Modulate = c;
     }
 
     void UpdateTilt(float dt)

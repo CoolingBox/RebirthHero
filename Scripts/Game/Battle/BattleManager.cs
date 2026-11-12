@@ -84,6 +84,14 @@ public sealed class BattleManager
     private BattleEngine _engine;
     private bool _resultShown;
 
+    // —— 本层战果统计（2026-11-12 从 StatsPanel 挪到这里）——
+    // 两个读者共用同一份：战报面板 + 卡牌详情。放在逻辑层还有个好处 ——
+    // 面板没被打开过也照样在统计（原来只有第一次打开战报才开始记，等于默认丢数据）。
+    private readonly StatsTracker _stats = new StatsTracker();
+    private int _statLayer = -1;
+
+    public StatsTracker Stats { get { return _stats; } }
+
     // —— 大劫（战斗形态）。倒计时的秒数在 BattleClock，档位与胜负在这里 ——
     private bool _inDajie;
     private int _dajieWins;
@@ -158,7 +166,9 @@ public sealed class BattleManager
         }
         HookEvents();
 
-        StatsPanel.BindBattle(_engine, _engine.A, _run.Layer);
+        ResetStatsForLayer();
+        _stats.Attach(_engine);
+        StatsPanel.BindBattle(_engine, _engine.A, _run.Layer, _stats);
         _view.BuildCards(_engine);
 
         _resultShown = false;
@@ -167,6 +177,22 @@ public sealed class BattleManager
         _clock.StartBeat();
         _view.RefreshCards(_engine);
         _view.SyncStacks(_engine);
+    }
+
+    /// <summary>
+    /// 统计的清算节奏：**换层才清零**（层内多波累计，口径与战报面板原有注释一致）。
+    /// 大劫战不走推图的层数，单独记一档 —— 否则打赢一场大劫会把当前层的数字一起清掉。
+    /// </summary>
+    private void ResetStatsForLayer()
+    {
+        int key = _inDajie ? -2 : _run.Layer;
+        if (key == _statLayer)
+        {
+            return;
+        }
+
+        _stats.Reset();
+        _statLayer = key;
     }
 
     /// <summary>
@@ -284,6 +310,16 @@ public sealed class BattleManager
         _engine.Bus.OnSummon += OnSummoned;
         _engine.Bus.OnDeath += OnUnitDied;      // **击杀即时掉落**
         _engine.Bus.OnEnd += OnEnded;
+        _engine.Bus.OnSkill += OnSkillFired;    // 抬手瞬间在卡牌头部报武学名
+    }
+
+    /// <summary>
+    /// 武学打完一次（引擎在重放循环结束后才抛，所以 <paramref name="hits"/> 是这一手的实际段数）。
+    /// 召唤物没有卡，交给 HeroCardLayer 时会静默忽略 —— 这里不做特殊判断。
+    /// </summary>
+    private void OnSkillFired(BattleUnit u, string name, int hits)
+    {
+        _view.ShowCast(u, name, hits);
     }
 
     /// <summary>敌方单位被击杀 → 掉落（规则在 DropRule）+ 飘字（视图负责）。</summary>

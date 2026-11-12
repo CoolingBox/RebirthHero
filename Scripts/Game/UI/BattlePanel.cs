@@ -139,6 +139,17 @@ public partial class BattlePanel : BasePanel
         _stacks.Sync(engine, _area.X);
     }
 
+    /// <summary>
+    /// 出手反馈：把武学名报到卡牌头部（逻辑层只说"谁放了什么、打了几段"，位置与样式归这里）。
+    /// </summary>
+    public void ShowCast(BattleUnit u, string skill, int hits)
+    {
+        if (_cards != null)
+        {
+            _cards.ShowCast(u, skill, hits);
+        }
+    }
+
     public void UpdateFloats(double dt)
     {
         if (_floats != null)

@@ -22,15 +22,24 @@ public partial class StatsPanel : BasePanel
     static BattleEngine _ctxEngine;
     static List<BattleUnit> _ctxTeam;
     static int _ctxLayer;
+    static StatsTracker _ctxStats;
 
     static StatsPanel _current;
 
-    /// <summary>开战时注入引擎与阵容；面板未创建时先存着，等首次打开再用。</summary>
-    public static void BindBattle(BattleEngine engine, List<BattleUnit> team, int layer)
+    /// <summary>
+    /// 开战时注入引擎与阵容；面板未创建时先存着，等首次打开再用。
+    /// <para>
+    /// 2026-11-12：<paramref name="stats"/> 是 BattleManager 持有的**共享实例**（卡牌详情也读它）。
+    /// 统计的挂载与"换层清零"现在都归逻辑层，面板只负责显示 —— 否则本面板一打开就
+    /// Reset 一次，会把开战以来攒的数字抹掉。
+    /// </para>
+    /// </summary>
+    public static void BindBattle(BattleEngine engine, List<BattleUnit> team, int layer, StatsTracker stats)
     {
         _ctxEngine = engine;
         _ctxTeam = team;
         _ctxLayer = layer;
+        _ctxStats = stats;
 
         if (_current != null)
         {
@@ -99,12 +108,11 @@ public partial class StatsPanel : BasePanel
     }
 
     // —— 实例状态 ——
-    readonly StatsTracker _stats = new StatsTracker();
+    StatsTracker _stats = new StatsTracker();   // 首次 ApplyBattleContext 时换成逻辑层的共享实例
     readonly Dictionary<string, Label> _rows = new Dictionary<string, Label>();
 
     List<BattleUnit> _team;
     int _layer;
-    int _statLayer = -1;                                  // 当前统计对应的层；变化时清零
     int _view = 0;                                        // 0 = 按侠客排列，1 = 按武学排列
     StatsTracker.StatMetric _metric = StatsTracker.StatMetric.Damage;
 
@@ -157,12 +165,11 @@ public partial class StatsPanel : BasePanel
             return;
         }
 
-        _stats.Attach(_ctxEngine);
-
-        if (_ctxLayer != _statLayer)
+        // 用逻辑层的共享统计实例：它开战时就挂好了，这里**不再 Reset**
+        // （一打开面板就清零，等于把开战以来的数字抹掉 —— 这正是改共享的原因之一）
+        if (_ctxStats != null)
         {
-            _stats.Reset();
-            _statLayer = _ctxLayer;
+            _stats = _ctxStats;
         }
 
         _team = _ctxTeam;
@@ -174,7 +181,11 @@ public partial class StatsPanel : BasePanel
 
     void InvalidateLayer()
     {
-        _statLayer = -1;
+        // 转世：整份统计作废。下一场开战时 BattleManager 会重新 Reset/Attach
+        if (_stats != null)
+        {
+            _stats.Reset();
+        }
     }
 
     void CycleView()
