@@ -23,29 +23,32 @@ using TinyFramework;   // BigNum（大数格式化工具，纯数值，没有 Go
 public sealed class BattleManager
 {
     /// <summary>
-    /// 每拍推进的**模拟秒数**（1x 时）。节拍是真实 0.1s，所以 0.15 = 1.5 倍速观赏。
-    /// 这一项只决定"世界走多快"，不决定"多久刷一次画面"。
+    /// 每拍往前**播**多少模拟秒（1x 时）。节拍是真实 0.1s，所以 0.15 = 1.5 倍速观赏。
+    /// 这一项只决定"片放多快"，不决定"多久刷一次画面"，更不决定战斗结果（结果入场就定了）。
     /// </summary>
     private const double SimDtPerBeat = 0.15;
 
     /// <summary>
-    /// 引擎推进的**固定步长**（2026-11-12）。
+    /// 结算这一场时喂给引擎的**固定步长**（2026-11-12，2026-11-13 起只在录影阶段用）。
     /// <para>
-    /// 为什么要有它：`BattleEngine.Step(dt)` 是"把整个 dt 一次性吃掉"的 ——
-    /// 蓄力条、DoT、护盾衰减都按 dt 一次算，行动点会被量化到帧边界。
-    /// 于是"一大步 0.15"和"三小步 0.05"跑出来的结果不同（行动顺序、DoT 跳数都可能差），
-    /// 倍速一改，同一场战斗的胜负就跟着变 —— 玩家会觉得"3 倍速的敌人更强"。
+    /// 为什么必须有：`BattleEngine.Step(dt)` 是"把整个 dt 一次性吃掉"的 ——
+    /// 蓄力条、DoT、护盾衰减都按 dt 一次算，行动点会被量化到步长边界。
+    /// 若步长随倍速变，"一大步 0.45"和"九小步 0.05"会算出不同的胜负。
     /// </para>
     /// <para>
-    /// 统一成 0.05 后：倍速只改变"每拍跑几个 0.05"，每步长度恒定，结果与倍速无关。
-    /// 代价是 1x 的战斗结果与旧版（一大步 0.15）略有差异 —— 量化误差从 0.15 降到 0.05，
-    /// 更接近无头探针 `Run()` 的精确推进（它是按"到下一次行动的时间"切片的）。
+    /// 现在整场在入场时按 0.05 一步算完、录成帧；播片只贴帧，因此**结果与倍速、帧率都无关**。
+    /// 代价是结算与无头探针 `Run()` 仍有细微口径差（探针按"到下一次行动"精确切片）。
     /// </para>
     /// </summary>
     private const double FixedStep = 0.05;
 
     private double _battleSpeed = 1.0;
-    private double _stepAcc;   // 未消耗的模拟时间（累加器）
+
+    /// <summary>这一场的录像（入场时算完，见 BattleReplay.cs）。</summary>
+    private BattleReplay _replay;
+
+    /// <summary>播片游标：按模拟时间往前推，把帧贴回单位、把事件重新抛给订阅者。</summary>
+    private BattlePlayback _playback;
 
     /// <summary>
     /// 战斗倍速。1 = 标称速度（每拍 0.15 模拟秒），2/3 = 快进。
@@ -146,7 +149,6 @@ public sealed class BattleManager
     // ============ 开战 ============
     public void StartBattle()
     {
-        _stepAcc = 0;   // 新一场从干净的累加器开始
         _view.ClearAll();
         _clock.StopAdvance();
         _view.HideResult();
@@ -164,6 +166,17 @@ public sealed class BattleManager
         {
             _engine = _run.Begin();
         }
+
+        // ① **算**：入场即用种子把整场跑完（无渲染）。之后前端只是播。
+        BattleRecorder recorder = new BattleRecorder(_engine);
+        recorder.Attach();
+        _replay = recorder.Run(FixedStep);
+        recorder.Detach();
+
+        // ② 回到开场再建卡：录音结束时引擎停在残局，直接建卡会全是尸体
+        _playback = new BattlePlayback(_replay, _engine);
+        _playback.SeekToStart();
+
         HookEvents();
 
         ResetStatsForLayer();
@@ -206,12 +219,12 @@ public sealed class BattleManager
             return;
         }
 
-        if (_engine == null)
+        if (_engine == null || _playback == null)
         {
             return;
         }
 
-        AdvanceSimulation();
+        AdvancePlayback();
 
         _view.RefreshCards(_engine);
         _view.SyncStacks(_engine);
@@ -220,31 +233,19 @@ public sealed class BattleManager
     }
 
     /// <summary>
-    /// 固定步长推进：把"这一拍该走的模拟时间"按 <see cref="FixedStep"/> 切片消耗。
-    /// 累加器保证跨拍的余数不丢 —— 否则 0.15 / 0.05 这类整除关系一改就漏时间。
+    /// 播片推进：每拍把"该播多少模拟秒"喂给播放器（1x = 0.15 模拟秒/拍）。
+    /// <para>
+    /// 这里**不跑任何规则** —— 整场在入场时就算完了（见 StartBattle 的 ①）。
+    /// 播放器只做两件事：把当前帧的血量/行动条贴回单位，把到点的事件重新抛一遍（战报靠它长数字）。
+    /// </para>
     /// </summary>
-    private void AdvanceSimulation()
-    {
-        if (_engine.IsOver)
+    private void AdvancePlayback()    {
+        if (_playback.Done)
         {
-            _stepAcc = 0;   // 打完了就别再攒，否则下一场第一拍会多推一截
             return;
         }
 
-        _stepAcc += SimDtPerBeat * _battleSpeed;
-
-        int guard = 0;
-        while (_stepAcc >= FixedStep && guard++ < 4096)
-        {
-            _engine.Step(FixedStep);
-            _stepAcc -= FixedStep;
-
-            if (_engine.IsOver)
-            {
-                _stepAcc = 0;
-                break;
-            }
-        }
+        _playback.Advance(SimDtPerBeat * _battleSpeed);
     }
 
     /// <summary>结算后开下一场（推图模式：胜则已进层 / 挂机模式：原地重复刷）。</summary>
@@ -264,7 +265,9 @@ public sealed class BattleManager
     /// <summary>存档面板关闭后恢复战斗节奏 —— 只有它还在用（读档会整份替换状态机）。</summary>
     public void ResumeAfterPause()
     {
-        if (_engine != null && !_engine.IsOver)
+        // 注意判的是"播片有没有播完"，不是"引擎有没有结束"：
+        // 引擎在入场时就跑完了（IsOver 恒为 true），拿它做条件会让播片永远停住。
+        if (_playback != null && !_playback.Done)
         {
             _clock.StartBeat();
         }
