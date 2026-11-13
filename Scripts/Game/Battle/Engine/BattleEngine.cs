@@ -599,6 +599,24 @@ public sealed class BattleEngine
         {
             amount *= 1 + BattleConfig.FatigueRate * (T - BattleConfig.FatigueStart);
         }
+        // 受击计数（2026-10-21 用户口径「一次行动只加一次受击」）：
+        //   同一次行动内只有**第一段伤害**推 Hits，其余段只结算伤害与承伤。
+        //   同时，受击武学也只在这第一段判定一次 —— 否则 Hits 停在 6、CondN=3 时，
+        //   后续每一段都满足 6%3==0，反而会在一次行动里连放 N 次。
+        //
+        // ⚠️ 2026-11-13 起**提前到闪避判定之前**：闪避原本在计数前就 return 0，
+        //   于是 `count` 型闪避武学永远读到 Counter=0，而 `0 % N == 0` 恒成立
+        //   → 每一下都闪 → **物理免疫**（第 6 层卡 120 秒超时的元凶）。
+        //   现在的口径：**被打了（哪怕没打中）也算一次受击**；
+        //   但"打空不记账"只对**破绽**成立（下面 breakUsed 的处理没动），
+        //   且闪避的那一下不触发其它受击武学（没打中就没有反伤）。
+        bool countedHit = tgt.HitActionId != _actSeq;
+        if (countedHit)
+        {
+            tgt.HitActionId = _actSeq;
+            tgt.Hits++;
+        }
+
         // 闪避：结算前判定（被沉默不可闪）
         if (!tgt.Silenced(T))
             foreach (var s in tgt.Skills)
@@ -636,16 +654,7 @@ public sealed class BattleEngine
         tgt.Hp = Math.Max(0, rem <= 0 ? tgt.Hp : tgt.Hp - rem);
         tgt.AccumDmg += amount;
 
-        // 受击计数（2026-10-21 用户口径「一次行动只加一次受击」）：
-        //   同一次行动内只有**第一段伤害**推 Hits，其余段只结算伤害与承伤。
-        //   同时，受击武学也只在这第一段判定一次 —— 否则 Hits 停在 6、CondN=3 时，
-        //   后续每一段都满足 6%3==0，反而会在一次行动里连放 N 次。
-        bool countedHit = tgt.HitActionId != _actSeq;
-        if (countedHit)
-        {
-            tgt.HitActionId = _actSeq;
-            tgt.Hits++;
-        }
+        // 受击计数已在函数前段（闪避判定之前）完成 —— 这里只记承伤读数
         if (tgt.Slot is >= 1 and <= 4)
         {
             St.DamageTaken[tgt.Slot] += amount;
