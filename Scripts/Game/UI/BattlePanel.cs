@@ -112,8 +112,6 @@ public partial class BattlePanel : BasePanel
         _fx = new BattleFxLayer();
         _fx.Name = "TFx";
         GameObject.AddChild(_fx);
-        _fx.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-
         int idx = GameObject.GetChildCount() - 1;
         if (_TFxLayer != null)
         {
@@ -121,6 +119,12 @@ public partial class BattlePanel : BasePanel
         }
         GameObject.MoveChild(_fx, idx);
     }
+
+    // 层级完全靠场景树顺序，不设 ZIndex（2026-11-16 清理）：
+    //   TBg → UnitsArea(TCards → TStacks) → TFx → TFxLayer → TResult → 按钮
+    // 即「背景 < 卡 < 堆叠 < 特效 < 飘字 < 结算栏」。TFx 由 EnsureFxLayer 用
+    // MoveChild 插到 TFxLayer 之前 —— 动这个顺序前先确认飘字仍在特效之上。
+    // MainPanel 在 GameRoot 里比 BattlePanel 后 ShowPanel，HUD 与弹窗自然在其上。
 
     // ============ 打击特效（P0：斩线 / 环 / 裂 / 火花 / 死亡碎片） ============
 
@@ -171,6 +175,13 @@ public partial class BattlePanel : BasePanel
 
         // 起：先让释放者亮一下，"谁出手了"这件事要能被看见
         _fx.PlayCast(cat, ap);
+
+        // 微对撞：攻击方卡小幅前冲 + 回弹（2026-11-16 用户选「全部攻击微对撞」）。
+        // 与 ShowDamage / 命中特效同在 OnDamage 这一拍，接触帧靠 0.02s 短前冲对齐。
+        if (_cards != null)
+        {
+            _cards.PlayAttackLunge(att, tgt);
+        }
 
         // 飞：投射物全距离飞过去。它是小弹体 + 短拖尾，不是 v0.1 否决的通栏长线
         _fx.PlayBolt(cat, ap, tp, power);

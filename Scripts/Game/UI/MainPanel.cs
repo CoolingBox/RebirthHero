@@ -375,6 +375,14 @@ public partial class MainPanel : BasePanel
         // 导出钩子（环境变量为空时完全不生效）
         _galleryShotDir = OS.GetEnvironment("GALLERY_SHOT");
         _battleShotDir = OS.GetEnvironment("BATTLE_SHOT");
+        _themeShotDir = OS.GetEnvironment("THEME_SHOT");
+        if (_themeShotDir.Length > 0)
+        {
+            // 记住玩家原主题，验收结束要还回去，别把最后一套写进存档。
+            _themeShotRestore = UIThemeManager.Id;
+            SceneTreeTimer boot = GameObject.GetTree().CreateTimer(1.4);
+            boot.Timeout += StartThemeShot;
+        }
     }
 
     // ============ 时钟转发 ============
@@ -1442,9 +1450,11 @@ public partial class MainPanel : BasePanel
         return r;
     }
 
-    // ============ 导出钩子（GALLERY_SHOT / BATTLE_SHOT） ============
+    // ============ 导出钩子（GALLERY_SHOT / BATTLE_SHOT / THEME_SHOT） ============
     private string _galleryShotDir = "";
     private string _battleShotDir = "";
+    private string _themeShotDir = "";
+    private int _themeShotRestore;
     private int _galleryShotPhase;
     private double _galleryShotMark;
 
@@ -1514,5 +1524,42 @@ public partial class MainPanel : BasePanel
             TinyLog.Info("Shot", path);
             GameObject.GetTree().Quit();
         }
+    }
+
+    // ============ 导出钩子：THEME_SHOT（逐套主题抓帧，2026-11-16） ============
+
+    private void StartThemeShot()
+    {
+        TinyLog.Info("Shot", "theme shot start · restore=" + _themeShotRestore.ToString()
+            + " current=" + UIThemeManager.Id.ToString());
+        UIThemeManager.SetTheme(0);
+        ShotTheme(0);
+    }
+
+    /// <summary>
+    /// 逐套切主题并抓帧：每套等 0.9s，够「清空卡牌 → 重建 → 背景刷新 → 一次布局」跑完。
+    /// 用 SceneTreeTimer 递归，不挂 OnBeat —— 节拍时钟粒度是 0.1s，且推进节奏受
+    /// 战斗速度影响，抓帧时机不该依赖它。
+    /// </summary>
+    private void ShotTheme(int id)
+    {
+        SceneTreeTimer timer = GameObject.GetTree().CreateTimer(0.9);
+        timer.Timeout += () =>
+        {
+            string path = _themeShotDir.PathJoin("theme_" + id.ToString() + ".png");
+            SaveViewportShot(path);
+            TinyLog.Info("Shot", path + " · " + UIThemeManager.NameOf(id));
+
+            if (id + 1 >= UIThemeManager.Count)
+            {
+                UIThemeManager.SetTheme(_themeShotRestore);
+                TinyLog.Info("Shot", "theme shot done · theme now " + UIThemeManager.Id.ToString());
+                GameObject.GetTree().Quit();
+                return;
+            }
+
+            UIThemeManager.SetTheme(id + 1);
+            ShotTheme(id + 1);
+        };
     }
 }

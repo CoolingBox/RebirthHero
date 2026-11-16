@@ -20,15 +20,10 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
-public partial class BattleParallaxCard : Control
+public partial class BattleParallaxCard : Node2D
 {
     /// <summary>本卡对应的战斗单位（HeroCardLayer 用它做刷新与锚点）。</summary>
     public BattleUnit Unit;
-
-    /// <summary>
-    /// 点卡面（打开详情）。由 HeroCardLayer 逐卡挂上 —— 卡自己不知道该找谁要详情。
-    /// </summary>
-    public event Action<BattleUnit> Clicked;
 
     // —— 视差参数（战斗卡比卡册小，位移等比收小）——
     public float ShiftPx = 8f;
@@ -148,35 +143,165 @@ public partial class BattleParallaxCard : Control
 
     bool _built;
 
-    public override void _Ready()
-    {
-        // Stop：卡要能接点击（点在卡上 = 看这张卡的详情）。
-        // 背景层与信息带里的子节点全是 Ignore，不会把点击抢走。
-        MouseFilter = MouseFilterEnum.Stop;
-        // 不裁剪：人物溢出层要画到卡框外面（见 BuildCharOver）
-        ClipContents = false;
+    // 2026-11-16 迁到 Node2D：Node2D 没有 Control.Size，自己维护卡尺寸。
+    // setter 在节点建好后触发布局，替代 Control 的 Resized 信号。
+    // 子 Control 的显式 Position/Size 在 Node2D 父链下仍生效（先验探针已验证）。
+    Vector2 _cardSize;
 
-        EnsureBuilt();
-        SetProcess(true);
+    public Vector2 Size
+    {
+        get { return _cardSize; }
+        set
+        {
+            _cardSize = value;
+            if (_built)
+            {
+                LayoutAll();
+            }
+        }
+    }
+
+    // —— 微对撞（2026-11-16）——
+    // 全部攻击都做，节拍压到 0.16s 以对齐实机攻击间隔 0.1~0.2s。
+    // 基准位与动画位移分离：动画只动 Position，永远以 BasePos 为终点，
+    // 连续攻击时 Kill 旧 tween 但**不瞬移回基准位**，让新 tween 从当前位置接着走，
+    // 这样不会累积漂移，也不会每次都跳一下。
+    public Vector2 BasePos;
+
+    const float LungePx = 40f;       // [PLACEHOLDER] 卡宽约 203px 的 20%，2026-11-16 实机验手感
+    // 前冲压到 2 帧内：飘字 / 命中特效在 OnDamage 当帧就出现，若前冲拖长会变成
+    // 「数字先跳、卡才撞上」。短前冲 + 慢回弹也就是《街霸：对决》的
+    // 「弱化过渡帧、突出打击帧」，总时长仍压在 0.16s 以对齐攻击间隔。
+    const float LungeIn = 0.02f;     // [PLACEHOLDER] 快速前冲，接触帧与飘字对齐
+    const float LungeHold = 0.03f;   // [PLACEHOLDER] 命中点局部停顿，非全局 hitstop
+    const float LungeOut = 0.11f;    // [PLACEHOLDER] 慢回弹，带回弹过冲
+
+    // 弧线（2026-11-16）：接触点向上抬起，回程斜向下收回并带一道浅下沉弧，
+    // 读起来是「斜向上扑击 → 沉身收势」，不是纯水平滑步。
+    //
+    // 为什么不用「去程抛物线拱起」：LungeIn 只有 0.02s（约 1 帧 @60fps），
+    // 实测抛物线中途一帧都采不到，去程只留 -1.5px，肉眼看等于直线。
+    // 又不许拉长 LungeIn（会破坏命中帧与飘字对齐），所以把弧线主体放到
+    // Hold（2 帧）与回程（约 7 帧）—— 抬起量在接触帧是实打实可见的。
+    // 10px ≈ 卡高 261 的 3.8%，不会顶到上一行卡（行距 12px）。
+    const float LungeLiftPx = 10f;        // [PLACEHOLDER] 峰值上抬，2026-11-16 实机验手感
+    // 回程弧高与抬起量同级：Back 缓动会把 y 插值很快推回 0，系数太小时
+    // 下沉会被抵消干净（实测 0.55 只剩 +1.1px，轨迹退化成往返直线）。
+    // 取 1.0 后回程路径明显落在去程路径下方，两条路径才围出一条闭合弧。
+    const float LungeDipRatio = 1.0f;
+
+    // 轻微放大（2026-11-16）：接触帧压近镜头一点，「扑上去」更实。
+    // 1.04 → 卡宽 203 变 211、卡高 261 变 271；列间距 26px，仍有余量。
+    // 只放大不旋转 —— 旋转会让信息带文字跟着歪，且点击命中要换算旋转矩阵。
+    // 注意 Node2D **没有 PivotOffset**（那是 Control 的属性），默认枢轴就是节点原点
+    // （卡左上角），直接放大卡会整体向右下甩。这里在 Position 里显式补
+    // CenterShift 把中心钉住，见 DashStep / ReturnStep。
+    const float LungeScale = 1.04f;       // [PLACEHOLDER] 2026-11-16 实机验手感
+
+    Tween _lungeTween;
+    Vector2 _lungeStart;
+    Vector2 _lungePeak;
+
+    /// <summary>
+    /// 朝 dir 方向做一次弧线前冲 + 抬层 + 回弹。由 HeroCardLayer 在 OnDamage 时调用。
+    /// 用 TweenMethod 而不是 TweenProperty：弧线要同时写 x 与 y，
+    /// 两条 tween 抢同一个 position 属性会互相覆盖（实测会随机只剩一个分量）。
+    /// </summary>
+    public void PlayLunge(float dir)
+    {
+        if (_lungeTween != null && _lungeTween.IsRunning())
+        {
+            _lungeTween.Kill();
+        }
+
+        // 从当前位置接着走，Kill 旧 tween 不瞬移；终点恒为 BasePos 所以不会累积漂移。
+        // 峰值带上抬量：接触帧卡是「跃起」的，Hold 与回程都能读出弧线。
+        // 连击时卡可能正停在放大的半途，先把中心补偿反解掉，拿到「逻辑位置」，
+        // 否则起点会多算一次 CenterShift，位置会跳一下。
+        _lungeStart = Position - CenterShift(Scale.X);
+        _lungePeak = BasePos + new Vector2(dir * LungePx, -LungeLiftPx);
+
+        // 不再抬 ZIndex（2026-11-16 实测删除）：8 张卡全定格在前冲峰值时，
+        // 抬到 -20 与保持 -40 的同帧截图 MD5 完全相同、0 像素差异。
+        // 原因是唯一的重叠是「后排卡压前排卡」，而后排卡在树序里本来就画在前排之上，
+        // 抬层没有改变任何绘制顺序。留着只会多一份必须复位的状态（A 级失败信号来源）。
+
+        _lungeTween = CreateTween();
+        _lungeTween.TweenMethod(Callable.From<float>(DashStep), 0f, 1f, LungeIn)
+            .SetTrans(Tween.TransitionType.Quad)
+            .SetEase(Tween.EaseType.Out);
+        _lungeTween.TweenInterval(LungeHold);
+        _lungeTween.TweenMethod(Callable.From<float>(ReturnStep), 0f, 1f, LungeOut)
+            .SetTrans(Tween.TransitionType.Back)
+            .SetEase(Tween.EaseType.Out);
+        _lungeTween.TweenCallback(Callable.From(ResetLunge));
     }
 
     /// <summary>
-    /// 左键按下 = 看详情。只认 Pressed 不认 Released：鼠标在卡上划过时视差会跟着动，
-    /// 若按 Released 判定，按住拖到别处松手也会弹一次详情。
+    /// 去程：斜向上冲到抬起的接触点，同时轻微放大。
+    /// Scale 与 Position 必须在这里一起写：放大要把卡中心钉住，补偿量依赖当帧的 Scale，
+    /// 拆成两条并行 tween（一条改 scale、一条改 position）会读到上一帧的缩放值，
+    /// 出现一帧的错位抖动，且 Kill 时容易只复位其中一条。
     /// </summary>
-    public override void _GuiInput(InputEvent @event)
+    void DashStep(float p)
     {
-        InputEventMouseButton mb = @event as InputEventMouseButton;
-        if (mb == null || !mb.Pressed || mb.ButtonIndex != MouseButton.Left)
-        {
-            return;
-        }
+        float s = Mathf.Lerp(1f, LungeScale, p);
+        Scale = new Vector2(s, s);
+        Position = _lungeStart.Lerp(_lungePeak, p) + CenterShift(s);
+    }
 
-        AcceptEvent();
-        if (Clicked != null && Unit != null)
-        {
-            Clicked(Unit);
-        }
+    /// <summary>
+    /// 回程：从抬起点斜向下收回基准位，途中叠一道浅下沉弧，放大同步收回。
+    /// p=0 时弧高为 0，接得住 Hold 结束时的抬起位置；p=1 时弧高也为 0，
+    /// 所以终点严格是 BasePos，纵向不产生漂移。
+    /// Back 缓动会让 p 略过 1，于是 x 越过基准位产生回弹过冲、y 顺势收住、
+    /// Scale 也略小于 1（轻微回缩）—— 这是原有的「-3.9px 过冲」手感的延伸。
+    /// </summary>
+    void ReturnStep(float p)
+    {
+        float s = Mathf.Lerp(LungeScale, 1f, p);
+        Scale = new Vector2(s, s);
+        Vector2 pos = _lungePeak.Lerp(BasePos, p);
+        pos.Y += ArcY(p) * LungeDipRatio;
+        Position = pos + CenterShift(s);
+    }
+
+    /// <summary>抛物线弧高：p=0 / 1 时为 0，p=0.5 时最大。</summary>
+    static float ArcY(float p)
+    {
+        return LungeLiftPx * 4f * p * (1f - p);
+    }
+
+    /// <summary>
+    /// 放大时把卡中心钉在基准中心所需的位移补偿。
+    /// Node2D 的缩放枢轴就是节点原点（卡左上角），不补的话放大 s 倍会让卡
+    /// 向右下甩出 Size*(s-1)/2；补上这个量，卡就变成以中心为轴四周均匀外扩。
+    /// </summary>
+    Vector2 CenterShift(float s)
+    {
+        return (1f - s) * Size * 0.5f;
+    }
+
+    /// <summary>
+    /// 兜底归位：tween 走完时把 Position 与 Scale 严格复位。
+    /// Scale 不复位会让卡永久大一号，且点击命中框跟着变大。
+    /// ZIndex 不需要复位 —— 前冲已经不再抬层（见 PlayLunge）。
+    /// </summary>
+    void ResetLunge()
+    {
+        Position = BasePos;
+        Scale = Vector2.One;
+    }
+
+    public override void _Ready()
+    {
+        // 2026-11-16 迁到 Node2D：根节点没有 MouseFilter / ClipContents / gui_input。
+        // 点击改由 HeroCardLayer._UnhandledInput 按卡矩形统一命中分发
+        // （先验探针实测：Control 挂在 Node2D 父链下收不到 gui_input）。
+        // 人物溢出层仍要画到卡框外，所以根节点不裁剪；
+        // 内部 _art 自己的 ClipContents 照常管住近景，不会漏到战场上。
+        EnsureBuilt();
+        SetProcess(true);
     }
 
     /// <summary>
@@ -193,11 +318,6 @@ public partial class BattleParallaxCard : Control
         }
         _built = true;
 
-        MouseFilter = MouseFilterEnum.Stop;
-        // 卡根**不裁剪**：人物溢出层要画到卡框外面去。
-        // 背景/前景/卡框仍由内部的 _art 自己 ClipContents 管住，不会漏到战场上。
-        ClipContents = false;
-
         BuildBoard();
         BuildArt();
         BuildBorder();
@@ -205,7 +325,7 @@ public partial class BattleParallaxCard : Control
         BuildPanel();
         BuildCast();
 
-        Resized += LayoutAll;
+        // Node2D 没有 Resized 信号，改由 Size 属性的 setter 触发布局。
         LayoutAll();
     }
 
@@ -216,7 +336,7 @@ public partial class BattleParallaxCard : Control
     {
         _board = new ColorRect();
         _board.Name = "Board";
-        _board.MouseFilter = MouseFilterEnum.Ignore;
+        _board.MouseFilter = Control.MouseFilterEnum.Ignore;
         _board.Color = UIThemeManager.CardAlly;
         AddChild(_board);
     }
@@ -225,7 +345,7 @@ public partial class BattleParallaxCard : Control
     {
         _art = new Control();
         _art.Name = "Art";
-        _art.MouseFilter = MouseFilterEnum.Ignore;
+        _art.MouseFilter = Control.MouseFilterEnum.Ignore;
         // 必须裁剪：背景层为视差被放大了 20px（PadSize），不裁就会溢出到边框外，
         // 看起来像"背景比边框大一圈"。人物溢出层挂在卡根、不在本层内，不受影响。
         _art.ClipContents = true;
@@ -236,7 +356,7 @@ public partial class BattleParallaxCard : Control
             TextureRect r = new TextureRect();
             r.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
             r.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-            r.MouseFilter = MouseFilterEnum.Ignore;
+            r.MouseFilter = Control.MouseFilterEnum.Ignore;
             // 战斗卡 300×386 显示 896×1152 的源图（缩 3 倍），必须走 mipmap，
             // 否则远处的发丝/花纹会抖成噪点（默认 Linear 不采样 mipmap）。
             r.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
@@ -247,7 +367,7 @@ public partial class BattleParallaxCard : Control
         _glow = new TextureRect();
         _glow.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _glow.StretchMode = TextureRect.StretchModeEnum.Scale;
-        _glow.MouseFilter = MouseFilterEnum.Ignore;
+        _glow.MouseFilter = Control.MouseFilterEnum.Ignore;
 
         CanvasItemMaterial mat = new CanvasItemMaterial();
         mat.BlendMode = CanvasItemMaterial.BlendModeEnum.Add;
@@ -318,12 +438,12 @@ public partial class BattleParallaxCard : Control
     {
         _panel = new Control();
         _panel.Name = "Info";
-        _panel.MouseFilter = MouseFilterEnum.Ignore;
+        _panel.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(_panel);
 
         Panel bg = new Panel();
         bg.Name = "Bg";
-        bg.MouseFilter = MouseFilterEnum.Ignore;
+        bg.MouseFilter = Control.MouseFilterEnum.Ignore;
 
         StyleBoxFlat sb = new StyleBoxFlat();
         // 0.86 而不是 0.7：卡面是整幅画，亮背景（红叶、雪地）会把灰字洗掉。
@@ -406,7 +526,7 @@ public partial class BattleParallaxCard : Control
 
         _castBar = new Panel();
         _castBar.Name = "Cast";
-        _castBar.MouseFilter = MouseFilterEnum.Ignore;
+        _castBar.MouseFilter = Control.MouseFilterEnum.Ignore;
         _castBar.Visible = false;
         _castBar.AddThemeStyleboxOverride("panel", _castStyle);
         AddChild(_castBar);
@@ -424,7 +544,7 @@ public partial class BattleParallaxCard : Control
     {
         ColorRect r = new ColorRect();
         r.Color = c;
-        r.MouseFilter = MouseFilterEnum.Ignore;
+        r.MouseFilter = Control.MouseFilterEnum.Ignore;
         r.Visible = true;
         return r;
     }
@@ -432,7 +552,7 @@ public partial class BattleParallaxCard : Control
     Label MakeLabel(int fontSize, HorizontalAlignment align)
     {
         Label l = new Label();
-        l.MouseFilter = MouseFilterEnum.Ignore;
+        l.MouseFilter = Control.MouseFilterEnum.Ignore;
         l.HorizontalAlignment = align;
         l.VerticalAlignment = VerticalAlignment.Center;
         l.AddThemeFontSizeOverride("font_size", fontSize);
@@ -450,8 +570,13 @@ public partial class BattleParallaxCard : Control
         EnsureBuilt();
         Unit = u;
 
-        // 悬停提示：没有它没人会猜"卡能点"
-        TooltipText = u.Name + " · 点击查看详情";
+        // 悬停提示：没有它没人会猜「卡能点」。
+        // 2026-11-16 根节点迁到 Node2D 后没有 TooltipText，改挂在铺满卡面的 _board 上。
+        // 注意：子节点 MouseFilter 仍是 Ignore，tooltip 能否触发需实机确认（见迁移验收）。
+        if (_board != null)
+        {
+            _board.TooltipText = u.Name + " · 点击查看详情";
+        }
 
         if (_board != null)
         {
@@ -846,7 +971,9 @@ public partial class BattleParallaxCard : Control
     void UpdateTilt(float dt)
     {
         Vector2 mp = GetGlobalMousePosition();
-        Vector2 center = GlobalPosition + Size * 0.5f;
+        // 用 GlobalTransform 换算卡中心：对撞期间卡有轻微 Scale 且枢轴在中心，
+        // GlobalPosition（节点原点）不再等于渲染左上角，直接加 Size*0.5 会偏。
+        Vector2 center = GlobalTransform * (Size * 0.5f);
         Vector2 rel = (mp - center) / (Size * 0.55f);
 
         if (rel.Length() < 1.35f)

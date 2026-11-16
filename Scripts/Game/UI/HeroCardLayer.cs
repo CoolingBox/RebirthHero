@@ -14,7 +14,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
-public partial class HeroCardLayer : Control
+public partial class HeroCardLayer : Node2D
 {
     /// <summary>
     /// 仇恨 → 卡面尺寸的映射强度。
@@ -111,13 +111,61 @@ public partial class HeroCardLayer : Control
         BattleParallaxCard card = new BattleParallaxCard();
         // 中心对齐格位中心：尺寸变化时四周均匀伸缩，不会向某一侧偏
         card.Position = pos;
+        card.BasePos = pos;      // 微对撞的归位基准，动画只动 Position
         card.Size = size;
         AddChild(card);
 
         // Setup 必须在 AddChild 之后：卡面节点是在 _Ready 里建的
         card.Setup(u, enemy, BattleArt.KeyOf(u.Name));
-        card.Clicked += OnCardClickedInternal;
         _cards[u] = card;
+    }
+
+    /// <summary>
+    /// 2026-11-16 迁到 Node2D 后，卡根节点收不到 gui_input（先验探针实测：
+    /// Control 挂在 Node2D 父链下不参与 GUI 输入传播），
+    /// 所以点击改由本层按卡的全局矩形统一命中，再转给面板。
+    ///
+    /// 用 _Input 而不是 _UnhandledInput：上层有全屏 Control（BattlePanel 根），
+    /// 实机验收时点击在 GUI 阶段就被吞掉，_UnhandledInput 根本收不到
+    /// （手动直调能开详情，注入事件不能，差异就在这里）。
+    /// 只有命中卡矩形才 SetInputAsHandled，等价于旧版 _GuiInput + AcceptEvent()；
+    /// 点在 HUD 按钮上不命中，事件照常传给 GUI。
+    /// 只认 Pressed 不认 Released：按住拖到别处松手不该弹详情。
+    /// </summary>
+    public override void _Input(InputEvent @event)
+    {
+        InputEventMouseButton mb = @event as InputEventMouseButton;
+        if (mb == null || !mb.Pressed || mb.ButtonIndex != MouseButton.Left)
+        {
+            return;
+        }
+
+        // 用事件自带的 GlobalPosition，不要读 GetGlobalMousePosition()：
+        // 后者是 Viewport 的鼠标状态，注入事件 / 触屏 / 窗口焦点变化时未必同步，
+        // 迁移后第一次验收就是因为这个导致命中失败（点卡不开详情）。
+        Vector2 mp = mb.GlobalPosition;
+        foreach (KeyValuePair<BattleUnit, BattleParallaxCard> kv in _cards)
+        {
+            BattleParallaxCard c = kv.Value;
+            if (c == null || !IsInstanceValid(c))
+            {
+                continue;
+            }
+
+            // 用 GlobalTransform 换算卡的两个对角，不要写 GlobalPosition + Size：
+            // 对撞期间卡有轻微 Scale、枢轴在卡中心，GlobalPosition 已不等于渲染左上角，
+            // 直接加 Size 会让命中框整体偏掉（越放大偏得越多）。
+            Transform2D xf = c.GlobalTransform;
+            Vector2 corner0 = xf * Vector2.Zero;
+            Vector2 corner1 = xf * c.Size;
+            Rect2 r = new Rect2(corner0, corner1 - corner0);
+            if (r.HasPoint(mp))
+            {
+                GetViewport().SetInputAsHandled();
+                OnCardClickedInternal(kv.Key);
+                return;
+            }
+        }
     }
 
     /// <summary>卡的点击回调 → 转给面板（本层只是"转发"，不判断点开之后做什么）。</summary>
@@ -127,6 +175,42 @@ public partial class HeroCardLayer : Control
         {
             OnCardClicked(u);
         }
+    }
+
+    /// <summary>
+    /// 每次伤害都让攻击方卡做一次微前冲（2026-11-16 用户选「全部攻击微对撞」）。
+    /// 方向取双方基准位的 X 差：本作左右对战，x 即冲锋方向。
+    /// 召唤物没有独立卡（只有堆叠卡），这类攻击跳过，不凭空造位移。
+    /// </summary>
+    public void PlayAttackLunge(BattleUnit attacker, BattleUnit target)
+    {
+        if (attacker == null || target == null)
+        {
+            return;
+        }
+
+        BattleParallaxCard fromCard;
+        if (!_cards.TryGetValue(attacker, out fromCard))
+        {
+            return;
+        }
+        if (fromCard == null || !IsInstanceValid(fromCard))
+        {
+            return;
+        }
+
+        BattleParallaxCard toCard;
+        if (!_cards.TryGetValue(target, out toCard))
+        {
+            return;
+        }
+
+        float dir = Mathf.Sign(toCard.BasePos.X - fromCard.BasePos.X);
+        if (dir == 0f)
+        {
+            dir = 1f;
+        }
+        fromCard.PlayLunge(dir);
     }
 
     /// <summary>把引擎数据推给每张卡（10Hz，由面板的 Tick 调用）。</summary>
@@ -169,7 +253,7 @@ public partial class HeroCardLayer : Control
         if (_cards.TryGetValue(u, out c))
         {
             // 用卡的实际尺寸算中心（卡会按仇恨缩放，写死 CardW 会让飘字偏）
-            pos = c.Position + new Vector2(c.Size.X * 0.5f - 60f, 40f);
+            pos = c.BasePos + new Vector2(c.Size.X * 0.5f - 60f, 40f);
             return true;
         }
 
@@ -187,7 +271,7 @@ public partial class HeroCardLayer : Control
         BattleParallaxCard c;
         if (_cards.TryGetValue(u, out c))
         {
-            pos = c.Position + new Vector2(c.Size.X * 0.5f, c.Size.Y * 0.45f);
+            pos = c.BasePos + new Vector2(c.Size.X * 0.5f, c.Size.Y * 0.45f);
             return true;
         }
 

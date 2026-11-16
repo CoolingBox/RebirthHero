@@ -143,7 +143,12 @@ public partial class TalentPanel : BasePanel
 
     void OnClosePressed()
     {
-        AudioManager.PlayUISFX("ui_click");
+        // 2026-11-16 修「天赋页无法关闭」：原来只调 _onClose()，
+        // 而 MainPanel.OnCloseTalent 只做同步 / 存档 / 刷新，两边都不关面板。
+        // 与 EquipPanel / SkillsPanel / StagePanel / SettingPanel / SavePanel 对齐：
+        // 先隐藏自己，再回调。
+        AudioManager.PlayUISFX("ui_close");
+        HidePanel<TalentPanel>();
         if (_onClose != null)
         {
             _onClose();

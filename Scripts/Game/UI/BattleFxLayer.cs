@@ -19,7 +19,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
-public partial class BattleFxLayer : Control
+public partial class BattleFxLayer : Node2D
 {
     /// <summary>特效种类。几何与节奏都由它决定，颜色只是附加信息。</summary>
     public enum FxKind
@@ -66,7 +66,6 @@ public partial class BattleFxLayer : Control
 
     public override void _Ready()
     {
-        MouseFilter = MouseFilterEnum.Ignore;
         // 像素特效要放大，线性过滤会把像素块糊成一团；最近邻保持硬边。
         // 程序化几何（DrawLine / DrawArc）不受纹理过滤影响。
         TextureFilter = TextureFilterEnum.Nearest;

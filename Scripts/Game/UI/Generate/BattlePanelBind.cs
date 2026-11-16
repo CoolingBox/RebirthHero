@@ -4,7 +4,7 @@ using TinyFramework;
 public partial class BattlePanel : BasePanel
 {
 	private Panel _TBg;
-	private Control _TCards;
+	private Node2D _TCards;
 	private Control _TStacks;
 	private Control _TFxLayer;
 	private Label _TResult;
@@ -14,7 +14,7 @@ public partial class BattlePanel : BasePanel
 	{
 		base.OnBind(control);
 		_TBg = GameObject.FindChild("TBg") as Panel;
-		_TCards = GameObject.FindChild("TCards") as Control;
+		_TCards = GameObject.FindChild("TCards") as Node2D;
 		_TStacks = GameObject.FindChild("TStacks") as Control;
 		_TFxLayer = GameObject.FindChild("TFxLayer") as Control;
 		_TResult = GameObject.FindChild("TResult") as Label;

@@ -19,7 +19,7 @@
 
 using Godot;
 
-public partial class BackdropLayer : Control
+public partial class BackdropLayer : Node2D
 {
     const string BgInkPath = "res://Resources/UI/Background/bg_ink_light.png";
     const string BgNightPath = "res://Resources/UI/Background/bg_night_dark.png";
@@ -33,19 +33,47 @@ public partial class BackdropLayer : Control
 
     public override void _Ready()
     {
-        // 背景层不参与输入，否则会挡住上级按钮
-        MouseFilter = MouseFilterEnum.Ignore;
-
+        // Node2D 没有 MouseFilter，默认不接收 GUI 输入，天然不会挡住上级按钮。
         BuildLayers();
         ApplyTheme();
 
+        GetTree().Root.SizeChanged += OnViewportResized;
         UIThemeManager.Changed += OnThemeChanged;
+        OnViewportResized();
     }
 
     public override void _ExitTree()
     {
-        // 静态事件必须退订，否则主题切换时会调到已释放的节点上
+        // 静态事件与 Window 信号都要退订，否则主题切换 / 窗口变化会调到已释放的节点上
+        if (GetTree() != null && GetTree().Root != null)
+        {
+            GetTree().Root.SizeChanged -= OnViewportResized;
+        }
         UIThemeManager.Changed -= OnThemeChanged;
+    }
+
+    /// <summary>
+    /// Node2D 没有 anchors，三层背景必须显式按 viewport 尺寸铺满。
+    /// 项目是固定 1920×1080 + canvas_items，这里主要防窗口尺寸变化后背景留在旧尺寸。
+    /// </summary>
+    void OnViewportResized()
+    {
+        Vector2 s = GetViewportRect().Size;
+        if (_image != null)
+        {
+            _image.Position = Vector2.Zero;
+            _image.Size = s;
+        }
+        if (_tint != null)
+        {
+            _tint.Position = Vector2.Zero;
+            _tint.Size = s;
+        }
+        if (_vignette != null)
+        {
+            _vignette.Position = Vector2.Zero;
+            _vignette.Size = s;
+        }
     }
 
     /// <summary>按当前主题刷新底图、叠色与暗角。</summary>
@@ -76,29 +104,24 @@ public partial class BackdropLayer : Control
 
     void BuildLayers()
     {
-        // 用 SetAnchorsAndOffsetsPreset 而不是 SetAnchorsPreset：
-        // 后者只改锚点、不重置 offset，刚 AddChild 时布局还没算 → size 停在 (0,0)，
-        // 整层画不出来（实测：tex 已加载但 size=(0,0)，背景一片空白）。
-        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-
+        // 2026-11-16 迁到 Node2D：根节点没有 anchors，子节点挂在 Node2D 父链下
+        // 也没法靠 FullRect 自动铺满。尺寸统一由 OnViewportResized() 显式设置。
+        // 子节点本身仍是 Control，MouseFilter=Ignore 照常有效，不会抢上级按钮的点击。
         _image = new TextureRect();
-        _image.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _image.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _image.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-        _image.MouseFilter = MouseFilterEnum.Ignore;
+        _image.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(_image);
 
         _tint = new ColorRect();
-        _tint.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _tint.MouseFilter = MouseFilterEnum.Ignore;
+        _tint.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(_tint);
 
         _vignette = new TextureRect();
-        _vignette.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _vignette.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _vignette.StretchMode = TextureRect.StretchModeEnum.Scale;
         _vignette.Texture = BuildVignetteTexture();
-        _vignette.MouseFilter = MouseFilterEnum.Ignore;
+        _vignette.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(_vignette);
     }
 

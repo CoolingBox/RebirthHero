@@ -26,7 +26,7 @@
 using System.Collections.Generic;
 using Godot;
 
-public partial class BattleFxGlow : Control
+public partial class BattleFxGlow : Node2D
 {
     /// <summary>
     /// 注入的 HDR 增量。核心层已画 1.0×贴图色，本层再叠 boost×fade×贴图色，
@@ -44,7 +44,6 @@ public partial class BattleFxGlow : Control
 
     public override void _Ready()
     {
-        MouseFilter = MouseFilterEnum.Ignore;
         // 与核心层一致：像素放大后保持硬边，不把发光源糊成一团。
         TextureFilter = TextureFilterEnum.Nearest;
         Material = MakeAdditiveMaterial();
@@ -189,7 +188,7 @@ public partial class BattleFxLayer
         BattleFxGlow glow = new BattleFxGlow();
         glow.Name = "FxGlow";
         glow.Bind(this);
-        glow.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        // Node2D 用全局坐标绘制，不需要 FullRect 锚点。
         AddChild(glow);
         _glow = glow;
     }
