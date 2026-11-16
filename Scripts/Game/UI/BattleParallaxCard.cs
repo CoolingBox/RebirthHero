@@ -42,6 +42,25 @@ public partial class BattleParallaxCard : Control
     /// <summary>只给最底层（不透明背景）留的余量。</summary>
     const float PadSize = 10f;
 
+    // —— 人物溢出（2026-11-14，参考 Marvel Snap"角色破框"）——
+    /// <summary>
+    /// 人物层相对**可见画区**（卡高 − 信息带 84）的放大倍数。
+    /// <para>
+    /// 2026-11-14 定稿：1.10 时头顶刚好高出卡框几个像素，脚压在信息带上沿，整具人都露着。
+    /// 比这个再大，腿就会重新被信息带吃掉（玩家会读成"缺腿"）。
+    /// </para>
+    /// <para>
+    /// 卡册 / 详情大卡没有信息带，仍按整卡排版，它们的倍数在 `GalleryCard` / `UnitDetailView` 里。
+    /// </para>
+    /// </summary>
+    const float CharScale = 1.05f;
+
+    /// <summary>素材宽高比（896:1152 = 7:9），用来按高度反推宽度。</summary>
+    const float CharAspect = 896f / 1152f;
+
+    /// <summary>脚底越过"信息带上沿"的像素数 —— 4px 足够让脚不悬空，又不会伸进文字行。</summary>
+    const float CharFootOver = 4f;
+
     // —— 信息带尺寸 ——
     // 左右对战把卡压到 203×261，信息带只剩 84（占卡高 32%）。
     // 再高就把整幅画压到 60% 以下，"这是张卡"的感觉会没掉；再矮则血条数字读不出。
@@ -66,12 +85,23 @@ public partial class BattleParallaxCard : Control
 
     readonly TextureRect[] _layers = new TextureRect[4];
     readonly Vector2[] _baseOf = new Vector2[4];
-    readonly ColorRect[] _border = new ColorRect[4];
+    // AI 线描边框是镂空的，若背景铺满整卡，插画会从金线外沿一直露到卡边，
+    // 看起来"背景比边框大一圈"。把画区内缩，最外一圈完全交给实体边框。
+    const float EdgeW = 12f;
+    const float ArtInset = 12f;
+
+    // 边框是**一张共享纹理**（CardBorderFactory），不是四条 ColorRect。
+    // AI 生图的整幅卡框，纹样在 Setup 里按品阶换纹理，颜色只给轻微阵营倾向。
+    TextureRect _borderFrame;
+    Panel _frameBacking;
 
     ColorRect _board;
     Control _art;
     TextureRect _glow;
     Control _panel;
+
+    /// <summary>人物溢出层：**不在**被裁剪的 _art 里，所以头/发/兵器能越过卡框。</summary>
+    TextureRect _charOver;
 
     Label _nameText;
     ColorRect _hpBack;
@@ -105,6 +135,7 @@ public partial class BattleParallaxCard : Control
     Vector2 _target = Vector2.Zero;
     float _t;
     float _phase;
+    Vector2 _charBase;
 
     // 血条拖尾状态
     float _lastFrac = -1f;
@@ -122,7 +153,8 @@ public partial class BattleParallaxCard : Control
         // Stop：卡要能接点击（点在卡上 = 看这张卡的详情）。
         // 背景层与信息带里的子节点全是 Ignore，不会把点击抢走。
         MouseFilter = MouseFilterEnum.Stop;
-        ClipContents = true;
+        // 不裁剪：人物溢出层要画到卡框外面（见 BuildCharOver）
+        ClipContents = false;
 
         EnsureBuilt();
         SetProcess(true);
@@ -162,11 +194,14 @@ public partial class BattleParallaxCard : Control
         _built = true;
 
         MouseFilter = MouseFilterEnum.Stop;
-        ClipContents = true;
+        // 卡根**不裁剪**：人物溢出层要画到卡框外面去。
+        // 背景/前景/卡框仍由内部的 _art 自己 ClipContents 管住，不会漏到战场上。
+        ClipContents = false;
 
         BuildBoard();
         BuildArt();
         BuildBorder();
+        BuildCharOver();   // 必须晚于 BuildBorder：人物要压在卡框之上
         BuildPanel();
         BuildCast();
 
@@ -191,6 +226,9 @@ public partial class BattleParallaxCard : Control
         _art = new Control();
         _art.Name = "Art";
         _art.MouseFilter = MouseFilterEnum.Ignore;
+        // 必须裁剪：背景层为视差被放大了 20px（PadSize），不裁就会溢出到边框外，
+        // 看起来像"背景比边框大一圈"。人物溢出层挂在卡根、不在本层内，不受影响。
+        _art.ClipContents = true;
         AddChild(_art);
 
         for (int i = 0; i < 4; i++)
@@ -246,16 +284,34 @@ public partial class BattleParallaxCard : Control
     /// 这是"扫一眼就知道谁打谁"的唯一线索。
     /// 描边**不参与视差** —— 它是卡的边，跟着倾斜会露出缝。
     /// </summary>
+    /// <summary>
+    /// 人物溢出层（2026-11-14，参考 Marvel Snap 的"角色破框"）：
+    /// 把 L2 人物**从被裁剪的画框里拿出来**，放大 <see cref="CharScale"/> 倍、底边对齐卡底，
+    /// 于是头/发/兵器越过卡框，压在卡框与相邻留白上 —— 卡还是那张卡，人先"出画"。
+    /// <para>
+    /// 为什么不是简单地把卡根改成不裁剪：那样背景与前景也会漏到卡外。
+    /// 所以内层 `_art` 继续裁剪（L1/L3/L4 都在里面），只有这一层单独挂在卡根上。
+    /// </para>
+    /// <para>
+    /// 为什么贴了渐隐 shader：素材是按卡面裁的，**没有出血**；放大后贴图四边就是
+    /// "被切断的飘带/发梢"。硬切看着像 bug，按 5% 的宽度渐隐，就变成"衣袖散进雾里"。
+    /// </para>
+    /// </summary>
+    void BuildCharOver()
+    {
+        _charOver = CardArtFx.MakeCharOverlay("CharOver");
+        AddChild(_charOver);
+    }
+
     void BuildBorder()
     {
-        for (int i = 0; i < 4; i++)
-        {
-            ColorRect c = new ColorRect();
-            c.MouseFilter = MouseFilterEnum.Ignore;
-            c.Color = UIThemeManager.CardBorderAlly;
-            AddChild(c);
-            _border[i] = c;
-        }
+        // 衬边与边框纹样都由工厂装配，卡册 / 详情大卡用同一套，三处不再各写一份。
+        _frameBacking = CardBorderFactory.CreateBacking(EdgeW);
+        AddChild(_frameBacking);
+
+        // 默认纹样先给回阑，Setup 时按品阶换成真正的纹理
+        _borderFrame = CardBorderFactory.CreateNode(CardBorderKind.HuiLan, Colors.White);
+        AddChild(_borderFrame);
     }
 
     void BuildPanel()
@@ -402,10 +458,14 @@ public partial class BattleParallaxCard : Control
             _board.Color = enemy ? UIThemeManager.CardEnemy : UIThemeManager.CardAlly;
         }
 
-        Color borderColor = enemy ? UIThemeManager.CardBorderEnemy : UIThemeManager.CardBorderAlly;
-        for (int i = 0; i < _border.Length; i++)
+        if (_borderFrame != null)
         {
-            _border[i].Color = borderColor;
+            // 纹样表达"什么货色"（品阶）
+            CardBorderKind kind = CardBorderFactory.ForRarity(u != null ? u.Rarity : 0);
+            _borderFrame.Texture = CardBorderFactory.Get(kind);
+            // 平面线描边框自带金/墨/朱砂配色，**不做任何染色**：
+            // 染成红或青都会毁掉国风线描的配色，敌我改由站位与卡牌底色区分。
+            _borderFrame.Modulate = Colors.White;
         }
 
         LoadArt(artKey);
@@ -462,15 +522,48 @@ public partial class BattleParallaxCard : Control
 
         for (int i = 0; i < 4; i++)
         {
-            string path = root + names[i] + ".png";
-            if (ResourceLoader.Exists(path))
-            {
-                _layers[i].Texture = GD.Load<Texture2D>(path);
-            }
-            else
+            // L4 是素材自带的亮金回纹框：与主题无关、且比人物更抢眼。
+            // 2026-11-16：素材自带的亮金回纹框已完全弃用（62 份逐像素重复、且与国风
+            // 扁平线描不搭）。战斗卡 / 卡册 / 详情大卡三处统一走 CardBorderFactory
+            // 的 6 套品阶线描纹样 + 环形实体衬边，这一层永久停用。
+            if (i == 3)
             {
                 _layers[i].Texture = null;
+                _layers[i].Visible = false;
+                continue;
             }
+
+            string path = root + names[i] + ".png";
+            if (!ResourceLoader.Exists(path))
+            {
+                _layers[i].Texture = null;
+                if (i == 1 && _charOver != null)
+                {
+                    _charOver.Texture = null;
+                }
+                continue;
+            }
+
+            Texture2D tex = GD.Load<Texture2D>(path);
+
+            if (i == 0)
+            {
+                // 不再压暗背景。原先的 (0.70,0.70,0.73) 是基于**线性帧缓冲误存的偏暗截图**
+                // 做的过度补偿（见 FixShotSrgb.py）；在正确的 sRGB 画面下它会把源图
+                // 的暖色山水压成发灰的一片，细节全丢，人物反而失去衬托。
+                // 源图本身就是"人物为主、背景稍虚"的成品构图，交给它自己表达层次。
+                _layers[i].Modulate = Colors.White;
+            }
+
+            // 人物层走溢出层：**不再**放进被裁剪的 _art 里，否则放大后被卡面裁掉就白做了
+            if (i == 1 && _charOver != null)
+            {
+                _layers[i].Texture = null;
+                _charOver.Texture = tex;
+                continue;
+            }
+
+            _layers[i].Texture = tex;
         }
     }
 
@@ -486,8 +579,10 @@ public partial class BattleParallaxCard : Control
 
         if (_art != null)
         {
-            _art.Position = Vector2.Zero;
-            _art.Size = Size;
+            // 画区内缩：插画只从金线内圈开始，卡边那一圈由实体衬边 + 线描边框占据。
+            // L1 相对 _art 还有 10px 视差余量，被 ClipContents 裁到内圈，不会露边。
+            _art.Position = new Vector2(ArtInset, ArtInset);
+            _art.Size = new Vector2(Size.X - ArtInset * 2f, Size.Y - ArtInset * 2f);
         }
 
         for (int i = 0; i < 4; i++)
@@ -506,23 +601,65 @@ public partial class BattleParallaxCard : Control
         LayoutBorder();
         LayoutPanel();
         LayoutCast();
+        LayoutCharOver();
+    }
+
+    /// <summary>
+    /// 人物溢出层：**按"可见画区"排版**（卡高减去底部信息带），整具人都露出来。
+    /// <para>
+    /// 2026-11-14 第二次改（玩家反馈"缺胳膊少腿"）：原来按整卡高 261 排版、底边对齐卡底，
+    /// 但底部 84px 被信息带盖住 —— 于是人物永远在大腿处被截断，看起来就是"没腿"。
+    /// 现在以 (卡高 − 信息带) 为基准定尺寸，脚落在信息带上沿再压 4px（不悬空），
+    /// 头顶因此自然高出卡框几个像素，正好保留"略微破框"的效果。
+    /// </para>
+    /// </summary>
+    void LayoutCharOver()
+    {
+        if (_charOver == null)
+        {
+            return;
+        }
+
+        // 按**整卡高**排版、底边对齐卡底：人物上半身因此足够大，
+        // 小腿被底部信息带自然裁掉 —— 卡牌人物要"大"，不要求"全"。
+        // （此前按可见画区排版并整体缩小来保住全身，结果人物读不出脸。）
+        float h = Mathf.Round(Size.Y * CharScale);
+
+        // 素材已裁到 alpha 边界：**纹理尺寸即人物尺寸**，宽高比随人而定。
+        // 不能再用固定的 896/1152 —— 那是含留白时的比例，沿用会把人又缩回去。
+        float aspect = CharAspect;
+        if (_charOver.Texture != null)
+        {
+            aspect = (float)_charOver.Texture.GetWidth() / (float)_charOver.Texture.GetHeight();
+        }
+
+        // 尺寸与基准位置都吸附整数像素。破框的发梢/飘带是半透明细线，
+        // 落在半像素上会被双线性重采样洗成"发虚"；取整后采样点对齐像素网格。
+        // 视差本身仍是连续的（见 Animate），只是每帧绘制位置取整。
+        float w = Mathf.Round(h * aspect);
+        _charBase = new Vector2(
+            Mathf.Round((Size.X - w) * 0.5f),
+            Mathf.Round(Size.Y - h + CharFootOver));
+        _charOver.Position = _charBase;
+        _charOver.Size = new Vector2(w, h);
     }
 
     void LayoutBorder()
     {
-        const float w = 3f;
+        if (_frameBacking != null)
+        {
+            _frameBacking.Position = Vector2.Zero;
+            _frameBacking.Size = Size;
+        }
 
-        _border[0].Position = new Vector2(0f, 0f);
-        _border[0].Size = new Vector2(Size.X, w);
+        if (_borderFrame == null)
+        {
+            return;
+        }
 
-        _border[1].Position = new Vector2(0f, Size.Y - w);
-        _border[1].Size = new Vector2(Size.X, w);
-
-        _border[2].Position = new Vector2(0f, 0f);
-        _border[2].Size = new Vector2(w, Size.Y);
-
-        _border[3].Position = new Vector2(Size.X - w, 0f);
-        _border[3].Size = new Vector2(w, Size.Y);
+        // 整幅卡框铺满卡面：AI 边框是固定比例的整幅图，不能用九宫格（会把浮雕纹样拉花）
+        _borderFrame.Position = Vector2.Zero;
+        _borderFrame.Size = Size;
     }
 
     void LayoutPanel()
@@ -731,6 +868,16 @@ public partial class BattleParallaxCard : Control
         {
             Vector2 off = new Vector2(-_tilt.X, -_tilt.Y) * (ShiftPx * Depth[i]);
             _layers[i].Position = _baseOf[i] + off;
+        }
+
+        // 人物溢出层跟着"人物"这一层的深度走 —— 它现在就是 L2，错开的话会看到两张人
+        if (_charOver != null)
+        {
+            Vector2 charOff = new Vector2(-_tilt.X, -_tilt.Y) * (ShiftPx * Depth[1]);
+            // 视差保持连续浮点：实测把每帧位置取整后静态帧锐度无改善，
+            // 却会让 ±4.4px 的慢速摆动变成 1px 台阶跳动，得不偿失。
+            // 只对布局时的尺寸/基准位置取整（见 LayoutCharOver）。
+            _charOver.Position = _charBase + charOff;
         }
 
         float gx = -_tilt.X * Size.X * 0.20f;

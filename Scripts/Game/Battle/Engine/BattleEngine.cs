@@ -120,6 +120,7 @@ public sealed class BattleEngine
         var c = new BattleUnit
         {
             Name = u.Name, Slot = u.Slot, BaseHp = u.BaseHp, BaseAtk = u.BaseAtk, BaseSpd = u.BaseSpd,
+            Rarity = u.Rarity,                                         // 品阶要跨波带上，否则第二波起边框掉回默认纹样
             BaseDef = u.BaseDef, BaseAggro = u.BaseAggro, IsSummon = u.IsSummon, Ttl = u.Ttl,
             DmgPerHit = u.DmgPerHit,
             SummonHpMul = u.SummonHpMul, DmgTakenMul = u.DmgTakenMul,   // 装配期属性，跨波延续时要带上
@@ -356,7 +357,8 @@ public sealed class BattleEngine
         while (u.PoisonStacks > 0 && u.NextPoisonTick > 0 && u.NextPoisonTick <= T && u.Alive)
         {
             double mul = u.PoisonFrom != null ? u.PoisonFrom.DotMul : 1.0;
-            DotDamage(u, u.PoisonStacks * BattleConfig.PoisonPerStackDmg * mul, true);
+            BattleUnit from = u.PoisonFrom != null ? u.PoisonFrom : u;
+            DotDamage(from, u, u.PoisonStacks * BattleConfig.PoisonPerStackDmg * mul, true, false);
             u.NextPoisonTick += BattleConfig.PoisonTick;
         }
 
@@ -367,7 +369,9 @@ public sealed class BattleEngine
                && u.NextBurnTick <= u.BurnUntil + 1e-9 && u.Alive)
         {
             double mul = u.BurnFrom != null ? u.BurnFrom.DotMul : 1.0;
-            DotDamage(u, u.BurnStacks * BattleConfig.BurnPerStackDmg * mul, BattleConfig.BurnPierceShield);
+            BattleUnit from = u.BurnFrom != null ? u.BurnFrom : u;
+            DotDamage(from, u, u.BurnStacks * BattleConfig.BurnPerStackDmg * mul,
+                      BattleConfig.BurnPierceShield, true);
             u.NextBurnTick += BattleConfig.BurnTick;
         }
 
@@ -391,8 +395,13 @@ public sealed class BattleEngine
     /// <summary>
     /// 持续状态跳伤。ignoreShield = true（毒）直接扣气血；false（火，默认）先由护盾吸收、余下扣血。
     /// 这是毒/火唯一的行为差异 —— 毒是破坦手段，火对裸装更狠。
+    /// <para>
+    /// 2026-11-14：跳伤要报事件。原来这里一条事件都不抛，于是毒和火每跳**既不飘字也没特效**，
+    /// 玩家只看到血条莫名少一截 —— 这不是"没做特效"，是漏了数据。
+    /// 只报**真正扣到气血的那部分**：被护盾全吃掉的火不算伤害（也就不会有 "-0" 的飘字）。
+    /// </para>
     /// </summary>
-    void DotDamage(BattleUnit u, double amount, bool ignoreShield)
+    void DotDamage(BattleUnit src, BattleUnit u, double amount, bool ignoreShield, bool burn)
     {
         if (amount <= 0)
         {
@@ -411,6 +420,7 @@ public sealed class BattleEngine
         }
 
         u.Hp -= amount;
+        Bus.RaiseDot(src, u, amount, burn);
         EmitDeathIfNeeded(u);
         if (!u.Alive)
         {
@@ -618,10 +628,20 @@ public sealed class BattleEngine
         }
 
         // 闪避：结算前判定（被沉默不可闪）
+        // 2026-11-14：闪出去要报一声 —— 否则表现层只能看到"血量没动"，
+        // 分不清是闪掉了、被护盾全吃了、还是结算 bug（闪避原本只记 St.Dodges）。
         if (!tgt.Silenced(T))
+        {
             foreach (var s in tgt.Skills)
+            {
                 if (s.Src == SkillSrc.OnHit && s.Eff == SkillEff.Dodge && s.CondMet(tgt, Rng, false))
-                { St.Dodges++; return 0; }
+                {
+                    St.Dodges++;
+                    Bus.RaiseDodge(att, tgt, s.Name);
+                    return 0;
+                }
+            }
+        }
 
         // 落空判定已过 → 这一刀确实挨上了：把"扣层"记在**当前这个攻击者**名下，
         // 它本次行动结束时结清（Act 末尾）。债务只认第一笔，同一行动多段不重复记账。

@@ -36,6 +36,7 @@ public partial class BattlePanel : BasePanel
     private HeroCardLayer _cards;
     private SummonStackLayer _stacks;
     private FloatLayer _floats;
+    private BattleFxLayer _fx;
     private BackdropLayer _backdrop;
     private Vector2 _area = new Vector2(1920f, 1080f);
     private bool _built;
@@ -83,6 +84,8 @@ public partial class BattlePanel : BasePanel
         _stacks = _TStacks as SummonStackLayer;
         _floats = _TFxLayer as FloatLayer;
 
+        EnsureFxLayer();
+
         if (_TPushBtn != null)
         {
             _TPushBtn.Pressed += OnPushPressed;
@@ -94,6 +97,170 @@ public partial class BattlePanel : BasePanel
 
         EnsureBackdrop();
     }
+
+    /// <summary>
+    /// 特效层懒创建：插在卡牌层与飘字层之间。
+    /// 层级必须是「卡 &lt; 特效 &lt; 飘字 &lt; 卡头横幅」—— 数字永远在特效上面，否则读不出来。
+    /// </summary>
+    private void EnsureFxLayer()
+    {
+        if (_fx != null && GodotObject.IsInstanceValid(_fx))
+        {
+            return;
+        }
+
+        _fx = new BattleFxLayer();
+        _fx.Name = "TFx";
+        GameObject.AddChild(_fx);
+        _fx.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+
+        int idx = GameObject.GetChildCount() - 1;
+        if (_TFxLayer != null)
+        {
+            idx = _TFxLayer.GetIndex();
+        }
+        GameObject.MoveChild(_fx, idx);
+    }
+
+    // ============ 打击特效（P0：斩线 / 环 / 裂 / 火花 / 死亡碎片） ============
+
+    /// <summary>特效锚点：优先卡面中心（人身上），召唤物退化成堆叠卡锚点。</summary>
+    private bool TryFxAnchor(BattleUnit u, out Vector2 pos)
+    {
+        if (_cards != null && _cards.TryGetFxAnchor(u, out pos))
+        {
+            return true;
+        }
+        if (_stacks != null && _stacks.TryGetAnchor(u, out pos))
+        {
+            return true;
+        }
+        pos = Vector2.Zero;
+        return false;
+    }
+
+    /// <summary>
+    /// 命中演出（v0.2 三段式）：起手一闪 → 相性投射物飞过去 → 目标处命中形。
+    /// 命中形由投射物消亡时自动带出（见 BattleFxLayer._Process），这里不再手动放斩线/火花。
+    /// </summary>
+    public void PlayHitFx(BattleUnit att, BattleUnit tgt, DamageKind kind, Category cat, double amt)
+    {
+        if (_fx == null || tgt == null)
+        {
+            return;
+        }
+
+        Vector2 tp;
+        if (!TryFxAnchor(tgt, out tp))
+        {
+            return;   // 目标没有锚点（已清场）就不画，别在屏幕角落放野特效
+        }
+
+        Vector2 ap;
+        if (!TryFxAnchor(att, out ap))
+        {
+            // 攻击者是召唤物（只有堆叠卡）或已阵亡：给一个"从旁边打过来"的近似起点
+            ap = tp + new Vector2(tp.X < _area.X * 0.5f ? 70f : -70f, -6f);
+        }
+
+        float power = 0.25f;
+        if (tgt.BaseHp > 0)
+        {
+            power = (float)Mathf.Clamp((float)(amt / tgt.BaseHp), 0.05f, 1f);
+        }
+
+        // 起：先让释放者亮一下，"谁出手了"这件事要能被看见
+        _fx.PlayCast(cat, ap);
+
+        // 飞：投射物全距离飞过去。它是小弹体 + 短拖尾，不是 v0.1 否决的通栏长线
+        _fx.PlayBolt(cat, ap, tp, power);
+
+        // 真伤额外叠一道裂：相性管"用什么打"，真伤管"无视防御"，是两个独立维度
+        if (kind == DamageKind.TrueDamage)
+        {
+            _fx.Play(BattleFxLayer.FxKind.Crack, tp, tp, FxTrue, 0.20f, power);
+        }
+    }
+
+    /// <summary>死亡碎片。友方偏青灰、敌方偏暗红 —— 一眼看出倒的是哪边。</summary>
+    public void PlayDeathFx(BattleUnit u, bool ally)
+    {
+        if (_fx == null || u == null)
+        {
+            return;
+        }
+
+        Vector2 p;
+        if (!TryAnchor(u, out p))
+        {
+            return;
+        }
+
+        Color c = ally ? new Color(0.62f, 0.72f, 0.80f) : new Color(0.85f, 0.35f, 0.30f);
+        _fx.Play(BattleFxLayer.FxKind.Death, p, p, c, 0.45f, 0.6f);
+    }
+
+    /// <summary>
+    /// 闪避：一条从身侧掠过的空挥弧 + 淡影，**不叠火花** —— 没打中就不该炸。
+    /// 颜色刻意取冷灰白而不是门派色：它表达的是"什么都没发生"，不该比打中还抢眼。
+    /// </summary>
+    public void PlayDodgeFx(BattleUnit tgt)
+    {
+        if (_fx == null || tgt == null)
+        {
+            return;
+        }
+
+        Vector2 p;
+        if (!TryFxAnchor(tgt, out p))
+        {
+            return;
+        }
+
+        _fx.Play(BattleFxLayer.FxKind.Miss, p, p, FxDodge, 0.22f, 0.5f);
+    }
+
+    /// <summary>
+    /// 持续伤害每跳：毒 = 上浮的泡（慢），火 = 上窜的火星（快）。
+    /// 两者都不画斩线 —— DoT 没有"出手方向"，画线会让人以为有人打了他一下。
+    /// </summary>
+    public void PlayDotFx(BattleUnit tgt, bool burn, double amt)
+    {
+        if (_fx == null || tgt == null)
+        {
+            return;
+        }
+
+        Vector2 p;
+        if (!TryFxAnchor(tgt, out p))
+        {
+            return;
+        }
+
+        float power = 0.25f;
+        if (tgt.BaseHp > 0)
+        {
+            power = (float)Mathf.Clamp((float)(amt / tgt.BaseHp), 0.05f, 1f);
+        }
+
+        if (burn)
+        {
+            _fx.Play(BattleFxLayer.FxKind.Ember, p, p, FxBurn, 0.30f, power);
+        }
+        else
+        {
+            _fx.Play(BattleFxLayer.FxKind.Bubble, p, p, FxPoison, 0.55f, power);
+        }
+    }
+
+    // 外功 = 暖金（刀风带火星）｜内功 = 青白（气浪）｜真伤 = 紫（破空）
+    static readonly Color FxExternal = new Color(1f, 0.78f, 0.42f);
+    static readonly Color FxInternal = new Color(0.55f, 0.85f, 1f);
+    static readonly Color FxTrue = new Color(0.82f, 0.60f, 1f);
+    // 持续伤害各有自己的色相：毒青绿、火橙（与"外功暖金"拉开，别混成刀光）
+    static readonly Color FxPoison = new Color(0.52f, 0.92f, 0.55f);
+    static readonly Color FxBurn = new Color(1f, 0.52f, 0.24f);
+    static readonly Color FxDodge = new Color(0.78f, 0.86f, 0.94f);
 
     private void OnPushPressed()
     {
@@ -172,6 +339,10 @@ public partial class BattlePanel : BasePanel
         {
             _floats.Clear();
         }
+        if (_fx != null)
+        {
+            _fx.Clear();
+        }
     }
 
     // ============ 语义化表现 ============
@@ -182,6 +353,10 @@ public partial class BattlePanel : BasePanel
     private static readonly Color WinColor = new Color(0.4f, 1f, 0.5f);
     private static readonly Color LoseColor = new Color(1f, 0.45f, 0.35f);
     private static readonly Color RewardColor = new Color(1f, 0.85f, 0.35f);
+    // DoT 与闪避的飘字色（2026-11-14）：毒青绿、火橙、闪避冷灰白
+    private static readonly Color PoisonColor = new Color(0.45f, 0.95f, 0.55f);
+    private static readonly Color BurnColor = new Color(1f, 0.58f, 0.28f);
+    private static readonly Color DodgeColor = new Color(0.80f, 0.88f, 0.96f);
 
     public void ShowDamage(BattleUnit tgt, double amt)
     {
@@ -196,6 +371,25 @@ public partial class BattlePanel : BasePanel
     public void ShowShield(BattleUnit tgt, double amt)
     {
         SpawnFloat(tgt, "🛡 " + amt.ToString("0"), ShieldColor);
+    }
+
+    /// <summary>
+    /// 闪避飘字。用"闪"而不是"闪避"，两字在 10Hz 刷新的战场上是糊的；
+    /// 也要与伤害数字区分 —— 它是**零**伤害，不该看起来像一个很小的伤害。
+    /// </summary>
+    public void ShowDodge(BattleUnit tgt)
+    {
+        SpawnFloat(tgt, "闪", DodgeColor);
+    }
+
+    /// <summary>
+    /// 毒 / 火每跳的飘字。刻意与"承伤"同形（"-N"）但换色：
+    /// 玩家对"我在掉血"这件事的读法是一样的，区别只在"是谁弄的"。
+    /// </summary>
+    public void ShowDot(BattleUnit tgt, double amt, bool burn)
+    {
+        Color c = burn ? BurnColor : PoisonColor;
+        SpawnFloat(tgt, "-" + amt.ToString("0"), c);
     }
 
     /// <summary>掉落一件装备：稀有度色 + 套装名，它是"惊喜"，不该混在资源流水里。</summary>

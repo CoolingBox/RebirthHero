@@ -19,6 +19,10 @@ public sealed class BattleEventBus
     public event Action<BattleUnit, BattleUnit, double, string> OnDamage;
     // 治疗（skillName=null=吸血/其它非武学治疗）
     public event Action<BattleUnit, BattleUnit, double, string> OnHeal;
+    // 闪避（att 打空、tgt 闪掉；skill = 触发闪避的那门受击武学名）
+    public event Action<BattleUnit, BattleUnit, string> OnDodge;
+    // 持续伤害每跳（src = 施加者，tgt = 挨跳的人；burn = true 火 / false 毒）
+    public event Action<BattleUnit, BattleUnit, double, bool> OnDot;
     // 护盾
     public event Action<BattleUnit, BattleUnit, double> OnShield;
     // 召唤（owner 召唤者，unit 新单位实例）
@@ -31,6 +35,8 @@ public sealed class BattleEventBus
     public void RaiseAction(BattleUnit u, bool combo) => OnAction?.Invoke(u, combo);
     public void RaiseSkill(BattleUnit u, string name, int hits) => OnSkill?.Invoke(u, name, hits);
     public void RaiseDamage(BattleUnit a, BattleUnit t, double amt, string skill) => OnDamage?.Invoke(a, t, amt, skill);
+    public void RaiseDodge(BattleUnit a, BattleUnit t, string skill) => OnDodge?.Invoke(a, t, skill);
+    public void RaiseDot(BattleUnit a, BattleUnit t, double amt, bool burn) => OnDot?.Invoke(a, t, amt, burn);
     public void RaiseHeal(BattleUnit a, BattleUnit t, double amt, string skill = null) => OnHeal?.Invoke(a, t, amt, skill);
     public void RaiseShield(BattleUnit a, BattleUnit t, double amt) => OnShield?.Invoke(a, t, amt);
     public void RaiseSummon(BattleUnit owner, BattleUnit unit) => OnSummon?.Invoke(owner, unit);

@@ -10,6 +10,10 @@ public sealed class BattleUnit
 {
     public string Name = "";
     public int Slot;                   // 1-4 侠客位；0 召唤物
+
+    /// <summary>品阶（1普通 / 2精良 / 3史诗 / 4传说 / 5神话；0 = 未指定）。
+    /// 卡牌边框按它选纹样（CardBorderFactory.ForRarity），与伤害类型、相性无关。</summary>
+    public int Rarity;
     public double BaseHp, Hp, BaseAtk, BaseSpd;
 
     /// <summary>

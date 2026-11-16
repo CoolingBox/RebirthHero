@@ -69,11 +69,13 @@ public sealed class StatsTracker
         eng.Bus.OnAction -= OnAction;
         eng.Bus.OnSkill -= OnSkill;
         eng.Bus.OnDamage -= OnDamage;
+        eng.Bus.OnDot -= OnDot;
         eng.Bus.OnHeal -= OnHeal;
 
         eng.Bus.OnAction += OnAction;
         eng.Bus.OnSkill += OnSkill;
         eng.Bus.OnDamage += OnDamage;
+        eng.Bus.OnDot += OnDot;
         eng.Bus.OnHeal += OnHeal;
     }
 
@@ -162,6 +164,29 @@ public sealed class StatsTracker
             {
                 Skill(ht, t.SummonFrom.Name).Taken += amt;
             }
+        }
+    }
+
+    /// <summary>
+    /// 毒 / 火每跳一次（2026-11-14 新增）。只记**侠客级**的造成伤害与承伤，不记武学级 ——
+    /// 层上只留了"谁施的"（`PoisonFrom` / `BurnFrom`），没留"是哪门武学施的"；
+    /// 硬编一行"毒"会让战报出现一门并不存在的武学。
+    /// </summary>
+    void OnDot(BattleUnit a, BattleUnit t, double amt, bool burn)
+    {
+        if (amt <= 0)
+        {
+            return;
+        }
+        var ha = ResolveHero(a);
+        if (ha != null)
+        {
+            Hero(ha).Damage += amt;
+        }
+        var ht = ResolveHero(t);
+        if (ht != null)
+        {
+            Hero(ht).Taken += amt;
         }
     }
 

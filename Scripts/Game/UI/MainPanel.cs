@@ -478,6 +478,7 @@ public partial class MainPanel : BasePanel
         d.Name = u.Name;
         d.Enemy = !ally;
         d.ArtKey = BattleArt.KeyOf(u.Name);
+        d.Rarity = u.Rarity;
 
         if (!ally)
         {

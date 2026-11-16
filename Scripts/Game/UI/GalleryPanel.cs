@@ -25,29 +25,65 @@ public partial class GalleryPanel : BasePanel
         _ctxOnClose = onClose;
     }
 
-    /// <summary>条目表：key（= Resources/UI/Gallery 下的目录名） + 显示名。</summary>
-    static readonly string[][] Entries =
+    /// <summary>
+    /// 条目表：key（= Resources/UI/Gallery 下的目录名） + 显示名。
+    /// <para>
+    /// 2026-11-14：从"19 套美术试验素材"改成**按侠客 / 敌人生成**——每个角色一个同名目录。
+    /// 卡面只认目录名、不认身份，所以这张表是唯一需要跟着名单走的地方。
+    /// </para>
+    /// </summary>
+    static string[][] _entries;
+
+    static string[][] Entries
     {
-        new string[] { "claude_n", "Claude · 娘" },
-        new string[] { "claude_q", "Claude · Q" },
-        new string[] { "deepseek_n", "DeepSeek · 娘" },
-        new string[] { "deepseek_q", "DeepSeek · Q" },
-        new string[] { "gemini_n", "Gemini · 娘" },
-        new string[] { "gemini_q", "Gemini · Q" },
-        new string[] { "glm_n", "GLM · 娘" },
-        new string[] { "glm_q", "GLM · Q" },
-        new string[] { "gpt_n", "GPT · 娘" },
-        new string[] { "gpt_q", "GPT · Q" },
-        new string[] { "grok_n", "Grok · 娘" },
-        new string[] { "grok_q", "Grok · Q" },
-        new string[] { "kimi_n", "Kimi · 娘" },
-        new string[] { "kimi_q", "Kimi · Q" },
-        new string[] { "qwen_n", "Qwen · 娘" },
-        new string[] { "qwen_q", "Qwen · Q" },
-        new string[] { "beast_feidudu", "三兽 · 肥嘟嘟" },
-        new string[] { "beast_naiwa", "三兽 · 奶蛙" },
-        new string[] { "beast_niulai", "三兽 · 牛来" },
-    };
+        get
+        {
+            if (_entries == null)
+            {
+                _entries = BuildEntries();
+            }
+            return _entries;
+        }
+    }
+
+    static string[][] BuildEntries()
+    {
+        List<string[]> list = new List<string[]>();
+
+        List<HeroConfig> heroes = ConfigManager.GetAll<HeroConfig>();
+        if (heroes != null)
+        {
+            List<HeroConfig> hs = new List<HeroConfig>(heroes);
+            hs.Sort((a, b) => a.Id.CompareTo(b.Id));
+            for (int i = 0; i < hs.Count; i++)
+            {
+                if (hs[i] == null || string.IsNullOrEmpty(hs[i].Name))
+                {
+                    continue;
+                }
+                list.Add(new string[] { hs[i].Name, hs[i].Name + " · " + hs[i].Title,
+                    hs[i].Rarity.ToString() });
+            }
+        }
+
+        List<EnemyConfig> foes = ConfigManager.GetAll<EnemyConfig>();
+        if (foes != null)
+        {
+            List<EnemyConfig> es = new List<EnemyConfig>(foes);
+            es.Sort((a, b) => a.Id.CompareTo(b.Id));
+            for (int i = 0; i < es.Count; i++)
+            {
+                if (es[i] == null || string.IsNullOrEmpty(es[i].Name))
+                {
+                    continue;
+                }
+                // EnemyConfig 没有 Rarity 字段，敌人统一按最低品阶取框
+                list.Add(new string[] { es[i].Name, es[i].Name + " · " + es[i].Desc, "1" });
+            }
+        }
+
+        return list.ToArray();
+    }
 
     GalleryCard _card;
 
@@ -159,8 +195,10 @@ public partial class GalleryPanel : BasePanel
 
         if (_THint != null)
         {
-            _THint.Text = "鼠标移到卡上 = 倾斜（4 层视差）　·　点右侧缩略图切换　·　"
-                          + "「三兽」只有 3 层（没有卡框），所以会是 3 层视差";
+            // 2026-11-14：条目已换成按角色出图的正式素材（4 层齐），
+            // 原来那句"三兽只有 3 层"的说明作废。
+            _THint.Text = "鼠标移到卡上 = 倾斜（多层视差）　·　点右侧缩略图切换　·　"
+                          + "每张卡 4 层：背景 / 人物 / 前景 / 卡框";
         }
     }
 
@@ -172,12 +210,18 @@ public partial class GalleryPanel : BasePanel
         }
 
         _index = ((i % Entries.Length) + Entries.Length) % Entries.Length;
-        string key = Entries[_index][0];
-        string name = Entries[_index][1];
+        string[] entry = Entries[_index];
+        string key = entry[0];
+        string name = entry[1];
+        int rarity = 1;
+        if (entry.Length > 2)
+        {
+            rarity = int.Parse(entry[2]);
+        }
 
         if (_card != null)
         {
-            _card.SetEntry(key);
+            _card.SetEntry(key, rarity);
         }
 
         if (_TTitle != null)

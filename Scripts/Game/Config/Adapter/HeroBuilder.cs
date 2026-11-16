@@ -81,6 +81,7 @@ public static class HeroBuilder
         {
             Name = hero.Name,
             Slot = slot,
+            Rarity = hero.Rarity,
             BaseHp = hp * hpBonus * BattleConfig.HpScale * realmMult * talent.HpMul,
             BaseAtk = atk * BattleConfig.AtkScale * realmMult * talent.AtkMul,
             BaseDef = def * BattleConfig.DefScale * realmMult * talent.DefMul,

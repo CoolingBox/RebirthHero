@@ -47,6 +47,10 @@ public static class BattleArt
     };
 
     static readonly Dictionary<string, string> _byName = new Dictionary<string, string>();
+
+    /// <summary>名字目录探测结果的缓存：KeyOf 每场建卡都要调 8 次，别每次都摸资源系统。</summary>
+    static readonly Dictionary<string, bool> _nameDir = new Dictionary<string, bool>();
+
     static bool _ready;
 
     /// <summary>
@@ -92,6 +96,13 @@ public static class BattleArt
 
         if (!string.IsNullOrEmpty(name))
         {
+            // ① 优先用**以角色名命名的目录**（2026-11-14 起每个侠客/敌人各有专属立绘）
+            if (HasNameDir(name))
+            {
+                return name;
+            }
+
+            // ② 退回旧的"Id 序取模 16 套试验素材"（新素材还没出全时的兜底）
             string key;
             if (_byName.TryGetValue(name, out key))
             {
@@ -108,6 +119,19 @@ public static class BattleArt
             }
         }
         return Keys[h % Keys.Length];
+    }
+
+    /// <summary>该名字是否有独立素材目录（目录里有 L2 才算有）。结果缓存，避免重复摸资源系统。</summary>
+    static bool HasNameDir(string name)
+    {
+        bool ok;
+        if (_nameDir.TryGetValue(name, out ok))
+        {
+            return ok;
+        }
+        ok = ResourceLoader.Exists(Root + name + "/L2.png");
+        _nameDir[name] = ok;
+        return ok;
     }
 
     /// <summary>该目录是否有 L2（人物层）—— 没有就说明素材缺失，调用方可以退化成纯色卡。</summary>

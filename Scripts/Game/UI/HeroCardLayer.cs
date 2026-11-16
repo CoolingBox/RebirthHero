@@ -99,11 +99,18 @@ public partial class HeroCardLayer : Control
     void BuildOne(BattleUnit u, Vector2 cell, bool enemy, float scale)
     {
         Vector2 baseSize = new Vector2(BattleLayout.CardW, BattleLayout.CardH);
-        Vector2 size = baseSize * scale;
+        Vector2 raw = baseSize * scale;
+
+        // 吸附到整数像素。仇恨缩放 0.93~1.08 会让卡尺寸和位置都带小数，
+        // 边框贴图（406×522 对应 203×261 的 2:1 整数缩小）因此落在半像素上，
+        // 每帧被双线性重采样，金线边缘发虚、发毛。取整后纹理采样点对齐像素网格。
+        Vector2 size = new Vector2(Mathf.Round(raw.X), Mathf.Round(raw.Y));
+        Vector2 rawPos = cell + (baseSize - size) * 0.5f;
+        Vector2 pos = new Vector2(Mathf.Round(rawPos.X), Mathf.Round(rawPos.Y));
 
         BattleParallaxCard card = new BattleParallaxCard();
         // 中心对齐格位中心：尺寸变化时四周均匀伸缩，不会向某一侧偏
-        card.Position = cell + (baseSize - size) * 0.5f;
+        card.Position = pos;
         card.Size = size;
         AddChild(card);
 
@@ -163,6 +170,24 @@ public partial class HeroCardLayer : Control
         {
             // 用卡的实际尺寸算中心（卡会按仇恨缩放，写死 CardW 会让飘字偏）
             pos = c.Position + new Vector2(c.Size.X * 0.5f - 60f, 40f);
+            return true;
+        }
+
+        pos = Vector2.Zero;
+        return false;
+    }
+
+    /// <summary>
+    /// 特效锚点：**卡面中心偏上**（人物胸口一带）。
+    /// 与飘字锚点（<see cref="TryGetAnchor"/>，取头顶偏左）刻意分开：
+    /// 飘字要往上浮所以从头边起，打击特效要落在"人身上"。
+    /// </summary>
+    public bool TryGetFxAnchor(BattleUnit u, out Vector2 pos)
+    {
+        BattleParallaxCard c;
+        if (_cards.TryGetValue(u, out c))
+        {
+            pos = c.Position + new Vector2(c.Size.X * 0.5f, c.Size.Y * 0.45f);
             return true;
         }
 

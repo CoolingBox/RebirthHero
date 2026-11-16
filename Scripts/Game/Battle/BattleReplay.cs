@@ -35,6 +35,8 @@ public enum ReplayKind
     Summon = 6,
     Death = 7,
     End = 8,
+    Dodge = 9,
+    Dot = 10,
 }
 
 /// <summary>一条带时间戳的事件。<see cref="T"/> 是**模拟秒**，与真实时间无关。</summary>
@@ -53,6 +55,10 @@ public struct ReplayEvent
     public string Skill;
     public int Hits;
     public bool Combo;
+
+    /// <summary>Dot 专用：true = 火，false = 毒。</summary>
+    public bool Burn;
+
     public int Result;
 }
 
@@ -159,6 +165,8 @@ public sealed class BattleRecorder
         bus.OnAction += OnAction;
         bus.OnSkill += OnSkill;
         bus.OnDamage += OnDamage;
+        bus.OnDodge += OnDodge;
+        bus.OnDot += OnDot;
         bus.OnHeal += OnHeal;
         bus.OnShield += OnShield;
         bus.OnSummon += OnSummon;
@@ -172,6 +180,8 @@ public sealed class BattleRecorder
         bus.OnAction -= OnAction;
         bus.OnSkill -= OnSkill;
         bus.OnDamage -= OnDamage;
+        bus.OnDodge -= OnDodge;
+        bus.OnDot -= OnDot;
         bus.OnHeal -= OnHeal;
         bus.OnShield -= OnShield;
         bus.OnSummon -= OnSummon;
@@ -269,6 +279,16 @@ public sealed class BattleRecorder
     void OnDamage(BattleUnit a, BattleUnit t, double amt, string skill)
     {
         Push(new ReplayEvent { Kind = ReplayKind.Damage, A = a, B = t, Amt = amt, Skill = skill });
+    }
+
+    void OnDot(BattleUnit a, BattleUnit t, double amt, bool burn)
+    {
+        Push(new ReplayEvent { Kind = ReplayKind.Dot, A = a, B = t, Amt = amt, Burn = burn });
+    }
+
+    void OnDodge(BattleUnit a, BattleUnit t, string skill)
+    {
+        Push(new ReplayEvent { Kind = ReplayKind.Dodge, A = a, B = t, Skill = skill });
     }
 
     void OnHeal(BattleUnit a, BattleUnit t, double amt, string skill)
@@ -423,6 +443,12 @@ public sealed class BattlePlayback
                     break;
                 case ReplayKind.Damage:
                     bus.RaiseDamage(e.A, e.B, e.Amt, e.Skill);
+                    break;
+                case ReplayKind.Dodge:
+                    bus.RaiseDodge(e.A, e.B, e.Skill);
+                    break;
+                case ReplayKind.Dot:
+                    bus.RaiseDot(e.A, e.B, e.Amt, e.Burn);
                     break;
                 case ReplayKind.Heal:
                     bus.RaiseHeal(e.A, e.B, e.Amt, e.Skill);

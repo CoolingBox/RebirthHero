@@ -23,10 +23,14 @@ using TinyFramework;   // BigNum（大数格式化工具，纯数值，没有 Go
 public sealed class BattleManager
 {
     /// <summary>
-    /// 每拍往前**播**多少模拟秒（1x 时）。节拍是真实 0.1s，所以 0.15 = 1.5 倍速观赏。
-    /// 这一项只决定"片放多快"，不决定"多久刷一次画面"，更不决定战斗结果（结果入场就定了）。
+    /// 每拍往前**播**多少模拟秒（1x 时）。节拍是真实 0.1s，原值 0.15 = 1.5 倍速观赏。
+    /// 2026-11-15：按需求把原始观赏速度降为原来的 1/2，0.15 → 0.075（= 0.75 倍真实时间）。
+    /// 行动条 / 事件 / 伤害数字都由播片按模拟时间 T 驱动（见 BattleReplay.Advance 的 T += simDt），
+    /// 改这一项它们会自动同步，**不需要单独调行动条速度**。
+    /// 只决定"片放多快"，不决定刷新频率，也不决定战斗结果（结果入场就定了）。
+    /// ⚠️ 副作用：每场回放时长翻倍，推图/挂机节奏随之变慢。
     /// </summary>
-    private const double SimDtPerBeat = 0.15;
+    private const double SimDtPerBeat = 0.075;
 
     /// <summary>
     /// 结算这一场时喂给引擎的**固定步长**（2026-11-12，2026-11-13 起只在录影阶段用）。
@@ -92,6 +96,18 @@ public sealed class BattleManager
     // 面板没被打开过也照样在统计（原来只有第一次打开战报才开始记，等于默认丢数据）。
     private readonly StatsTracker _stats = new StatsTracker();
     private int _statLayer = -1;
+
+    /// <summary>武学名 → 伤害类型（特效按它选"线/环/裂"）。每场清一次，避免跨场残留。</summary>
+    private readonly Dictionary<string, DamageKind> _skillKind = new Dictionary<string, DamageKind>();
+
+    // 武学名 → 相性（特效 v0.2 按它选投射物形态 / 命中形 / 配色）。
+    // 相性只在 SkillConfig 里（BattleSkill 没这字段），所以表现层自己建索引，不改引擎。
+    // 配置是只读的，索引建一次即可，不必像 _skillKind 那样每场清。
+    private readonly Dictionary<string, Category> _skillCat = new Dictionary<string, Category>();
+    private bool _skillCatReady;
+
+    // 单位名 → 主修派系。普攻没有武学名，用它选特效；按该单位武学相性众数推导，算一次缓存。
+    private readonly Dictionary<string, Category> _unitCat = new Dictionary<string, Category>();
 
     public StatsTracker Stats { get { return _stats; } }
 
@@ -180,6 +196,7 @@ public sealed class BattleManager
         HookEvents();
 
         ResetStatsForLayer();
+        _skillKind.Clear();   // 换一场就清：不同敌人可能带同名但不同伤害类型的卡
         _stats.Attach(_engine);
         StatsPanel.BindBattle(_engine, _engine.A, _run.Layer, _stats);
         _view.BuildCards(_engine);
@@ -233,7 +250,8 @@ public sealed class BattleManager
     }
 
     /// <summary>
-    /// 播片推进：每拍把"该播多少模拟秒"喂给播放器（1x = 0.15 模拟秒/拍）。
+    /// 播片推进：每拍把"该播多少模拟秒"喂给播放器（1x = 0.075 模拟秒/拍，
+    /// 见 SimDtPerBeat；2026-11-15 由 0.15 减半而来）。
     /// <para>
     /// 这里**不跑任何规则** —— 整场在入场时就算完了（见 StartBattle 的 ①）。
     /// 播放器只做两件事：把当前帧的血量/行动条贴回单位，把到点的事件重新抛一遍（战报靠它长数字）。
@@ -294,7 +312,23 @@ public sealed class BattleManager
                 return;
             }
             _view.ShowDamage(t, amt);
+            _view.PlayHitFx(a, t, KindOf(a, skill), CatOf(a, skill), amt);
             _view.PlayHitSound(t, skill);
+        };
+        _engine.Bus.OnDot += (a, t, amt, burn) =>
+        {
+            if (amt <= 0)
+            {
+                return;
+            }
+            // 不播打击音：毒火是"背景伤害"，每秒每单位一跳，给了音效会变成雨声
+            _view.ShowDot(t, amt, burn);
+            _view.PlayDotFx(t, burn, amt);
+        };
+        _engine.Bus.OnDodge += (a, t, skill) =>
+        {
+            _view.ShowDodge(t);
+            _view.PlayDodgeFx(t);
         };
         _engine.Bus.OnHeal += (a, t, amt, skill) =>
         {
@@ -325,10 +359,154 @@ public sealed class BattleManager
         _view.ShowCast(u, name, hits);
     }
 
+    /// <summary>
+    /// 这次伤害算哪种（外功/内功/真伤）—— 特效靠它决定画"线 / 环 / 裂"。
+    /// <para>
+    /// 事件里只带武学名，所以在攻击者的武学表里按名字反查；查不到（普攻、吸血、DoT）一律按外功。
+    /// 按名字缓存：同一张卡每次都是同一个类型，不必每帧线性查找。
+    /// </para>
+    /// </summary>
+    private DamageKind KindOf(BattleUnit att, string skillName)
+    {
+        if (att == null || string.IsNullOrEmpty(skillName))
+        {
+            return DamageKind.External;
+        }
+
+        DamageKind cached;
+        if (_skillKind.TryGetValue(skillName, out cached))
+        {
+            return cached;
+        }
+
+        List<BattleSkill> list = att.Skills;
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].Name == skillName)
+            {
+                _skillKind[skillName] = list[i].DmgKind;
+                return list[i].DmgKind;
+            }
+        }
+
+        _skillKind[skillName] = DamageKind.External;
+        return DamageKind.External;
+    }
+
+    /// <summary>
+    /// 武学相性（特效 v0.2）。
+    /// 普攻没有武学名，取该单位首门武学的相性当"惯用兵器"——使刀的人普攻也该是刀芒。
+    /// 实在查不到就按伤害类型退化，保证任何攻击都有确定的投射物形态。
+    /// </summary>
+    private Category CatOf(BattleUnit att, string skillName)
+    {
+        EnsureSkillCat();
+
+        if (!string.IsNullOrEmpty(skillName))
+        {
+            Category cat;
+            if (_skillCat.TryGetValue(skillName, out cat))
+            {
+                return cat;                 // 武学伤害：用这门武学自己的相性
+            }
+        }
+
+        // 普攻 / 名字查不到：用该单位的主修派系，避免所有普攻挤在第一门心法上
+        if (att != null && att.Skills.Count > 0)
+        {
+            return UnitCatOf(att);
+        }
+
+        if (KindOf(att, skillName) == DamageKind.Internal)
+        {
+            return Category.Palm;
+        }
+        return Category.Sword;
+    }
+
+    /// <summary>
+    /// 单位主修派系：统计该单位所带武学的相性，取出现次数最多的（平票取先出现的，保证播片可复现）。
+    /// 配置表里 300 门武学的 Category 全部有效，所以这里不需要猜名字语义。
+    /// </summary>
+    private Category UnitCatOf(BattleUnit u)
+    {
+        if (u == null)
+        {
+            return Category.Sword;
+        }
+
+        Category cached;
+        if (_unitCat.TryGetValue(u.Name, out cached))
+        {
+            return cached;
+        }
+
+        Dictionary<Category, int> votes = new Dictionary<Category, int>();
+        Category best = Category.Sword;
+        int bestN = 0;
+
+        List<BattleSkill> list = u.Skills;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Category cat;
+            if (!_skillCat.TryGetValue(list[i].Name, out cat))
+            {
+                continue;
+            }
+
+            int n;
+            if (!votes.TryGetValue(cat, out n))
+            {
+                n = 0;
+            }
+            n = n + 1;
+            votes[cat] = n;
+
+            if (n > bestN)
+            {
+                bestN = n;
+                best = cat;
+            }
+        }
+
+        _unitCat[u.Name] = best;
+        return best;
+    }
+
+    /// <summary>建"武学名 → 相性"索引。配置只读，建一次就够。</summary>
+    private void EnsureSkillCat()
+    {
+        if (_skillCatReady)
+        {
+            return;
+        }
+        _skillCatReady = true;
+
+        List<SkillConfig> all = ConfigManager.GetAll<SkillConfig>();
+        if (all == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < all.Count; i++)
+        {
+            SkillConfig sc = all[i];
+            if (sc == null || string.IsNullOrEmpty(sc.Name))
+            {
+                continue;
+            }
+            _skillCat[sc.Name] = sc.Category;
+        }
+
+        // 启动一次的诊断：配表漏填相性时这里会立刻暴露，不用等到看特效才发现
+        Console.WriteLine("[BattleManager] 武学相性索引 " + _skillCat.Count + " 条 / " + all.Count);
+    }
+
     /// <summary>敌方单位被击杀 → 掉落（规则在 DropRule）+ 飘字（视图负责）。</summary>
     private void OnUnitDied(BattleUnit u)
     {
         _view.PlayDeathSound(u);   // 必须在移除锚点之前取位置
+        _view.PlayDeathFx(u, _engine != null && _engine.InA(u));
 
         // 召唤物死亡不留"尸体"：引擎已把它移出队伍，这里同步堆叠卡（减 1，减到 0 就撤卡）
         if (u.IsSummon)

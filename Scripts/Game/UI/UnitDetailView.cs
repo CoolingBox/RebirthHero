@@ -45,6 +45,8 @@ public sealed class UnitDetailData
     public string Subtitle = "";
     public string ArtKey = "";
     public bool Enemy;
+    /// <summary>品阶：与战斗卡共用 CardBorderFactory 的纹样映射。</summary>
+    public int Rarity = 1;
 
     /// <summary>等级行（我方 = 等级 + 修为进度；敌方 = 层段/档位）。</summary>
     public string LevelText = "";
@@ -97,6 +99,14 @@ public partial class UnitDetailView : Control
     const float SkillRowH = 38f;
     const float SkillRowY = 452f;
 
+    /// <summary>
+    /// 人物头顶探出卡框的**绝对像素**。
+    /// 原用 `CharScale = 1.11`（按"素材透明留白均值约 9%"反推，认为只探出 ~13px），
+    /// 但 CropPortraits.py 把 L2 裁到 alpha 边界后留白没了，1.11 变成实打实探出
+    /// 66px，头发顶到标题区。改用绝对像素，与卡册大卡、战斗卡同量级。
+    /// </summary>
+    const float CharOverhang = 16f;
+
     static readonly Color ScrimColor = new Color(0.02f, 0.02f, 0.03f, 0.80f);
 
     Panel _panel;
@@ -130,6 +140,11 @@ public partial class UnitDetailView : Control
     Control _artHolder;
     ColorRect _artBack;
     readonly TextureRect[] _art = new TextureRect[4];
+    /// <summary>不透明环形衬边，与战斗卡 / 卡册共用工厂装配。</summary>
+    Panel _frameBacking;
+
+    /// <summary>人物溢出层：不在被裁剪的 _artHolder 里，所以头/发/兵器能越出卡框。</summary>
+    TextureRect _charOver;
 
     readonly Label[] _skillRows = new Label[SkillRowMax];
 
@@ -197,6 +212,10 @@ public partial class UnitDetailView : Control
 
         _title = MakeLabel(_panel, 32, new Vector2(28, 16), new Vector2(900, 44));
         _subtitle = MakeLabel(_panel, 20, new Vector2(30, 62), new Vector2(900, 26));
+
+        // 人物破框后头发可能伸到标题区：把标题提到人物层之上，保证名字永远读得到
+        _title.ZIndex = 2;
+        _subtitle.ZIndex = 2;
 
         _closeBtn = new Button();
         _closeBtn.Text = "关闭 ✕";
@@ -272,6 +291,16 @@ public partial class UnitDetailView : Control
 
         for (int i = 0; i < 4; i++)
         {
+            if (i == 3)
+            {
+                // 线描卡框是镂空的，先垫一圈实体衬边挡住背景外沿。
+                // 详情大卡 470 宽，取 5%（≈24px），与战斗卡 12/203 同比例。
+                _frameBacking = CardBorderFactory.CreateBacking(24f);
+                _frameBacking.Position = Vector2.Zero;
+                _frameBacking.Size = new Vector2(CardW, CardH);
+                _artHolder.AddChild(_frameBacking);
+            }
+
             TextureRect r = new TextureRect();
             r.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
             r.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
@@ -287,6 +316,38 @@ public partial class UnitDetailView : Control
             _artHolder.AddChild(r);
             _art[i] = r;
         }
+
+        // 人物破框：L2 单独挂在 _panel 上（不在被裁剪的 _artHolder 里），放大后压在卡框之上
+        _charOver = CardArtFx.MakeCharOverlay("CharOver");
+        _panel.AddChild(_charOver);
+        LayoutCharOver();
+    }
+
+    /// <summary>
+    /// 按 L2 纹理**真实比例**排版人物溢出层。
+    /// CropPortraits.py 之后 L2 已裁到各自 alpha 边界，宽高比 0.46~0.58 各异；
+    /// 若把宽高都设成卡面的旧 CharScale 倍（521×670，aspect 0.778），
+    /// KeepAspectCovered 会按宽度放大并上下各裁约 20%，正好把头切掉。
+    /// 战斗卡与卡册都已按此修正，这里是第三处调用点。
+    /// </summary>
+    void LayoutCharOver()
+    {
+        if (_charOver == null)
+        {
+            return;
+        }
+
+        float h = CardH + CharOverhang;
+        float aspect = 7f / 9f;
+        if (_charOver.Texture != null)
+        {
+            Texture2D tex = _charOver.Texture;
+            aspect = (float)tex.GetWidth() / (float)tex.GetHeight();
+        }
+
+        float w = h * aspect;
+        _charOver.Position = new Vector2(28f + (CardW - w) * 0.5f, 104f + CardH - h);
+        _charOver.Size = new Vector2(w, h);
     }
 
     void BuildRightColumn()
@@ -418,6 +479,8 @@ public partial class UnitDetailView : Control
         _title.Text = d.Name;
         _subtitle.Text = d.Subtitle;
         _levelText.Text = d.LevelText;
+
+        ApplyBorder(d.Rarity);
 
         // 血条：满格 = BaseHp + LockedHp（"原本该有的最大生命"），锁死那截单独画灰段
         double total = d.MaxHp + d.LockedHp;
@@ -576,14 +639,40 @@ public partial class UnitDetailView : Control
         }
         _artKey = key;
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 3; i++)
         {
             string path = BattleArt.Root + key + "/L" + (i + 1) + ".png";
-            if (ResourceLoader.Exists(path))
+            if (!ResourceLoader.Exists(path))
             {
-                _art[i].Texture = GD.Load<Texture2D>(path);
+                _art[i].Texture = null;
+                if (i == 1 && _charOver != null)
+                {
+                    _charOver.Texture = null;
+                }
+                continue;
             }
-            else _art[i].Texture = null;
+
+            Texture2D tex = GD.Load<Texture2D>(path);
+
+            // 人物层走溢出层，不放进裁剪区
+            if (i == 1 && _charOver != null)
+            {
+                _art[i].Texture = null;
+                _charOver.Texture = tex;
+                continue;
+            }
+
+            _art[i].Texture = tex;
         }
+
+        // 纹理换了，宽高比可能不同，必须重排人物层（BuildArt 时 Texture 还是 null）
+        LayoutCharOver();
+    }
+
+    /// <summary>第 4 层卡框与战斗卡共用 CardBorderFactory 的 6 套品阶纹样。</summary>
+    void ApplyBorder(int rarity)
+    {
+        CardBorderKind kind = CardBorderFactory.ForRarity(rarity);
+        _art[3].Texture = CardBorderFactory.Get(kind);
     }
 }
