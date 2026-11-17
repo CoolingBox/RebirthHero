@@ -18,7 +18,8 @@
 //   核心层要 Nearest + Mix（原样、锐利、颜色不变），
 //   本层要 Additive 才能只往屏幕里注入 HDR 能量而不覆盖核心。
 //
-// 边界：本层只画**同尺寸、同帧**的形状，不放大、不膨胀、不描边、不做色散。
+// 边界：主体只画**同尺寸、同帧**的形状，不放大、不膨胀、不描边、不做色散。
+//   唯一的几何扩展是投射物后面的拖尾条带（2026-11-17，取代原来的 3 段残影）。
 //   13 相性的几何、轨迹、时序仍全在 BattleFxProjectile / BattleFxImpact。
 //   关闭整套辉光：注释 GameRoot 的 SetupGlowEnvironment() 即可
 //   （没有 > 1 像素时 glow 是空操作）。
@@ -32,8 +33,14 @@ public partial class BattleFxGlow : Node2D
     /// 注入的 HDR 增量。核心层已画 1.0×贴图色，本层再叠 boost×fade×贴图色，
     /// 特效亮部总和约 1 + boost×fade（> 1 才发光），暗部仍 <= 1 不发光，
     /// 等于天然 bright-pass，稀疏半透明像素不会被无差别点亮。
+    ///
+    /// 2026-11-17 从 0.85 降到 0.40：13 相性换成的投射物素材本身**更亮、面积更大**
+    /// （64×32 的能量弹、整颗火球、成片星点），0.85 时亮部总和到 1.6，
+    /// 引擎 Glow（threshold 1.0 + Screen）把绿/粉/金全洗成青白 ——
+    /// 实测 poison 的亮部从 (204,237,96) 变成 (178,241,254)。
+    /// 降到 0.40 后总和约 1.25，只留一层薄光，颜色得以保留。
     /// </summary>
-    const float EmissiveBoost = 0.85f;
+    const float EmissiveBoost = 0.40f;
 
     BattleFxLayer _owner;
 
@@ -146,36 +153,88 @@ void fragment() {
         }
     }
 
+    // —— 拖尾（2026-11-17，三版迭代，最终选 v2）——
+    // v1：3 个历史点各画一份精灵 —— 实机是「3 根分离的竖条」（间距 40px > 可见宽度）。
+    // v2（当前）：加密到 18 份重叠，间距约 10px，尺寸递减 —— 连成一条锥形光尾。
+    // v3：几何条带（UE Ribbon Renderer / Unity Trail Renderer 的思路）。
+    //     试过 DrawPrimitive 与 DrawLine 两版：位置、宽度、亮度都调通了，但**形状语言不搭** ——
+    //     主体是「竖刺 + 横底」的像素图，条带是一根横杠，拼在一起像两件不相干的东西。
+    //     根本原因是这套素材里没有「横向光带」这一形，要做得像必须新做一张拖尾贴图，
+    //     那属于新增素材而不是改绘制逻辑。所以退回 v2：同一张精灵重复，形状天然同源。
+    //
+    // 若以后要做真 ribbon：先给 FxPixel 加一张 128×32 的横向渐隐光带，
+    // 再用 DrawTextureRectRegion 沿轨迹拉长绘制 —— 那时条带的颜色与形状都来自素材本身。
+    const int TrailPoints = 18;
+
+    /// <summary>拖尾长度占飞行进度的比例。0.22 ≈ 飞行 0.43s 里的 0.095s 轨迹。</summary>
+    const float TrailSpan = 0.22f;
+
+    /// <summary>尺寸递减：头 90% → 尾 30%，收成锥形。</summary>
+    const float TrailHeadScale = 0.90f;
+    const float TrailTailScale = 0.30f;
+
     /// <summary>
-    /// 投射物：主形状 + 沿真实轨迹历史的 3 段残影，都注入 HDR。
-    /// 尺寸与核心层严格一致，不再放大 1.24 倍 —— 那是旧版主体重影的来源。
+    /// 单份注入强度。18 份相互重叠（重叠 3~4 层），单份必须比旧版 3 段低得多，
+    /// 否则叠加后过曝成白柱（v3 的增益 1.6 就洗白了）。
+    /// </summary>
+    const float TrailHeadFade = 0.30f;
+
+    /// <summary>
+    /// 投射物：先连续拖尾，再叠主体（同帧、同尺寸），都注入 HDR。
+    /// 主体尺寸与核心层严格一致，不再放大 1.24 倍 —— 那是旧版主体重影的来源。
     /// </summary>
     void DrawBoltEmissive(BattleFxLayer.FxItem it, float p, float themeScale)
     {
-        Texture2D sheet = FxPixel.Bolt(it.Cat);
+        // 与核心层用同一张（含镜像方向），发光与主体才不会左右对不上。
+        bool flip = it.B.X < it.A.X;
+        Texture2D sheet = FxPixel.Bolt(it.Cat, flip);
         if (sheet == null)
         {
             return;
         }
 
         Vector2 pos = BattleFxLayer.BoltPos(it, p);
-        float core = (46f + it.Power * 14f) * BattleFxLayer.FxPixelScale;
+        // 尺寸必须与核心层同源：暗器在 BoltSize 里缩到 0.55，这里跟着缩放，
+        // 否则辉光会比主体大一圈。
+        float core = BattleFxLayer.BoltSize(it);
+
+        // 拖尾先画：它拖在主体后面。加法混合与顺序无关，但先画便于之后单独调亮度。
+        DrawTrail(it, p, core, themeScale, sheet);
         DrawEmissive(sheet, p, pos, core, 0.70f * themeScale);
+    }
 
-        for (int k = 1; k <= 3; k++)
+    /// <summary>
+    /// 沿真实轨迹铺一串重叠精灵。帧也往回退一点，拖尾读起来是「主体甩下的旧帧」，
+    /// 而不是同一帧被复制了 18 份。
+    /// </summary>
+    void DrawTrail(BattleFxLayer.FxItem it, float p, float core, float themeScale,
+        Texture2D sheet)
+    {
+        // 贴图自带拖尾的相性（sword / poison）不再铺残影，
+        // 否则会变成「彗星后面再拖一串彗星」。
+        if (FxPixel.BoltHasTail(it.Cat))
         {
-            float lag = Mathf.Min(0.055f * k, p * 0.60f);
-            if (lag < 0.01f)
-            {
-                continue;
-            }
+            return;
+        }
 
-            float back = Mathf.Clamp(p - lag, 0f, 1f);
-            Vector2 tail = BattleFxLayer.BoltPos(it, back);
-            float frameP = Mathf.Clamp(p - 0.10f * k, 0f, 1f);
-            float ts = core * (0.92f - 0.16f * (k - 1));
-            float fade = (0.45f / (float)k) * themeScale;
-            DrawEmissive(sheet, frameP, tail, ts, fade);
+        // 刚出膛时没有拖尾：不能凭空画到起点之前。
+        float span = Mathf.Min(TrailSpan, p);
+        if (span < 0.02f)
+        {
+            return;
+        }
+
+        for (int i = 1; i <= TrailPoints; i++)
+        {
+            float t = (float)i / TrailPoints;
+            Vector2 pt = BattleFxLayer.BoltPos(it, p - span * t);
+
+            float sc = Mathf.Lerp(TrailHeadScale, TrailTailScale, t);
+            // 二次衰减：头部保持亮度、尾部快速消失，才像「被甩在后面」。
+            float fade = TrailHeadFade * themeScale * (1f - t) * (1f - t);
+            float frameP = Mathf.Clamp(p - 0.10f * t, 0f, 1f);
+
+            DrawEmissive(sheet, frameP, pt, core * sc, fade);
         }
     }
 }

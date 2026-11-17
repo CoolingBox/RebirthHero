@@ -230,6 +230,24 @@ public partial class BattleFxLayer : Node2D
     const float BoltTimeScale = 2.0f;
     const float ImpactTimeScale = 1.35f;
 
+    /// <summary>
+    /// 投射物绘制尺寸（像素）。**核心层与发光源层必须都调这里**，
+    /// 两边各写一遍公式很容易只改一处，结果辉光和主体错位。
+    ///
+    /// 暗器比其它相性小一圈（0.55）：暗器本来就是「小而快」的东西，
+    /// 而且它的源素材只有 16×16，按常规尺寸画会被放大 5 倍、糊成一块。
+    /// 缩小后既贴语义，又让源像素接近 1:1。
+    /// </summary>
+    internal static float BoltSize(FxItem it)
+    {
+        float size = (46f + it.Power * 14f) * FxPixelScale;
+        if (it.Cat == Category.Hidden)
+        {
+            size *= 0.55f;
+        }
+        return size;
+    }
+
     /// <summary>飞行时长 = 相性基准 × 距离微增 × 全局放慢。近身不闪没、远距不拖沓。</summary>
     static float BoltDuration(Category cat, float dist)
     {

@@ -755,7 +755,7 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 | `.codebuddy/tools/CleanCardEdges.py` | 清卡框抠像残留的半透明碎点、人物层淡边；从 `*_raw` / `*_soft` 重算，幂等 | 任意目录 |
 | `.codebuddy/tools/EnableCardMipmaps.py` | 把卡面 `L1~L4` 的 `.import` 设为 `mipmaps/generate=true`（`--off` 回滚、`--stat` 统计）。**新增卡面素材后必跑**，否则 4.5~9x 缩小会混叠成麻点；改完要 `Godot --headless --import` 重导入 | 任意目录 |
 | `.codebuddy/tools/FixShotSrgb.py` | 实机抓帧（线性帧缓冲）→ 正确 sRGB PNG；`--all` 批量。**所有基于截图的视觉判断都要先过这一步** | 任意目录 |
-| `.codebuddy/tools/GenFxPixel.py` | Super Pixel Effects Gigapack → 13 相性 × 投射/命中的横向精灵表 `Resources/UI/FxPixel/` | 任意目录 |
+| `.codebuddy/tools/GenFxPixel.py` | 13 相性 × 投射/命中的横向精灵表（256 帧格）`Resources/UI/FxPixel/`；素材来自 Super Pixel 系列 + CraftPix 特效包 | 任意目录 |
 | `.codebuddy/tools/CutFlatFrames.py` | AI 平面线描卡框：绿幕 + 底色双键控 → 406×522 带镂空的透明 PNG。输入 `raw_<key>.png` → 输出 `frame_<key>.png`；`--src/--dst` 指定目录、`--preview` 出拼图、彩色/深色锦带加 `--deep-clean suojia,zhujie`。**新增边框后跑** | 任意目录 |
 
 依赖 `openpyxl`（`pip install openpyxl`）。
@@ -882,8 +882,17 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 
 ## 素材鸣谢
 
-战斗像素特效来自 **Super Pixel Effects Gigapack — Will Tice / unTied Games**。
-按其 `license.txt`：可商用、可随游戏打包，需在鸣谢中署名；**禁止将素材用作 AI 训练材料**。
-本项目仅对序列帧做裁切与拼接后直接使用（`.codebuddy/tools/GenFxPixel.py`），不用于任何训练。
+战斗像素特效来自两个来源：
+
+1. **Super Pixel Effects Gigapack / Super Pixel Projectiles Pack 4 — Will Tice / unTied Games**
+   按其 `license.txt`：可商用、可随游戏打包，需在鸣谢中署名；**禁止将素材用作 AI 训练材料**。
+2. **CraftPix 系列特效包** —— `free-slash-effects-sprite-pack`（斩击）、
+   `fire-magic-effects-pixel-art`、`water-effects-pixel-art-set`、
+   `10-magic-effects-pixel-art-pack`、`10-magic-sprite-sheet-effects-pixel-art`、
+   `pixel-art-magic-sprite-effects-and-icons-pack`。
+   许可以各包内 `License.txt` 与 <https://craftpix.net/file-licenses/> 为准
+   （免费包通常可商用、不可转售素材本身）。
+
+本项目仅对序列帧做裁切、缩放与拼接后直接使用（`.codebuddy/tools/GenFxPixel.py`），不用于任何训练。
 
 > Pixel Art Assets - Will Tice / unTied Games

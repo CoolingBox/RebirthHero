@@ -58,8 +58,11 @@ public partial class BattleFxLayer
 
     void DrawBolt(FxItem it, float p)
     {
-        // 像素序列帧优先：飞行过程中特效本身也在动，不是一张静图平移
-        Texture2D sheet = FxPixel.Bolt(it.Cat);
+        // 像素序列帧优先：飞行过程中特效本身也在动，不是一张静图平移。
+        // 敌方从右往左飞时取镜像版：自带拖尾的贴图（sword / poison）尾巴朝左，
+        // 不翻就变成「倒着飞」。
+        bool flip = it.B.X < it.A.X;
+        Texture2D sheet = FxPixel.Bolt(it.Cat, flip);
         if (sheet != null)
         {
             Vector2 pp = BoltPos(it, p);
@@ -68,7 +71,7 @@ public partial class BattleFxLayer
             {
                 pa = 1f - (p - 0.85f) / 0.15f;
             }
-            float ps = (46f + it.Power * 14f) * FxPixelScale;
+            float ps = BoltSize(it);
             DrawSheetFrame(sheet, p, pp, ps, pa);
             return;
         }
