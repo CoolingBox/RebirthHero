@@ -147,7 +147,7 @@ public partial class TalentPanel : BasePanel
         // 而 MainPanel.OnCloseTalent 只做同步 / 存档 / 刷新，两边都不关面板。
         // 与 EquipPanel / SkillsPanel / StagePanel / SettingPanel / SavePanel 对齐：
         // 先隐藏自己，再回调。
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         HidePanel<TalentPanel>();
         if (_onClose != null)
         {
@@ -157,7 +157,7 @@ public partial class TalentPanel : BasePanel
 
     void OnCenterPressed()
     {
-        AudioManager.PlayUISFX("ui_click");
+        UiSfx.Click();
         CenterView();
     }
 
@@ -170,6 +170,7 @@ public partial class TalentPanel : BasePanel
 
         if (_resetArmed == 0)
         {
+            UiSfx.Click();
             _resetArmed = 1;
             if (_TResetBtn != null)
             {
@@ -186,7 +187,7 @@ public partial class TalentPanel : BasePanel
         }
 
         double refund = Talent.Respec(_dao);
-        AudioManager.PlayUISFX("ui_confirm");
+        UiSfx.Confirm();
         SetHint("已重塑：退回 " + refund.ToString("0.#") + " 道行");
         // 洗点会把「江湖」树一起清空 → 它重新上锁，视图退回「武学」，否则玩家会盯着一张空树
         _tree = 1;
@@ -206,7 +207,7 @@ public partial class TalentPanel : BasePanel
     {
         if (!Talent.IsUnlocked(2))
         {
-            AudioManager.PlayUISFX("ui_cancel");
+            UiSfx.Deny();
             SetHint("「江湖」要点满「武学」才会出现 —— 还差 " + NodesLeft(1) + " 个节点的最后一级");
             return;
         }
@@ -217,13 +218,13 @@ public partial class TalentPanel : BasePanel
     {
         if (tree == _tree)
         {
-            AudioManager.PlayUISFX("ui_click");
+            UiSfx.Select();
             return;
         }
 
         _tree = tree;
         _selected = 0;
-        AudioManager.PlayUISFX("ui_click");
+        UiSfx.Select();
         HideTip();
         BuildTree();
         CenterView();
@@ -582,7 +583,7 @@ public partial class TalentPanel : BasePanel
 
         if (Talent.IsMaxed(id))
         {
-            AudioManager.PlayUISFX("ui_click");
+            UiSfx.Click();
             SetHint("「" + c.Name + "」已点满（" + c.MaxLevel + "/" + c.MaxLevel + " 级）");
             Refresh();
             return;
@@ -590,7 +591,7 @@ public partial class TalentPanel : BasePanel
 
         if (!Talent.ReqMet(id))
         {
-            AudioManager.PlayUISFX("ui_click");
+            UiSfx.Deny();
             if (c.ReqB > 0)
             {
                 SetHint("交汇节点：需要「" + NameOf(c.ReqA) + "」与「" + NameOf(c.ReqB) + "」各至少 1 级");
@@ -606,7 +607,7 @@ public partial class TalentPanel : BasePanel
         double cost = Talent.CostOf(id);
         if (_dao == null || _dao.Amount < cost)
         {
-            AudioManager.PlayUISFX("ui_click");
+            UiSfx.Deny();
             SetHint("道行不足：需要 " + cost.ToString("0.#") + "，当前 " + (_dao != null ? _dao.Amount.ToString(1) : "0"));
             Refresh();
             return;
@@ -614,7 +615,7 @@ public partial class TalentPanel : BasePanel
 
         if (Talent.TryLearn(id, _dao))
         {
-            AudioManager.PlayUISFX("ui_confirm");
+            UiSfx.Confirm();
             SetHint("「" + c.Name + "」→ " + Talent.LevelOf(id) + " 级（花费 " + cost.ToString("0.#") + " 道行）");
             Refresh();
         }

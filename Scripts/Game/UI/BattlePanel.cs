@@ -1,4 +1,4 @@
-// 文件：BattlePanel.cs
+﻿// 文件：BattlePanel.cs
 // 《轮回大侠》—— **战斗显示面板**（BasePanel 子类，自己的场景 `Resources/UI/BattlePanel.tscn`）
 //
 // 2026-11-05 三次切分后的三层结构：
@@ -146,18 +146,21 @@ public partial class BattlePanel : BasePanel
     /// <summary>
     /// 命中演出（v0.2 三段式）：起手一闪 → 相性投射物飞过去 → 目标处命中形。
     /// 命中形由投射物消亡时自动带出（见 BattleFxLayer._Process），这里不再手动放斩线/火花。
+    ///
+    /// 返回**投射物飞行真实秒数**，调用方拿它决定伤害飘字什么时候出
+    /// （见 <see cref="ShowDamageAfter"/>）。没画特效时返回 0，飘字立刻出。
     /// </summary>
-    public void PlayHitFx(BattleUnit att, BattleUnit tgt, DamageKind kind, Category cat, double amt)
+    public float PlayHitFx(BattleUnit att, BattleUnit tgt, DamageKind kind, Category cat, double amt)
     {
         if (_fx == null || tgt == null)
         {
-            return;
+            return 0f;
         }
 
         Vector2 tp;
         if (!TryFxAnchor(tgt, out tp))
         {
-            return;   // 目标没有锚点（已清场）就不画，别在屏幕角落放野特效
+            return 0f;   // 目标没有锚点（已清场）就不画，别在屏幕角落放野特效
         }
 
         Vector2 ap;
@@ -176,21 +179,56 @@ public partial class BattlePanel : BasePanel
         // 起：先让释放者亮一下，"谁出手了"这件事要能被看见
         _fx.PlayCast(cat, ap);
 
-        // 微对撞：攻击方卡小幅前冲 + 回弹（2026-11-16 用户选「全部攻击微对撞」）。
-        // 与 ShowDamage / 命中特效同在 OnDamage 这一拍，接触帧靠 0.02s 短前冲对齐。
-        if (_cards != null)
-        {
-            _cards.PlayAttackLunge(att, tgt);
-        }
-
         // 飞：投射物全距离飞过去。它是小弹体 + 短拖尾，不是 v0.1 否决的通栏长线
         _fx.PlayBolt(cat, ap, tp, power);
+
+        // 出手破空声：与弹同时起步
+        PlayWhoosh(ap, tp);
+
+        // 飞行时长交给调用方去延迟飘字：数字必须等弹到了再出
+        float fly = BattleFxLayer.BoltFlightTime(cat, ap, tp);
+
+        // 微对撞延后到「弹快到时」再开始（2026-11-17 方案 2）：
+        // 前冲 0.02 + 停顿 0.03 正好压在命中帧上。
+        // 之前在攻击瞬间就撞，卡 0.16s 撞完回来还要干等 0.3~0.65s 弹才到，
+        // 中间空一段，读起来像「卡挥空了一下，伤害随后才到」。
+        if (_cards != null)
+        {
+            float lungeDelay = fly - BattleParallaxCard.HitLeadSec;
+            if (lungeDelay > 0.03f)
+            {
+                ScheduleLunge(att, tgt, lungeDelay);
+            }
+            else
+            {
+                _cards.PlayAttackLunge(att, tgt);
+            }
+        }
 
         // 真伤额外叠一道裂：相性管"用什么打"，真伤管"无视防御"，是两个独立维度
         if (kind == DamageKind.TrueDamage)
         {
             _fx.Play(BattleFxLayer.FxKind.Crack, tp, tp, FxTrue, 0.20f, power);
         }
+
+        return fly;
+    }
+
+    /// <summary>
+    /// 延迟触发卡牌前冲。用真实时间 timer（ignoreTimeScale），与飘字/命中特效同一套时钟，
+    /// 三者不会各走各的 —— 战斗加速时也不会出现「卡先撞、弹后到」。
+    /// </summary>
+    void ScheduleLunge(BattleUnit att, BattleUnit tgt, float delay)
+    {
+        SceneTreeTimer timer = GameObject.GetTree().CreateTimer(delay, true, false, true);
+        timer.Timeout += () =>
+        {
+            if (!GodotObject.IsInstanceValid(GameObject) || _cards == null)
+            {
+                return;
+            }
+            _cards.PlayAttackLunge(att, tgt);
+        };
     }
 
     /// <summary>死亡碎片。友方偏青灰、敌方偏暗红 —— 一眼看出倒的是哪边。</summary>
@@ -275,6 +313,8 @@ public partial class BattlePanel : BasePanel
 
     private void OnPushPressed()
     {
+        // 「继续推图」是一次真正的提交（开下一场）；「转世」的确认在 BattleManager 里播
+        UiSfx.Click();
         if (_mgr != null)
         {
             _mgr.ResumePush();
@@ -374,6 +414,37 @@ public partial class BattlePanel : BasePanel
         SpawnFloat(tgt, "-" + amt.ToString("0"), DamageColor);
     }
 
+    /// <summary>
+    /// 承伤飘字延后到投射物到达时再出（2026-11-17）。
+    ///
+    /// 之前是 OnDamage 当拍就出字、弹还在飞，读起来像「隔空扣血」——
+    /// 数字比命中先到，玩家的因果感是反的。延迟量直接用投射物的飞行时长，
+    /// 与命中特效同一时刻触发（两者都由 BoltDuration 决定，不会各走各的）。
+    ///
+    /// 单位被清场 / 节点已释放时不补字（<see cref="SpawnFloat"/> 找不到锚点会自己跳过），
+    /// 不做「数字飘在空地上」的兜底 —— 那比丢一个数字更怪。
+    /// </summary>
+    public void ShowDamageAfter(BattleUnit tgt, double amt, float delaySec)
+    {
+        if (delaySec <= 0.03f)
+        {
+            ShowDamage(tgt, amt);
+            return;
+        }
+
+        // ignoreTimeScale = true：战斗速度只该改变模拟推进，不该改变「弹飞多久」的观感
+        // 注意面板本身不是 Node（BasePanel 持有 GameObject 节点），取树要经 GameObject。
+        SceneTreeTimer timer = GameObject.GetTree().CreateTimer(delaySec, true, false, true);
+        timer.Timeout += () =>
+        {
+            if (!GodotObject.IsInstanceValid(GameObject) || tgt == null)
+            {
+                return;
+            }
+            ShowDamage(tgt, amt);
+        };
+    }
+
     public void ShowHeal(BattleUnit tgt, double amt)
     {
         SpawnFloat(tgt, "+" + amt.ToString("0"), HealColor);
@@ -426,11 +497,53 @@ public partial class BattlePanel : BasePanel
 
     // ============ 音效（方位 / 距离 / 优先级） ============
     /// <summary>
-    /// 命中音：普攻轻、武学重。
-    /// 只做"轻重两档"，不按伤害数值分档 —— 引擎没有暴击概念，
-    /// 凭数值猜档位会让同一件武器忽轻忽重，反而破坏空间一致性。
+    /// 相性 → 命中音类别（2026-11-17）。六大类各 5 个变体，见 Resources/Audio/SFX/hit_*。
+    ///
+    /// 为什么按**分系**而不是按伤害：伤害 = 武学基础值 × 攻方属性 × (1 - 目标防御)，
+    /// 同一招打不同敌人能差 5 倍。若音效跟着伤害走，玩家听到的是"这一招忽强忽弱"，
+    /// 但变的是敌人不是招式；音效该回答"谁用什么打了我"，这个问题只有分系能回答。
+    /// 伤害已由飘字数字与命中特效（power = 伤害/目标最大血量）两条通道承载。
     /// </summary>
-    public void PlayHitSound(BattleUnit tgt, string skillName)
+    static string HitGroupOf(Category cat)
+    {
+        switch (cat)
+        {
+            case Category.Fist:
+            case Category.Palm:
+            case Category.Leg:
+                return "punch";       // 肉击 + 低频体
+
+            case Category.Sword:
+            case Category.Saber:
+            case Category.Whip:
+                return "blade";       // 金属铮
+
+            case Category.Hidden:
+                return "thrown";      // 小金属，短促
+
+            case Category.Lightness:
+                return "wind";        // 轻通用，最脆
+
+            case Category.Medicine:
+            case Category.Poison:
+            case Category.Qimen:
+            case Category.Zen:
+                return "internal";    // 钝击闷响（内功/法门）
+
+            case Category.Beast:
+                return "beast";       // 低频闷，像重物/兽击
+        }
+        return "wind";
+    }
+
+    /// <summary>
+    /// 命中音：按相性选类别，再在 5 个变体里随机取一个。
+    ///
+    /// 多采样比调音高更有效 —— 人耳对 ±5% 的音高差不敏感，同一段采样连播三次
+    /// 听起来就是"贴片"；而 5 个真实变体轮换能直接消掉重复感。
+    /// 音高随机由 AudioManager 统一做（±10%），音效名只负责"用哪一个"。
+    /// </summary>
+    public void PlayHitSound(BattleUnit tgt, string skillName, Category cat)
     {
         if (!TryWorldAnchor(tgt, out Vector2 pos))
         {
@@ -438,7 +551,10 @@ public partial class BattlePanel : BasePanel
         }
 
         bool isSkill = !string.IsNullOrEmpty(skillName);
-        string sfx = isSkill ? "hit_heavy" : "hit_light";
+
+        string group = HitGroupOf(cat);
+        int variant = _sfxVariant.Next(5);
+        string sfx = "hit_" + group + "_" + variant;
 
         AudioManager.SfxPriority priority = AudioManager.SfxPriority.Hit;
         if (isSkill)
@@ -447,6 +563,55 @@ public partial class BattlePanel : BasePanel
         }
 
         AudioManager.PlaySFXAt(sfx, pos, priority);
+    }
+
+    /// <summary>
+    /// 变体随机用独立实例：不碰全局 RNG，战斗回放的种子不受音频影响
+    /// （声音不该改变逻辑结果，否则录像无法复现）。
+    /// </summary>
+    readonly System.Random _sfxVariant = new System.Random();
+
+    /// <summary>
+    /// 延迟播放命中音（2026-11-17）：打击声必须在打击那一刻响。
+    ///
+    /// 之前挂在 OnDamage 当拍，比命中早 0.43~0.81s，听感像「挥空了一声，
+    /// 过一会儿才莫名其妙掉血」。延迟量与飘字、命中特效共用飞行时长，三者同拍。
+    /// </summary>
+    public void PlayHitSoundAfter(BattleUnit tgt, string skillName, Category cat, float delaySec)
+    {
+        if (delaySec <= 0.03f)
+        {
+            PlayHitSound(tgt, skillName, cat);
+            return;
+        }
+
+        SceneTreeTimer timer = GameObject.GetTree().CreateTimer(delaySec, true, false, true);
+        timer.Timeout += () =>
+        {
+            if (!GodotObject.IsInstanceValid(GameObject))
+            {
+                return;
+            }
+            PlayHitSound(tgt, skillName, cat);
+        };
+    }
+
+    /// <summary>
+    /// 出手破空声（2026-11-17）。放在**发射瞬间**，不是命中处。
+    ///
+    /// 关键区别：Kenney 的 woosh 本身就是渐强型（起音能量 0.00）——它的"前摇"
+    /// 正是气流由远及近的过程，放在动作开始时才对；若放到命中处播，
+    /// 就变成"已经打完了才听到风声"，方向是反的。
+    ///
+    /// 音量已压到打击音的 1/3（导出时归一化到 0.32），优先级用 Ambient：
+    /// 声部不够时先牺牲它，绝不抢命中音；同屏 2~5 条弹重叠也只是一层底噪。
+    /// </summary>
+    void PlayWhoosh(Vector2 from, Vector2 to)
+    {
+        Vector2 mid = (from + to) * 0.5f;
+        int idx = _sfxVariant.Next(8);
+        string sfx = "whoosh_" + idx;
+        AudioManager.PlaySFXAt(sfx, mid, AudioManager.SfxPriority.Ambient);
     }
 
     public void PlayDeathSound(BattleUnit u)
@@ -471,11 +636,6 @@ public partial class BattlePanel : BasePanel
     public void PlayEventSound(string key)
     {
         AudioManager.PlayEventSFX(key);
-    }
-
-    public void PlayUiSound(string key)
-    {
-        AudioManager.PlayUISFX(key);
     }
 
     // ============ 结算栏 ============

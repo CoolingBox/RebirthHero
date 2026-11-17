@@ -222,7 +222,7 @@ public partial class UnitDetailView : Control
         _closeBtn.Position = new Vector2(PanelW - 150f, 22f);
         _closeBtn.Size = new Vector2(120f, 42f);
         _closeBtn.FocusMode = Control.FocusModeEnum.None;   // 焦点环会跟鼠标抢视觉
-        _closeBtn.Pressed += Close;
+        _closeBtn.Pressed += OnClosePressed;
         _panel.AddChild(_closeBtn);
 
         _levelText = MakeLabel(_panel, 24, new Vector2(RightX, 104), new Vector2(RightW, 30));
@@ -439,6 +439,14 @@ public partial class UnitDetailView : Control
         ApplyColors();
         Visible = true;
         Apply(data);
+    }
+
+    /// <summary>点右上角「关闭」：只有**玩家主动关**才播关闭音；
+    /// 单位阵亡 / 换波时 MainPanel 会直接调 Close()，那时不该有"玩家操作"的声音。</summary>
+    void OnClosePressed()
+    {
+        UiSfx.Close();
+        Close();
     }
 
     public void Close()

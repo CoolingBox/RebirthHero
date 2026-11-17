@@ -70,8 +70,12 @@ public partial class AudioManager : SingletonNode<AudioManager>
     private const float Attenuation = 1.2f;
 
     // —— 音色随机：同一素材的微差，不是变声 ——
-    private const float PitchMin = 0.94f;
-    private const float PitchMax = 1.06f;
+    // 2026-11-17 从 ±6% 提到 ±10%：打击音在 10Hz 攻击下连续播放，
+    // ±6%（人耳 5% 以内分辨不出）听起来仍是同一个采样；
+    // 配合每类 5 个变体轮换后才真正消掉"贴片感"。
+    // UI 音效走 PlayUISFX，不经过这里，按钮不会忽高忽低。
+    private const float PitchMin = 0.90f;
+    private const float PitchMax = 1.10f;
 
     // —— 总线基础偏移（dB）：音量滑杆叠加在它之上，不覆盖它 ——
     private const float FarBusOffsetDb = -4f;
@@ -143,12 +147,43 @@ public partial class AudioManager : SingletonNode<AudioManager>
     /// </summary>
     private void WarmupSfx()
     {
-        string[] names =
+        // 命中音改为「六类 × 5 变体 + 8 个出手破空声」（2026-11-17）：
+        // 名字是拼出来的，不写 38 行字面量；改类别或变体数只需改这里一处。
+        string[] hitGroups = { "punch", "blade", "thrown", "wind", "internal", "beast" };
+        const int HitVariants = 5;
+        const int WhooshVariants = 8;
+
+        string[] fixedNames =
         {
-            "hit_light", "hit_heavy", "crit", "death", "spawn",
+            "crit", "death", "spawn",
+            // 界面音：九个动词，见 Scripts/Game/UI/UiSfx.cs
             "ui_click", "ui_open", "ui_close", "ui_confirm", "ui_cancel", "ui_upgrade",
+            "ui_deny", "ui_select", "ui_toggle",
             "clear_layer", "boss_down",
         };
+
+        int total = hitGroups.Length * HitVariants + WhooshVariants + fixedNames.Length;
+        string[] names = new string[total];
+
+        int n = 0;
+        for (int g = 0; g < hitGroups.Length; g++)
+        {
+            for (int i = 0; i < HitVariants; i++)
+            {
+                names[n] = "hit_" + hitGroups[g] + "_" + i;
+                n++;
+            }
+        }
+        for (int i = 0; i < WhooshVariants; i++)
+        {
+            names[n] = "whoosh_" + i;
+            n++;
+        }
+        for (int i = 0; i < fixedNames.Length; i++)
+        {
+            names[n] = fixedNames[i];
+            n++;
+        }
 
         for (int i = 0; i < names.Length; i++)
         {

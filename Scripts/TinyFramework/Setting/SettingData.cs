@@ -27,4 +27,10 @@ public class SettingData:SaveData
     /// 它是"玩家怎么看"的偏好，跟这一世的进度无关，转世也不该被重置。
     /// 只影响 BattleManager 的模拟推进，不影响倒计时、自动保存与 UI 动效。</summary>
     public float BattleSpeed = 1f;
+
+    /// <summary>可选倍速档位。
+    /// 导航条「×N」按钮（循环切换）与设置面板（分段按钮）共用这一份 ——
+    /// 两边各自写一遍，新增档位时必然只改一处，另一处悄悄不同步。
+    /// 同时兼作白名单：存档里不在表内的值一律退回第一档。</summary>
+    public static readonly float[] SpeedSteps = { 1f, 2f, 3f };
 }

@@ -131,7 +131,7 @@ public partial class StagePanel : BasePanel
 
     void OnClosePressed()
     {
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         HidePanel<StagePanel>();
         if (_onClose != null)
         {
@@ -240,6 +240,14 @@ public partial class StagePanel : BasePanel
 
     void OnLayerPressed(int layer)
     {
+        if (_locked)
+        {
+            // 大劫中锁死换层：按钮已经是 Disabled，这里兜一层，避免以后改按钮样式时漏掉声音
+            UiSfx.Deny();
+            return;
+        }
+
+        UiSfx.Select();
         if (_onGo != null)
         {
             _onGo(layer);

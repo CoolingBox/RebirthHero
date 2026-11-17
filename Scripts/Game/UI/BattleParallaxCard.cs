@@ -1,4 +1,4 @@
-// 文件：BattleParallaxCard.cs
+﻿// 文件：BattleParallaxCard.cs
 // 《轮回大侠》战斗界面 —— **4 层视差侠客卡**（Control 子类，由 HeroCardLayer 建并逐帧刷新）
 //
 // 与卡册（Gallery/GalleryCard.cs）同源，但两者关注点不同：
@@ -141,6 +141,13 @@ public partial class BattleParallaxCard : Node2D
     int _trailPhase;
     float _trailClock;
 
+    // 行动条平滑（2026-11-17）：
+    // 卡面刷新是 10Hz（战斗节拍），直接把 Gauge 写进 Size 会每 0.1s 跳一格。
+    // 这里只记目标值，由 _Process 每帧指数逼近 —— 节拍不变，读起来是连续上涨的线。
+    float _gaugeTarget = -1f;
+    float _gaugeShown = -1f;
+    float _gaugeBarW;
+
     bool _built;
 
     // 2026-11-16 迁到 Node2D：Node2D 没有 Control.Size，自己维护卡尺寸。
@@ -175,6 +182,13 @@ public partial class BattleParallaxCard : Node2D
     const float LungeIn = 0.02f;     // [PLACEHOLDER] 快速前冲，接触帧与飘字对齐
     const float LungeHold = 0.03f;   // [PLACEHOLDER] 命中点局部停顿，非全局 hitstop
     const float LungeOut = 0.11f;    // [PLACEHOLDER] 慢回弹，带回弹过冲
+
+    /// <summary>
+    /// 从「开始前冲」到「命中帧」的时长（前冲 + 停顿）。
+    /// 2026-11-17 方案 2：前冲改为延后到投射物快到时才播，
+    /// 调用方用这个常量反推该提前多久叫醒它（飞行时长 − 本值）。
+    /// </summary>
+    public const float HitLeadSec = LungeIn + LungeHold;
 
     // 弧线（2026-11-16）：接触点向上抬起，回程斜向下收回并带一道浅下沉弧，
     // 读起来是「斜向上扑击 → 沉身收势」，不是纯水平滑步。
@@ -570,6 +584,10 @@ public partial class BattleParallaxCard : Node2D
         EnsureBuilt();
         Unit = u;
 
+        // 换单位（卡被复用）：行动条状态清零，避免上一场的进度被平滑带进新单位
+        _gaugeShown = -1f;
+        _gaugeTarget = -1f;
+
         // 悬停提示：没有它没人会猜「卡能点」。
         // 2026-11-16 根节点迁到 Node2D 后没有 TooltipText，改挂在铺满卡面的 _board 上。
         // 注意：子节点 MouseFilter 仍是 Ignore，tooltip 能否触发需实机确认（见迁移验收）。
@@ -861,6 +879,48 @@ public partial class BattleParallaxCard : Node2D
         UpdateTrail((float)delta);
         UpdateTilt((float)delta);
         UpdateCast((float)delta);
+        UpdateGauge((float)delta);
+    }
+
+    /// <summary>
+    /// 行动条每帧逼近目标值。
+    ///
+    /// 只往前追、不往后滑：出手后 Gauge 会归零，这时必须瞬跳 ——
+    /// 平滑退回会读成「进度条在倒流」，比跳变更糟。
+    /// 收敛速度 20/秒 ≈ 0.11s 追到 89%，与 10Hz 的刷新间隔基本同量级：
+    /// 再慢会落后整拍（实测 12/秒时稳定落后 15%，条子看起来永远差一截）。
+    /// 目标是满槽时直接吸附 —— 否则出手那一拍会把「差一点满」的状态覆盖掉，
+    /// 玩家永远看不到条子填满。
+    /// </summary>
+    void UpdateGauge(float dt)
+    {
+        if (_gaugeFill == null || _gaugeTarget < 0f || _gaugeShown < 0f)
+        {
+            return;
+        }
+
+        if (_gaugeTarget < _gaugeShown - 0.02f)
+        {
+            // 归零 / 大幅回退：直接跳
+            _gaugeShown = _gaugeTarget;
+        }
+        else if (_gaugeTarget >= 0.995f)
+        {
+            // 满槽：直接落满。Gauge 到顶的下一拍就会归零，平滑追不上
+            _gaugeShown = _gaugeTarget;
+        }
+        else
+        {
+            float k = 1f - Mathf.Exp(-20f * dt);
+            _gaugeShown += (_gaugeTarget - _gaugeShown) * k;
+            if (Mathf.Abs(_gaugeTarget - _gaugeShown) < 0.001f)
+            {
+                // 吸附：否则差 0.4% 永远追不到，满槽看起来少一截
+                _gaugeShown = _gaugeTarget;
+            }
+        }
+
+        _gaugeFill.Size = new Vector2(_gaugeBarW * _gaugeShown, GaugeH);
     }
 
     // ============ 出手横幅 ============
@@ -1106,9 +1166,17 @@ public partial class BattleParallaxCard : Node2D
         }
         _hpText.Text = hpText;
 
-        // ④ 行动条
+        // ④ 行动条：只记目标值，实际宽度由 UpdateGauge 每帧逼近
+        // （刷新是 10Hz，直接写 Size 会跳；见字段注释）
+        _gaugeBarW = barW;
         float g = (float)Math.Clamp(u.Gauge / BattleEngine.GaugeMax, 0, 1);
-        _gaugeFill.Size = new Vector2(barW * g, GaugeH);
+        if (_gaugeShown < 0f)
+        {
+            // 首次：直接落到真实值，不要从 0 缓慢长出来
+            _gaugeShown = g;
+        }
+        _gaugeTarget = g;
+        _gaugeFill.Size = new Vector2(barW * _gaugeShown, GaugeH);
 
         // ⑤ 状态行右侧：沉默 > 护盾（沉默更紧急：被禁技能时盾多少不重要）
         if (u.Silenced(engine.T))

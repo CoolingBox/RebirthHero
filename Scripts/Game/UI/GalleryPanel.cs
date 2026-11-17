@@ -146,7 +146,7 @@ public partial class GalleryPanel : BasePanel
 
     void OnClosePressed()
     {
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         UIManager.ClosePanel<GalleryPanel>();
         if (_ctxOnClose != null)
         {
@@ -187,7 +187,11 @@ public partial class GalleryPanel : BasePanel
                 }
 
                 int idx = i;
-                b.Pressed += () => Select(idx);
+                b.Pressed += () =>
+                {
+                    UiSfx.Select();
+                    Select(idx);
+                };
                 _TGrid.AddChild(b);
                 _thumbs.Add(b);
             }

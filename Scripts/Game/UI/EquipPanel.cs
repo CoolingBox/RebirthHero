@@ -120,7 +120,7 @@ public partial class EquipPanel : BasePanel
 
     void OnClosePressed()
     {
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         HidePanel<EquipPanel>();
         if (_onClose != null)
         {
@@ -296,7 +296,7 @@ public partial class EquipPanel : BasePanel
                 EquipSlot captured = slotEnum;
                 off.Pressed += () =>
                 {
-                    AudioManager.PlayUISFX("ui_click");
+                    UiSfx.Cancel();
                     _bag.Unequip(hero.Id, captured);
                     Build();
                 };
@@ -422,11 +422,14 @@ public partial class EquipPanel : BasePanel
             wear.Disabled = wornBy == hero.Id;
             wear.Pressed += () =>
             {
-                AudioManager.PlayUISFX("ui_click");
                 if (_bag.Equip(hero.Id, uid, CfgOf))
                 {
+                    UiSfx.Confirm();
                     Build();
+                    return;
                 }
+
+                UiSfx.Deny();
             };
             row.AddChild(wear);
 
@@ -443,11 +446,14 @@ public partial class EquipPanel : BasePanel
             plus.Disabled = cost < 0 || wornBy != hero.Id;
             plus.Pressed += () =>
             {
-                AudioManager.PlayUISFX("ui_upgrade");
                 if (EquipRules.TryEnhance(item, _silver))
                 {
+                    UiSfx.Upgrade();
                     Build();
+                    return;
                 }
+
+                UiSfx.Deny();
             };
             row.AddChild(plus);
 
@@ -460,23 +466,25 @@ public partial class EquipPanel : BasePanel
             recycle.TooltipText = wornBy != 0 ? "穿着中的装备不能回收，先卸下" : "回收换银两";
             recycle.Pressed += () =>
             {
-                AudioManager.PlayUISFX("ui_click");
                 EquipItem target = _bag.Find(uid);
                 EquipConfig targetCfg = target != null ? CfgOf(target.ConfigId) : null;
                 if (targetCfg == null)
                 {
+                    UiSfx.Deny();
                     return;
                 }
 
                 long value = EquipRules.RecycleValue(target, targetCfg);
                 if (!_bag.Remove(uid))
                 {
+                    UiSfx.Deny();
                     return;
                 }
                 if (_silver != null)
                 {
                     _silver.Add(value);
                 }
+                UiSfx.Confirm();
                 Build();
             };
             row.AddChild(recycle);
@@ -553,7 +561,7 @@ public partial class EquipPanel : BasePanel
         if (!_batchConfirm)
         {
             // 第一次点只切到确认态：批量删道具必须有一步"你确定"的停顿
-            AudioManager.PlayUISFX("ui_click");
+            UiSfx.Click();
             _batchConfirm = true;
             Build();
             return;
@@ -597,7 +605,15 @@ public partial class EquipPanel : BasePanel
         {
             _silver.Add(total);
         }
-        AudioManager.PlayEventSFX("ui_confirm");
+
+        if (total > 0)
+        {
+            UiSfx.Confirm();
+        }
+        else
+        {
+            UiSfx.Deny();
+        }
         Build();
     }
 
@@ -731,7 +747,7 @@ public partial class EquipPanel : BasePanel
         }
         b.Pressed += () =>
         {
-            AudioManager.PlayUISFX("ui_click");
+            UiSfx.Select();   // 筛选/排序 chip = 选项切换，不是提交
             onClick();
         };
         return b;

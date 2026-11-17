@@ -125,7 +125,7 @@ public partial class SkillsPanel : BasePanel
 
     void OnClosePressed()
     {
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         HidePanel<SkillsPanel>();
         if (_onClose != null)
         {
@@ -225,6 +225,7 @@ public partial class SkillsPanel : BasePanel
 
                 btn.Pressed += () =>
                 {
+                    UiSfx.Select();
                     _selHero = heroId;
                     _selSlot = slot;
                     Build();
@@ -253,6 +254,7 @@ public partial class SkillsPanel : BasePanel
         {
             if (_selHero > 0 && _selSlot >= 0)
             {
+                UiSfx.Cancel();
                 _loadout.Clear(_selHero, _selSlot);
                 Build();
             }
@@ -286,6 +288,7 @@ public partial class SkillsPanel : BasePanel
             {
                 if (_selHero > 0 && _selSlot >= 0)
                 {
+                    UiSfx.Confirm();
                     _loadout.Equip(_selHero, _selSlot, skillId);
                     Build();
                 }

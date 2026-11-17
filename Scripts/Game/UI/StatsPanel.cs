@@ -57,6 +57,25 @@ public partial class StatsPanel : BasePanel
         }
     }
 
+    /// <summary>当前是否可见（主面板据此决定播「开」还是「关」）。</summary>
+    public static bool CurrentVisible
+    {
+        get
+        {
+            if (_current == null)
+            {
+                return false;
+            }
+
+            if (_current.GameObject == null || !GodotObject.IsInstanceValid(_current.GameObject))
+            {
+                return false;
+            }
+
+            return _current.GameObject.Visible;
+        }
+    }
+
     /// <summary>切换显隐（「战报」按钮）。首次点击才创建面板。</summary>
     public static void ToggleCurrent()
     {
@@ -139,11 +158,11 @@ public partial class StatsPanel : BasePanel
         {
             if (_TViewBtn != null)
             {
-                _TViewBtn.Pressed += CycleView;
+                _TViewBtn.Pressed += OnCycleViewPressed;
             }
             if (_TSortBtn != null)
             {
-                _TSortBtn.Pressed += CycleSort;
+                _TSortBtn.Pressed += OnCycleSortPressed;
             }
             _wired = true;
         }
@@ -186,6 +205,18 @@ public partial class StatsPanel : BasePanel
         {
             _stats.Reset();
         }
+    }
+
+    void OnCycleViewPressed()
+    {
+        UiSfx.Select();
+        CycleView();
+    }
+
+    void OnCycleSortPressed()
+    {
+        UiSfx.Select();
+        CycleSort();
     }
 
     void CycleView()

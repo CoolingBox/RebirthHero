@@ -61,8 +61,8 @@ public partial class MainPanel : BasePanel
     private BattleManager _battleMgr;
 
     // ============ 战斗倍速（导航条「×N」按钮，选择记进设置） ============
-    /// <summary>可选档位。数组顺序就是点击循环顺序，也是"非法存档值退回 1x"的白名单。</summary>
-    private static readonly double[] SpeedSteps = { 1.0, 2.0, 3.0 };
+    // 档位表不在这里写第二份：设置面板有同一组分段按钮，两边共用 SettingData.SpeedSteps。
+    // 本面板只负责"点一下往上走一档"的循环，以及把速度套给 BattleManager。
     private double _battleSpeed = 1.0;
 
     // ============ 卡牌详情浮层（点战斗卡打开；显示层，数据在这里装配） ============
@@ -368,6 +368,9 @@ public partial class MainPanel : BasePanel
         // 这样 SavePanel 不必知道"外面谁关心这个开关"（原来是靠传进去的 Action）
         TinyEventBus.Global.On<AutoSaveToggled>(OnAutoSaveToggled);
 
+        // 倍速同理：设置面板改倍速后发事件，导航条的「×N」文案与战斗会话在这里对齐。
+        TinyEventBus.Global.On<BattleSpeedChanged>(OnBattleSpeedChanged);
+
         UIThemeManager.ApplyTo(GameObject);
         ApplyThemeColors();
         UIThemeManager.Changed += OnThemeChanged;
@@ -420,7 +423,7 @@ public partial class MainPanel : BasePanel
 
         _detailUnit = u;
         _detail.Open(BuildUnitDetail(u));
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
     }
 
     /// <summary>浮层每拍跟着刷（10Hz）。单位已不在场上（换波 / 重开）就自己收起来。</summary>
@@ -780,7 +783,7 @@ public partial class MainPanel : BasePanel
             return;
         }
 
-        AudioManager.PlayUISFX("ui_confirm");
+        UiSfx.Confirm();
         _battleMgr.StartDajie();
     }
 
@@ -867,7 +870,7 @@ public partial class MainPanel : BasePanel
 
     private void OnOpenSave()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         _clock.StopBeat();
         _clock.StopAdvance();
 
@@ -916,6 +919,18 @@ public partial class MainPanel : BasePanel
     private void OnAutoSaveToggled(AutoSaveToggled evt)
     {
         _clock.SyncAutoSave(evt.On);
+    }
+
+    /// <summary>
+    /// 设置面板改了战斗倍速 → 这里套给战斗会话并刷新导航条文案。
+    /// <para>
+    /// <c>save: false</c>：设置本身由发起方写盘，本面板只管应用 ——
+    /// 否则一次切换要写两次盘，而且"谁负责存"变成两处都有。
+    /// </para>
+    /// </summary>
+    private void OnBattleSpeedChanged(BattleSpeedChanged evt)
+    {
+        ApplyBattleSpeed(evt.Speed, false);
     }
 
     // ============ 阵容查询 ============
@@ -1084,7 +1099,7 @@ public partial class MainPanel : BasePanel
     //       唯一例外是存档面板（读档会整份替换状态机，必须停）。
     private void OnOpenInn()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         if (_TInnBtn != null)
         {
             _TInnBtn.Disabled = true;
@@ -1099,7 +1114,7 @@ public partial class MainPanel : BasePanel
 
     private void OnCloseInn()
     {
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         if (_TInnBtn != null)
         {
             _TInnBtn.Disabled = false;
@@ -1109,7 +1124,7 @@ public partial class MainPanel : BasePanel
 
     private void OnOpenSkills()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         SkillsPanel.BindData(_loadout, ActiveRoster(), _lookup, _skillPool, OnCloseSkills);
         UIManager.ShowPanel<SkillsPanel>();
     }
@@ -1121,7 +1136,7 @@ public partial class MainPanel : BasePanel
 
     private void OnOpenEquips()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         EquipPanel.BindData(_equips, _equipPool, ActiveRoster(), _silver, _equipSetPool, _equipAffixPool, OnCloseEquips);
         UIManager.ShowPanel<EquipPanel>();
     }
@@ -1133,7 +1148,7 @@ public partial class MainPanel : BasePanel
 
     private void OnOpenTalent()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         TalentPanel.BindData(_dao, OnCloseTalent);
         UIManager.ShowPanel<TalentPanel>();
     }
@@ -1147,13 +1162,13 @@ public partial class MainPanel : BasePanel
 
     private void OnOpenGallery()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         UIManager.ShowPanel<GalleryPanel>();
     }
 
     private void OnOpenStage()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         StagePanel.BindData(_run, _materials, OnGoLayer, OnCloseStage, InDajie);
         UIManager.ShowPanel<StagePanel>();
     }
@@ -1181,7 +1196,16 @@ public partial class MainPanel : BasePanel
 
     private void OnToggleStats()
     {
-        AudioManager.PlayUISFX("ui_open");
+        // 侧栏是"常驻开关"，关的时候要播关闭音 —— 否则点第二下像没反应
+        if (StatsPanel.CurrentVisible)
+        {
+            UiSfx.Close();
+        }
+        else
+        {
+            UiSfx.Open();
+        }
+
         StatsPanel.ToggleCurrent();
         if (_battleMgr != null && _battleMgr.HasEngine)
         {
@@ -1191,7 +1215,7 @@ public partial class MainPanel : BasePanel
 
     private void OnOpenSettings()
     {
-        AudioManager.PlayUISFX("ui_open");
+        UiSfx.Open();
         SettingPanel.BindData(OnCloseSettings);
         UIManager.ShowPanel<SettingPanel>();
     }
@@ -1214,16 +1238,16 @@ public partial class MainPanel : BasePanel
     /// </summary>
     private void OnCycleSpeed()
     {
-        AudioManager.PlayUISFX("ui_click");
+        UiSfx.Select();   // 档位循环 = 选项切换
 
         // 取"下一个比当前大的档位"；已经最大就回到第一档。
         // 这样即使存档里是 2.5（手动改的设置）也能顺着往上走，不会卡住。
-        double next = SpeedSteps[0];
-        for (int i = 0; i < SpeedSteps.Length; i++)
+        double next = SettingData.SpeedSteps[0];
+        for (int i = 0; i < SettingData.SpeedSteps.Length; i++)
         {
-            if (SpeedSteps[i] > _battleSpeed + 0.001)
+            if (SettingData.SpeedSteps[i] > _battleSpeed + 0.001)
             {
-                next = SpeedSteps[i];
+                next = SettingData.SpeedSteps[i];
                 break;
             }
         }
@@ -1268,11 +1292,11 @@ public partial class MainPanel : BasePanel
             return 1.0;
         }
 
-        for (int i = 0; i < SpeedSteps.Length; i++)
+        for (int i = 0; i < SettingData.SpeedSteps.Length; i++)
         {
-            if (Math.Abs(SpeedSteps[i] - data.BattleSpeed) < 0.001)
+            if (Math.Abs(SettingData.SpeedSteps[i] - data.BattleSpeed) < 0.001)
             {
-                return SpeedSteps[i];
+                return SettingData.SpeedSteps[i];
             }
         }
         return 1.0;

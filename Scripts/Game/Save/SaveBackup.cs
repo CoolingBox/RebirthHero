@@ -69,6 +69,28 @@ public static class SaveBackup
         return "v" + Version + "_" + DateTime.Now.ToString("yyyyMMdd_HHmm");
     }
 
+    // ============ 自动保存开关 ============
+
+    /// <summary>
+    /// 切换「自动保存」：写设置 → 落盘 → 广播。<c>AutoSaveToggled</c> 的订阅方
+    /// （主面板的计时器）自己去启停对应逻辑。
+    /// <para>
+    /// 存档面板与设置面板各有一个同样的开关，写盘 + 广播这四行只放这一处 ——
+    /// 否则哪天改成"只在手动保存时写设置"，另一边必然漏改。
+    /// </para>
+    /// </summary>
+    public static void ApplyAutoSave(bool on)
+    {
+        SettingData settings = SettingManager.Data;
+        if (settings != null)
+        {
+            settings.AutoSave = on;
+            SaveManager.Save(settings);
+        }
+
+        TinyEventBus.Global.Emit(new AutoSaveToggled(on));
+    }
+
     // ============ 备份 ============
 
     /// <summary>把当前进度另存为一条备份，返回条目（失败返回 null）。</summary>

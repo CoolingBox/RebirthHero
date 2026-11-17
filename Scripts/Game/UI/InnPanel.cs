@@ -221,16 +221,22 @@ public partial class InnPanel : BasePanel
         TalentBonus tb = Talent.Bonus();
         if (_inn.TryRefresh(_silver, tb.InnDiscount, tb.InnFreeAdd))
         {
+            UiSfx.Click();
             if (_onRosterChanged != null)
             {
                 _onRosterChanged();
             }
             Refresh();
+            return;
         }
+
+        // 银两不够时按钮仍然是亮的（价目要能看见），所以失败一定要有声音
+        UiSfx.Deny();
     }
 
     void OnCloseClicked()
     {
+        UiSfx.Close();
         if (_onClose != null)
         {
             _onClose();
@@ -306,12 +312,16 @@ public partial class InnPanel : BasePanel
         {
             if (_inn.TryRecruit(q, _silver))
             {
+                UiSfx.Confirm();
                 if (_onRosterChanged != null)
                 {
                     _onRosterChanged();
                 }
                 Refresh();
+                return;
             }
+
+            UiSfx.Deny();
         };
         vb.AddChild(btn);
         return card;
@@ -406,6 +416,7 @@ public partial class InnPanel : BasePanel
         {
             if (hasHero && _inn.MoveRoster(_inn.Roster[idx], -1))
             {
+                UiSfx.Click();
                 if (_onRosterChanged != null)
                 {
                     _onRosterChanged();
@@ -421,6 +432,7 @@ public partial class InnPanel : BasePanel
         {
             if (hasHero && _inn.MoveRoster(_inn.Roster[idx], +1))
             {
+                UiSfx.Click();
                 if (_onRosterChanged != null)
                 {
                     _onRosterChanged();
@@ -436,6 +448,7 @@ public partial class InnPanel : BasePanel
         {
             if (hasHero)
             {
+                UiSfx.Cancel();   // 下阵 = 把这名侠客从阵容里撤回，属于"撤销"而非"提交"
                 _inn.RemoveFromRoster(_inn.Roster[idx]);
                 if (_onRosterChanged != null)
                 {
@@ -467,12 +480,16 @@ public partial class InnPanel : BasePanel
         {
             if (_inn.AddToRoster(q.HeroId))
             {
+                UiSfx.Confirm();
                 if (_onRosterChanged != null)
                 {
                     _onRosterChanged();
                 }
                 Refresh();
+                return;
             }
+
+            UiSfx.Deny();
         };
         return btn;
     }

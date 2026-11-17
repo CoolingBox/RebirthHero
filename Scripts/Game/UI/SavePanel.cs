@@ -135,7 +135,7 @@ public partial class SavePanel : BasePanel
 
     void OnClosePressed()
     {
-        AudioManager.PlayUISFX("ui_close");
+        UiSfx.Close();
         HidePanel<SavePanel>();
         if (_ctxOnClose != null)
         {
@@ -150,25 +150,23 @@ public partial class SavePanel : BasePanel
         GameSave data = Capture();
         if (data == null)
         {
+            UiSfx.Deny();
             SetStatus("保存失败：进度还没准备好。");
             return;
         }
 
         SaveManager.Save(data);   // 主档 = user://GameSave（框架默认文件名 = 类型名）
-        AudioManager.PlayEventSFX("ui_confirm");
+        UiSfx.Confirm();
         SetStatus("已保存主存档 · " + DateTime.Now.ToString("HH:mm:ss"));
         RefreshList();
     }
 
     void OnAutoSaveToggled(bool pressed)
     {
-        SettingData settings = SettingManager.Data;
-        settings.AutoSave = pressed;
-        SaveManager.Save(settings);
-
-        // 广播出去，谁关心谁自己订阅（主面板的自动保存计时器就靠这个启停）。
-        // 本面板不需要知道外面有谁 —— 这正是把"静态回调字段"换成事件总线的理由。
-        TinyEventBus.Global.Emit(new AutoSaveToggled(pressed));
+        // 写设置 + 落盘 + 广播都归 SaveBackup（设置面板也有同一个开关，逻辑只放一处）。
+        // 本面板不需要知道外面有谁 —— 订阅方自己接住去启停计时器。
+        UiSfx.Toggle();
+        SaveBackup.ApplyAutoSave(pressed);
         SetStatus(pressed
             ? "已开启：每 " + SaveBackup.AutoSaveMinutes + " 分钟自动保存主存档。"
             : "已关闭自动保存：记得手动保存或退出（退出时仍会兜底存一次）。");
@@ -181,6 +179,7 @@ public partial class SavePanel : BasePanel
         GameSave data = Capture();
         if (data == null)
         {
+            UiSfx.Deny();
             SetStatus("备份失败：进度还没准备好。");
             return;
         }
@@ -193,11 +192,12 @@ public partial class SavePanel : BasePanel
             SaveEntry entry = SaveBackup.CreateBackup(data, name);
             if (entry == null)
             {
+                UiSfx.Deny();
                 SetStatus("备份失败：写文件出错，详见日志。");
                 return;
             }
 
-            AudioManager.PlayEventSFX("ui_confirm");
+            UiSfx.Confirm();
             SetStatus("已备份：" + entry.DisplayName);
             if (_TNameEdit != null)
             {
@@ -272,13 +272,14 @@ public partial class SavePanel : BasePanel
             bool ok = SaveBackup.ExportTo(data, path);
             if (!ok)
             {
+                UiSfx.Deny();
                 SetStatus("备份失败：" + path + "（详见日志）");
                 return;
             }
 
             // 同时留一份在存档夹：否则玩家选了路径，载入列表里却找不到这份备份
             string imported = SaveBackup.ImportFrom(path);
-            AudioManager.PlayEventSFX("ui_confirm");
+            UiSfx.Confirm();
             if (imported == null)
             {
                 SetStatus("已备份到：" + path + "（存档夹复制失败，可用「导入存档…」找回）");
@@ -292,12 +293,13 @@ public partial class SavePanel : BasePanel
         string importedName = SaveBackup.ImportFrom(path);
         if (importedName == null)
         {
+            UiSfx.Deny();
             SetStatus("导入失败：不是有效的存档文件。");
             return;
         }
 
         SetStatus("已导入：可在下方列表里点「载入」。");
-        AudioManager.PlayEventSFX("ui_confirm");
+        UiSfx.Confirm();
         RefreshList();
     }
 
@@ -313,6 +315,7 @@ public partial class SavePanel : BasePanel
         GameSave data = SaveBackup.LoadInternal(entry.InternalName);
         if (data == null)
         {
+            UiSfx.Deny();
             SetStatus("载入失败：" + entry.DisplayName + " 读不出来（可能是坏档）。");
             return;
         }
@@ -320,11 +323,12 @@ public partial class SavePanel : BasePanel
         bool ok = _ctxApply(data);
         if (!ok)
         {
+            UiSfx.Deny();
             SetStatus("载入失败：这份存档与本版本不兼容（版本 " + data.Version + "）。");
             return;
         }
 
-        AudioManager.PlayEventSFX("ui_confirm");
+        UiSfx.Confirm();
         HidePanel<SavePanel>();
         if (_ctxOnClose != null)
         {
@@ -340,7 +344,16 @@ public partial class SavePanel : BasePanel
         }
 
         bool ok = SaveBackup.Delete(entry.InternalName);
-        SetStatus(ok ? ("已删除备份：" + entry.DisplayName) : "删除失败（主存档不可删除）。");
+        if (ok)
+        {
+            UiSfx.Confirm();
+            SetStatus("已删除备份：" + entry.DisplayName);
+        }
+        else
+        {
+            UiSfx.Deny();
+            SetStatus("删除失败（主存档不可删除）。");
+        }
         RefreshList();
     }
 

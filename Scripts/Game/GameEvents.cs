@@ -11,6 +11,18 @@
 //
 // 事件一律用 readonly struct（派发零装箱）。
 
+/// <summary>战斗倍速被改动（导航条「×N」与设置面板都可能改）。订阅方负责把新速度套给战斗。</summary>
+public readonly struct BattleSpeedChanged
+{
+    /// <summary>切换后的倍速。</summary>
+    public readonly double Speed;
+
+    public BattleSpeedChanged(double speed)
+    {
+        Speed = speed;
+    }
+}
+
 /// <summary>设置里的「自动保存」开关被切换。订阅方负责启停自己的计时器。</summary>
 public readonly struct AutoSaveToggled
 {

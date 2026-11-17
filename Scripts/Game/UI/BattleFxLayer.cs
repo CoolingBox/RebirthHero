@@ -248,6 +248,18 @@ public partial class BattleFxLayer : Node2D
         return size;
     }
 
+    /// <summary>
+    /// 投射物从 a 飞到 b 需要多少**真实秒**（2026-11-17）。
+    ///
+    /// 用途：伤害飘字要等弹到了再出（之前是 OnDamage 当拍就出，数字比命中先到，
+    /// 读起来像「隔空扣血」）。飞行时长只由相性与距离决定、不吃战斗速度
+    /// （特效层用的是真实 delta），所以调用方直接用这个值做延迟即可。
+    /// </summary>
+    public static float BoltFlightTime(Category cat, Vector2 a, Vector2 b)
+    {
+        return BoltDuration(cat, a.DistanceTo(b));
+    }
+
     /// <summary>飞行时长 = 相性基准 × 距离微增 × 全局放慢。近身不闪没、远距不拖沓。</summary>
     static float BoltDuration(Category cat, float dist)
     {

@@ -311,9 +311,13 @@ public sealed class BattleManager
             {
                 return;
             }
-            _view.ShowDamage(t, amt);
-            _view.PlayHitFx(a, t, KindOf(a, skill), CatOf(a, skill), amt);
-            _view.PlayHitSound(t, skill);
+            // 飘字与命中音都要等投射物飞到再出（2026-11-17）：
+            // PlayHitFx 返回飞行时长，两者共用同一个延迟，与命中特效同拍。
+            // 相性也一并传下去 —— 命中音按分系选类别（不按伤害，见 PlayHitSound 注释）。
+            Category cat = CatOf(a, skill);
+            float fly = _view.PlayHitFx(a, t, KindOf(a, skill), cat, amt);
+            _view.ShowDamageAfter(t, amt, fly);
+            _view.PlayHitSoundAfter(t, skill, cat, fly);
         };
         _engine.Bus.OnDot += (a, t, amt, burn) =>
         {
@@ -664,7 +668,7 @@ public sealed class BattleManager
         if (!_nextArmed)
         {
             _nextArmed = true;
-            _view.PlayUiSound("ui_click");
+            UiSfx.Click();
             _main.RefreshNextButtonText();
             _clock.StartConfirm();
             return;
@@ -695,7 +699,7 @@ public sealed class BattleManager
     {
         // 大劫打输也会走到这里（OnAdvance → OnNext）：先清掉"等确认"，否则新一世按钮停在警示文案上
         DisarmNext();
-        _view.PlayUiSound("ui_confirm");
+        UiSfx.Confirm();
 
         // ① 发道行（够门槛才有；天赋「天机」的乘区在规则里乘）
         RebirthRule.GrantDao(_rule, _run.BestLayer);

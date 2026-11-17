@@ -518,8 +518,15 @@ addons/TinyTools/             # 配置生成 / UI 代码生成（编辑器插件
 | `ui_confirm` | 0.70s | 880Hz | 铜铃圆板 1:1.51:2.32:3.62:4.85 | 「叮——」 |
 | `ui_open` / `ui_close` | 0.35/0.25s | 150/120Hz | 竹木 + 摩擦 | 木门开合 |
 | `ui_upgrade` | 0.85s | C5→G5 | Karplus-Strong 拨弦（宫→徵） | 古筝 |
+| `ui_deny` | 0.20s | 400→330Hz | 梆子 1:2.32:3.90 双击（第二击更低） | 「不行」 |
+| `ui_select` | 0.05s | 760Hz | 竹筒 1:2.72:5.05 | 竹片轻拍 |
+| `ui_toggle` | 0.07s | 1080→880Hz | 木榫 1:2.10:3.30 两段瞬态 | 锁扣「咔哒」 |
 | `clear_layer` / `boss_down` | 2.2/2.8s | 180/110Hz | 铜锣密集非谐波 | 锣声「当——」 |
 
+- **界面音统一入口** `Scripts/Game/UI/UiSfx.cs`：九个动词（Click / Open / Close / Confirm / Cancel / Deny / Select / Toggle / Upgrade），
+  素材名只出现在那一个文件里。规则：**有结果的操作必须播 Confirm 或 Deny**，不能借 Click 顶替 ——
+  否则"道行不足"和"点成功了"是同一个声音（2026-11-17 之前的天赋页就是这样）。
+  界面音一律不随机音高、居中、走 `SFX_UI` 总线（按钮变调会让 UI 显得不可靠）
 - **素材替换**：`Resources/Audio/SFX/` 语义化命名，替换同名文件即可换音，零代码改动
 - ⚠️ 远场总线在当前 1920×1080 布局下**不会触发**（卡片离中心最远约 1100px，阈值 1650），保留给屏外音源 / 镜头缩放场景
 
@@ -756,6 +763,8 @@ addons/TinyTools/ConfigGenerator/*.xlsx
 | `.codebuddy/tools/EnableCardMipmaps.py` | 把卡面 `L1~L4` 的 `.import` 设为 `mipmaps/generate=true`（`--off` 回滚、`--stat` 统计）。**新增卡面素材后必跑**，否则 4.5~9x 缩小会混叠成麻点；改完要 `Godot --headless --import` 重导入 | 任意目录 |
 | `.codebuddy/tools/FixShotSrgb.py` | 实机抓帧（线性帧缓冲）→ 正确 sRGB PNG；`--all` 批量。**所有基于截图的视觉判断都要先过这一步** | 任意目录 |
 | `.codebuddy/tools/GenFxPixel.py` | 13 相性 × 投射/命中的横向精灵表（256 帧格）`Resources/UI/FxPixel/`；素材来自 Super Pixel 系列 + CraftPix 特效包 | 任意目录 |
+| `.codebuddy/tools/GenHitSfx.py` | 六类命中音 × 5 变体 + 8 个出手破空声 `Resources/Audio/SFX/hit_*` `whoosh_*`；素材来自 Kenney All-in-1（CC0） | 改音效后必须重导入 |
+| `.codebuddy/tools/GenUiSfx.py` | 合成 `ui_deny` / `ui_select` / `ui_toggle`（模态合成，与已有界面音同族；峰值 0.72 对齐） | 改完必须重导入 |
 | `.codebuddy/tools/CutFlatFrames.py` | AI 平面线描卡框：绿幕 + 底色双键控 → 406×522 带镂空的透明 PNG。输入 `raw_<key>.png` → 输出 `frame_<key>.png`；`--src/--dst` 指定目录、`--preview` 出拼图、彩色/深色锦带加 `--deep-clean suojia,zhujie`。**新增边框后跑** | 任意目录 |
 
 依赖 `openpyxl`（`pip install openpyxl`）。
@@ -893,6 +902,10 @@ addons/TinyTools/ConfigGenerator/*.xlsx
    许可以各包内 `License.txt` 与 <https://craftpix.net/file-licenses/> 为准
    （免费包通常可商用、不可转售素材本身）。
 
-本项目仅对序列帧做裁切、缩放与拼接后直接使用（`.codebuddy/tools/GenFxPixel.py`），不用于任何训练。
+战斗音效（命中 30 个 + 出手 8 个）来自 **Kenney All-in-1 3.8.0** 的
+`Impact Sounds` 与 `Foley Sounds/Woosh` 两个包 —— **CC0**，可商用、可修改、免署名。
+生成脚本 `.codebuddy/tools/GenHitSfx.py`（做 onset 裁剪、归一化、按类别命名）。
+
+本项目仅对序列帧与音频做裁切、缩放、拼接后直接使用，不用于任何训练。
 
 > Pixel Art Assets - Will Tice / unTied Games
